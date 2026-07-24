@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package avlp.vector.v1;
+
+option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
+
+// StudentSessionMeta captures optional engagement / scaffolding hints (Rogers + DUA).
+message StudentSessionMeta {
+  string preferred_format = 1;     // visual | conceptual | practica
+  string engagement_tone = 2;      // calm | encouraging | challenge
+  float frustration_signal = 3;    // 0..1 observed affective load
+  bool needs_scaffolding = 4;
+  string cohort_id = 5;
+  string active_story_point = 6;
+}
+
+// StudentVector represents the learner state in N DUA/Rogers dimensions.
+message StudentVector {
+  string student_id = 1;
+  // [Dominio, Sensorial, Frustracion, Ritmo, Autonomia]
+  repeated float dimensions = 2;
+  int64 timestamp = 3;
+  StudentSessionMeta session = 4;
+}
+
+// VectorQuery is the gRPC request for nearest pedagogical node routing.
+message VectorQuery {
+  StudentVector student_state = 1;
+  repeated float query_embedding = 2;
+  // 0 => server default 0.85
+  float min_similarity_threshold = 3;
+  // Natural-language doubt used by RAG retrieval on miss path.
+  string query_text = 4;
+}

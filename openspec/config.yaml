@@ -1,0 +1,29 @@
+schema: spec-driven
+
+context: |
+  Project: AVLP (Adaptive Vector Learning Platform) / vectorial-DUA
+  Domain: Hyper-personalized adaptive learning with DUA + Carl Rogers person-centered facilitation
+  Architecture triangle: Master (route map) | IDE Antigravity (execution cells) | Agent (scaffolding)
+  Tech stack: Go 1.22+, gRPC, Protocol Buffers, in-memory cosine k-NN, ULID node IDs
+  Control plane: harness/{evals,sandbox,load,telemetry} + cmd/harness
+  RAG: pkg/rag + pkg/livestation; knowledge_base at data/knowledge_base; HashEmbedder default
+  Miss path: NodeNotFound → RAG retrieve → rogerian prompt → live ULID node (AVLP_RAG_ENABLED)
+  Performance: p99 routing/retrieve latency < 15ms; cosine ops > 100,000/sec; load error_rate < 1%
+  Node ID format: dua::<dimension>::<dificultad>::<formato>::<ulid>
+  Default similarity threshold: 0.85 (cosine)
+  Eval pass threshold: aggregate score >= 0.80
+  Out of scope: Master/IDE UI, cloud LLM required, external vector DB, HNSW production
+
+rules:
+  proposal:
+    - Include rollback plan
+    - Explicit included vs out-of-scope sections
+  specs:
+    - Use Given/When/Then scenarios
+    - Prefer SHALL requirements
+  design:
+    - Document Protobuf contracts and gRPC surface
+    - Call out latency and concurrency targets
+  tasks:
+    - Keep checklist items executable by an AI agent
+    - Mark checkboxes only when verified

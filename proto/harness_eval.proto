@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package avlp.vector.v1;
+
+option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
+
+// HarnessEvalOutcome is the expected routing class for a golden case.
+enum HarnessEvalOutcome {
+  HARNESS_EVAL_OUTCOME_UNSPECIFIED = 0;
+  HARNESS_EVAL_OUTCOME_STATIC = 1;
+  HARNESS_EVAL_OUTCOME_LIVE = 2;
+}
+
+// EvalCase is a golden pedagogical routing scenario.
+message EvalCase {
+  string case_id = 1;
+  string description = 2;
+  string student_id = 3;
+  repeated float query_embedding = 4;
+  float min_similarity_threshold = 5;
+  string expected_dimension_dua = 6; // Representacion | Accion | Compromiso
+  string expected_format = 7;        // visual | conceptual | practica
+  HarnessEvalOutcome expected_outcome = 8;
+  string expected_node_id_prefix = 9; // optional dua::<dim>::<dif>::<fmt>
+}
+
+// EvalSignalScores are weighted pedagogical quality signals.
+message EvalSignalScores {
+  float cosine_ok = 1;
+  float dua_dimension_match = 2;
+  float format_match = 3;
+  float rogers_safety = 4;
+  float aggregate = 5;
+}
+
+// EvalCaseResult is the scored result for one case.
+message EvalCaseResult {
+  string case_id = 1;
+  bool passed = 2;
+  float aggregate_score = 3;
+  EvalSignalScores signals = 4;
+  string actual_outcome = 5; // static | live
+  string actual_node_id = 6;
+  string actual_dimension_dua = 7;
+  string actual_format = 8;
+  float similarity_score = 9;
+  string message = 10;
+}
+
+// EvalReport aggregates a full evals suite run.
+message EvalReport {
+  string run_id = 1;
+  int64 started_at_unix_ms = 2;
+  int64 finished_at_unix_ms = 3;
+  int32 total_cases = 4;
+  int32 passed_cases = 5;
+  int32 failed_cases = 6;
+  float pass_rate = 7;
+  repeated EvalCaseResult results = 8;
+}
+
+// LLMTraceSpan records a single LLM invocation for live stations / agent scaffolding.
+message LLMTraceSpan {
+  string span_id = 1;
+  string parent_run_id = 2;
+  string model = 3;
+  string purpose = 4; // live_station | agent_scaffold | eval_judge
+  int32 prompt_tokens = 5;
+  int32 completion_tokens = 6;
+  int64 latency_ms = 7;
+  bool success = 8;
+  string error_message = 9;
+  int64 timestamp_unix_ms = 10;
+}
+
+// LatencyPercentiles captures harness load metrics.
+message LatencyPercentiles {
+  double p50_ms = 1;
+  double p95_ms = 2;
+  double p99_ms = 3;
+  double max_ms = 4;
+  double mean_ms = 5;
+}
+
+// LoadReport is the output of the gRPC load harness.
+message LoadReport {
+  string run_id = 1;
+  int32 concurrency = 2;
+  int32 total_requests = 3;
+  int32 ok_requests = 4;
+  int32 err_requests = 5;
+  double error_rate = 6;
+  double qps = 7;
+  LatencyPercentiles latency = 8;
+  int64 wall_ms = 9;
+}
+
+// MetricCounter is a named counter sample.
+message MetricCounter {
+  string name = 1;
+  int64 value = 2;
+}
+
+// TelemetrySnapshot is the exportable control-plane state.
+message TelemetrySnapshot {
+  string snapshot_id = 1;
+  int64 timestamp_unix_ms = 2;
+  repeated MetricCounter counters = 3;
+  LatencyPercentiles routing_latency = 4;
+  repeated LLMTraceSpan llm_spans = 5;
+  EvalReport last_eval_report = 6;
+  LoadReport last_load_report = 7;
+}

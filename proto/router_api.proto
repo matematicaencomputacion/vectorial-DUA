@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package avlp.vector.v1;
+
+option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
+
+import "student_state.proto";
+
+// VectorRouter is the adaptive routing API consumed by Agent/IDE.
+service VectorRouter {
+  rpc QueryNearestNode(VectorQuery) returns (RouteResult);
+}
+
+message NodeResponse {
+  string node_id = 1;
+  string dimension_dua = 2;
+  string resource_url = 3;
+  float similarity_score = 4;
+  bool is_live_generated = 5;
+  repeated string retrieved_sources = 6;
+  string live_content = 7;
+}
+
+message LiveStationPending {
+  string tracking_ulid = 1;
+  string status = 2; // "in_progress"
+  string message = 3;
+}
+
+message RouteResult {
+  oneof outcome {
+    NodeResponse matched = 1;
+    LiveStationPending pending = 2;
+  }
+}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package avlp.vector.v1;
+
+option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
+
+// NodeRecord is a pedagogical DUA node indexed in the vector space.
+message NodeRecord {
+  // Format: dua::<dimension>::<dificultad>::<formato>::<ulid>
+  string node_id = 1;
+  // Representacion | Accion | Compromiso
+  string dimension_dua = 2;
+  string difficulty = 3;
+  // visual | conceptual | practica
+  string format = 4;
+  string resource_url = 5;
+  repeated float embedding = 6;
+}
