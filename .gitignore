@@ -1,0 +1,21 @@
+# Binaries
+/bin/
+*.exe
+*.test
+*.out
+
+# Harness outputs
+harness/out/
+
+# IDE / OS
+.idea/
+.vscode/
+desktop.ini
+Thumbs.db
+
+# Go
+vendor/
+
+# Local env
+.env
+*.log

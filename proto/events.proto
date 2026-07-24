@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package avlp.vector.v1;
+
+option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
+
+// NodeNotFoundEvent is emitted when no static node meets the similarity threshold.
+message NodeNotFoundEvent {
+  string event_id = 1;
+  string tracking_ulid = 2;
+  string student_id = 3;
+  repeated float query_embedding = 4;
+  float best_similarity = 5;
+  float threshold = 6;
+  int64 timestamp = 7;
+}

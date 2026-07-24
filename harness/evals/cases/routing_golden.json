@@ -1,0 +1,47 @@
+[
+  {
+    "case_id": "env-visual-static",
+    "description": "Duda sobre .env con preferencia visual → nodo Representacion/visual",
+    "student_id": "stu-env-1",
+    "query_embedding": [0.92, 0.10, 0.05, 0.20, 0.15],
+    "min_similarity_threshold": 0.85,
+    "expected_dimension_dua": "Representacion",
+    "expected_format": "visual",
+    "expected_outcome": "static",
+    "expected_node_id_prefix": "dua::Representacion::basico::visual"
+  },
+  {
+    "case_id": "parameter-conceptual-static",
+    "description": "Qué es un parámetro → tarjeta conceptual",
+    "student_id": "stu-param-1",
+    "query_embedding": [0.15, 0.90, 0.10, 0.20, 0.25],
+    "min_similarity_threshold": 0.85,
+    "expected_dimension_dua": "Representacion",
+    "expected_format": "conceptual",
+    "expected_outcome": "static",
+    "expected_node_id_prefix": "dua::Representacion::basico::conceptual"
+  },
+  {
+    "case_id": "quotes-practica-static",
+    "description": "Comillas/string → celda práctica",
+    "student_id": "stu-str-1",
+    "query_embedding": [0.20, 0.15, 0.85, 0.30, 0.20],
+    "min_similarity_threshold": 0.85,
+    "expected_dimension_dua": "Accion",
+    "expected_format": "practica",
+    "expected_outcome": "static",
+    "expected_node_id_prefix": "dua::Accion::basico::practica"
+  },
+  {
+    "case_id": "novel-block-live",
+    "description": "Bloqueo inédito lejos del manifold → estación en vivo vía RAG",
+    "student_id": "stu-live-1",
+    "query_embedding": [0.01, 0.02, 0.01, 0.02, 0.99],
+    "query_text": "Estoy bloqueado con un tema nuevo de PostGIS ST_DWithin que no está en la ruta estática",
+    "min_similarity_threshold": 0.85,
+    "expected_dimension_dua": "",
+    "expected_format": "",
+    "expected_outcome": "live",
+    "expected_node_id_prefix": ""
+  }
+]

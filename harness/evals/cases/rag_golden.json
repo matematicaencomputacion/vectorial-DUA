@@ -1,0 +1,20 @@
+[
+  {
+    "case_id": "rag-env-faithful",
+    "description": "Estación sobre .env debe anclarse a henry/env-variables.md",
+    "doubt_text": "No entiendo qué es un archivo .env ni las variables de entorno en Henry",
+    "expected_source_substr": "env-variables"
+  },
+  {
+    "case_id": "rag-postgis-faithful",
+    "description": "Estación espacial debe anclarse a PostGIS ST_DWithin",
+    "doubt_text": "Qué es ST_DWithin en PostGIS y para qué sirve la distancia geográfica",
+    "expected_source_substr": "spatial-basics"
+  },
+  {
+    "case_id": "rag-async-faithful",
+    "description": "Estación async/await anclada a Node",
+    "doubt_text": "No entiendo async await en Node.js y cómo manejar errores con try catch",
+    "expected_source_substr": "async-await"
+  }
+]
