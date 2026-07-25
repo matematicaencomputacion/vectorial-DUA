@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+package avlp.vector.v1;
+
+option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
+
+// LayoutType selects the Master UI composition for a pedagogical node.
+enum LayoutType {
+  LAYOUT_TYPE_UNSPECIFIED = 0;
+  LAYOUT_TYPE_INTERACTIVE_DASHBOARD = 1; // Stage ~70% + botonera ~30%
+}
+
+// ButtonActionType is the action fired when a flat botonera entry is selected.
+enum ButtonActionType {
+  BUTTON_ACTION_PLAY_CLIP = 0;
+  BUTTON_ACTION_OPEN_IDE_CELL = 1;
+  BUTTON_ACTION_ASK_AGENT = 2;
+}
+
+// BotoneraSchemaKind selects a reusable structural botonera pattern.
+enum BotoneraSchemaKind {
+  BOTONERA_SCHEMA_FLAT = 0;       // legacy InteractiveButton list
+  BOTONERA_SCHEMA_DEPTH = 1;      // zoom pedagógico
+  BOTONERA_SCHEMA_COGNITIVE = 2;  // estilos de aprendizaje
+  BOTONERA_SCHEMA_EMERGENCY = 3;  // diagnóstico de bloqueos
+  BOTONERA_SCHEMA_COMBINED = 4;   // matriz profundidad × formato
+}
+
+// MediaFormatType is how content is rendered on the Stage.
+enum MediaFormatType {
+  MEDIA_FORMAT_UNSPECIFIED = 0;
+  MEDIA_FORMAT_VIDEO = 1;
+  MEDIA_FORMAT_LIVE_CODE = 2;
+  MEDIA_FORMAT_DIAGRAM = 3;
+  MEDIA_FORMAT_AUDIO_DEBATE = 4;
+  MEDIA_FORMAT_INTERACTIVE_CANVAS = 5;
+  MEDIA_FORMAT_TEXT_HINT = 6;
+}
+
+// InteractiveButton is one atomized DUA control in a flat botonera.
+message InteractiveButton {
+  string id_btn = 1;
+  string label = 2;
+  ButtonActionType action_type = 3;
+  string media_url = 4;
+  float timestamp_start = 5;
+  float timestamp_end = 6;
+  string cell_code = 7;
+  repeated float vector_delta = 8;
+  bool is_live_generated = 9;
+}
+
+// DepthVariant is a zoom level in the thematic depth botonera.
+message DepthVariant {
+  string variant_id = 1;       // express_30s | core | deep_dive | under_the_hood
+  string label = 2;
+  string media_url = 3;
+  int32 duration_seconds = 4;
+  MediaFormatType format_type = 5;
+  repeated float preference_delta = 6; // contributes to Ve (ritmo/sensorial)
+}
+
+// CognitiveVariant presents the same concept in a different learning modality.
+message CognitiveVariant {
+  string variant_id = 1; // animation | live_coding | diagram | debate
+  string label = 2;
+  string media_url = 3;
+  string cell_code = 4;
+  MediaFormatType format_type = 5;
+  repeated float preference_delta = 6;
+}
+
+// EmergencyVariant supports blockage diagnosis without spoiling solutions on hints.
+message EmergencyVariant {
+  string variant_id = 1; // common_errors | hint | test_cases
+  string label = 2;
+  string media_url = 3;
+  string hint_text = 4;          // Rogers-style guide; never full solution
+  string walkthrough_url = 5;    // optional step-by-step media
+  MediaFormatType format_type = 6;
+  repeated float preference_delta = 7;
+}
+
+// CombinedCell is one cell in the depth × format interaction matrix.
+message CombinedCell {
+  string depth_id = 1;   // express | standard | deep
+  string format_id = 2;  // video | live_code | diagram
+  string media_url = 3;
+  string cell_code = 4;
+  int32 duration_seconds = 5;
+  MediaFormatType format_type = 6;
+}
+
+// DUANodeBotonera is a reusable structural botonera attached to a node.
+message DUANodeBotonera {
+  BotoneraSchemaKind kind = 1;
+  string topic_title = 2;
+  // Flat / legacy buttons (also used for ask_agent entry points).
+  repeated InteractiveButton flat_buttons = 3;
+  repeated DepthVariant depth_options = 4;
+  repeated CognitiveVariant cognitive_options = 5;
+  repeated EmergencyVariant emergency_options = 6;
+  // Combined matrix axes + cells
+  repeated string depth_axis = 7;
+  repeated string format_axis = 8;
+  repeated CombinedCell matrix_cells = 9;
+}
+
+// BotoneraInteraction records a student selection for profile vector updates.
+message BotoneraInteraction {
+  string node_id = 1;
+  string student_id = 2;
+  BotoneraSchemaKind schema_kind = 3;
+  string variant_id = 4;
+  string format_id = 5;
+  repeated float preference_delta = 6;
+  int64 timestamp_unix_ms = 7;
+}
+
+// SubtopicDepth is the fractal depth of a hierarchical subtopic.
+enum SubtopicDepth {
+  SUBTOPIC_DEPTH_MACRO = 0;
+  SUBTOPIC_DEPTH_COMPONENT = 1;
+  SUBTOPIC_DEPTH_MICRO = 2;
+}
+
+// SubtopicNode is a recursive optional branch in the accordion navigator.
+message SubtopicNode {
+  string subtopic_id = 1;
+  string title = 2;
+  SubtopicDepth depth_level = 3;
+  bool is_optional = 4;
+  string media_url = 5;
+  int32 duration_seconds = 6;
+  repeated float orbit_delta = 7; // Δv relative to parent embedding
+  repeated SubtopicNode child_subtopics = 8;
+}
+
+// DUAHierarchicalTree is the optional fractal navigator under a root node.
+message DUAHierarchicalTree {
+  string main_topic_title = 1;
+  string macro_media_url = 2;
+  repeated SubtopicNode subtopics = 3;
+}
+
+// SubtopicInteraction records a student opening a subtopic (profile detail preference).
+message SubtopicInteraction {
+  string parent_node_id = 1;
+  string student_id = 2;
+  string subtopic_id = 3;
+  repeated string path_ids = 4;
+  repeated float preference_delta = 5;
+  int64 timestamp_unix_ms = 6;
+}
+
+// Ack is a minimal success response.
+message Ack {
+  bool ok = 1;
+  string message = 2;
+}
+
+// InteractiveVideoNode is a multipart Stage + botonera DUA resource.
+message InteractiveVideoNode {
+  string node_id = 1; // dua::<dimension>::<dificultad>::<formato>::<ulid>
+  string dimension_dua = 2;
+  string titulo = 3;
+  LayoutType layout_type = 4;
+  string stage_media_default = 5;
+  // Legacy flat botonera (still supported).
+  repeated InteractiveButton botonera = 6;
+  repeated float embedding = 7;
+  // Structured reusable botonera schema (preferred by Master when set).
+  DUANodeBotonera botonera_schema = 8;
+  // Optional fractal accordion of subtopics.
+  DUAHierarchicalTree hierarchy = 9;
+}
+
+// NodeIdRequest fetches a single interactive node by id.
+message NodeIdRequest {
+  string node_id = 1;
+}
+
+// MutateInteractiveRequest appends a live button from a novel student doubt.
+message MutateInteractiveRequest {
+  string node_id = 1;
+  string student_id = 2;
+  string doubt_text = 3;
+  repeated float query_embedding = 4;
+  float frustration = 5;
+}
+
+// MutateInteractiveResponse returns the new button and updated node snapshot.
+message MutateInteractiveResponse {
+  InteractiveButton button = 1;
+  InteractiveVideoNode node = 2;
+}

@@ -1,0 +1,55 @@
+{
+  "node_id": "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FB2",
+  "dimension_dua": "Representacion",
+  "titulo": "PostGIS ST_DWithin — Matriz DUA",
+  "layout_type": "interactive_dashboard",
+  "stage_media_default": "https://cdn.example.com/videos/postgis/intro.mp4",
+  "embedding": [0.15, 0.55, 0.1, 0.25, 0.35],
+  "botonera_schema": {
+    "kind": "combined",
+    "topic_title": "ST_DWithin",
+    "depth_axis": ["express", "standard", "deep"],
+    "format_axis": ["video", "live_code", "diagram"],
+    "matrix_cells": [
+      {
+        "depth_id": "express",
+        "format_id": "video",
+        "media_url": "https://cdn.example.com/videos/postgis/express.mp4",
+        "duration_seconds": 35,
+        "format_type": "video"
+      },
+      {
+        "depth_id": "express",
+        "format_id": "diagram",
+        "media_url": "https://cdn.example.com/canvas/postgis/express.svg",
+        "format_type": "diagram"
+      },
+      {
+        "depth_id": "standard",
+        "format_id": "video",
+        "media_url": "https://cdn.example.com/videos/postgis/standard.mp4",
+        "duration_seconds": 180,
+        "format_type": "video"
+      },
+      {
+        "depth_id": "standard",
+        "format_id": "live_code",
+        "cell_code": "SELECT * FROM cafes WHERE ST_DWithin(geom, ST_MakePoint(-58.4,-34.6)::geography, 500);",
+        "format_type": "live_code"
+      },
+      {
+        "depth_id": "deep",
+        "format_id": "video",
+        "media_url": "https://cdn.example.com/videos/postgis/deep.mp4",
+        "duration_seconds": 480,
+        "format_type": "video"
+      },
+      {
+        "depth_id": "deep",
+        "format_id": "diagram",
+        "media_url": "https://cdn.example.com/canvas/postgis/deep-index.svg",
+        "format_type": "diagram"
+      }
+    ]
+  }
+}

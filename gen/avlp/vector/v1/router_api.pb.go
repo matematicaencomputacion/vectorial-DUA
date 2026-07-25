@@ -30,8 +30,10 @@ type NodeResponse struct {
 	IsLiveGenerated  bool                   `protobuf:"varint,5,opt,name=is_live_generated,json=isLiveGenerated,proto3" json:"is_live_generated,omitempty"`
 	RetrievedSources []string               `protobuf:"bytes,6,rep,name=retrieved_sources,json=retrievedSources,proto3" json:"retrieved_sources,omitempty"`
 	LiveContent      string                 `protobuf:"bytes,7,opt,name=live_content,json=liveContent,proto3" json:"live_content,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// When the matched pedagogical node is interactive, Master may fetch full payload via GetInteractiveNode.
+	HasInteractivePayload bool `protobuf:"varint,8,opt,name=has_interactive_payload,json=hasInteractivePayload,proto3" json:"has_interactive_payload,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *NodeResponse) Reset() {
@@ -111,6 +113,13 @@ func (x *NodeResponse) GetLiveContent() string {
 		return x.LiveContent
 	}
 	return ""
+}
+
+func (x *NodeResponse) GetHasInteractivePayload() bool {
+	if x != nil {
+		return x.HasInteractivePayload
+	}
+	return false
 }
 
 type LiveStationPending struct {
@@ -259,7 +268,7 @@ var File_router_api_proto protoreflect.FileDescriptor
 
 const file_router_api_proto_rawDesc = "" +
 	"\n" +
-	"\x10router_api.proto\x12\x0eavlp.vector.v1\x1a\x13student_state.proto\"\x96\x02\n" +
+	"\x10router_api.proto\x12\x0eavlp.vector.v1\x1a\x13student_state.proto\x1a\x16interactive_node.proto\"\xce\x02\n" +
 	"\fNodeResponse\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12#\n" +
 	"\rdimension_dua\x18\x02 \x01(\tR\fdimensionDua\x12!\n" +
@@ -267,7 +276,8 @@ const file_router_api_proto_rawDesc = "" +
 	"\x10similarity_score\x18\x04 \x01(\x02R\x0fsimilarityScore\x12*\n" +
 	"\x11is_live_generated\x18\x05 \x01(\bR\x0fisLiveGenerated\x12+\n" +
 	"\x11retrieved_sources\x18\x06 \x03(\tR\x10retrievedSources\x12!\n" +
-	"\flive_content\x18\a \x01(\tR\vliveContent\"k\n" +
+	"\flive_content\x18\a \x01(\tR\vliveContent\x126\n" +
+	"\x17has_interactive_payload\x18\b \x01(\bR\x15hasInteractivePayload\"k\n" +
 	"\x12LiveStationPending\x12#\n" +
 	"\rtracking_ulid\x18\x01 \x01(\tR\ftrackingUlid\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +
@@ -275,9 +285,12 @@ const file_router_api_proto_rawDesc = "" +
 	"\vRouteResult\x128\n" +
 	"\amatched\x18\x01 \x01(\v2\x1c.avlp.vector.v1.NodeResponseH\x00R\amatched\x12>\n" +
 	"\apending\x18\x02 \x01(\v2\".avlp.vector.v1.LiveStationPendingH\x00R\apendingB\t\n" +
-	"\aoutcome2\\\n" +
+	"\aoutcome2\xfc\x02\n" +
 	"\fVectorRouter\x12L\n" +
-	"\x10QueryNearestNode\x12\x1b.avlp.vector.v1.VectorQuery\x1a\x1b.avlp.vector.v1.RouteResultB;Z9github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1b\x06proto3"
+	"\x10QueryNearestNode\x12\x1b.avlp.vector.v1.VectorQuery\x1a\x1b.avlp.vector.v1.RouteResult\x12Y\n" +
+	"\x12GetInteractiveNode\x12\x1d.avlp.vector.v1.NodeIdRequest\x1a$.avlp.vector.v1.InteractiveVideoNode\x12l\n" +
+	"\x15MutateInteractiveNode\x12(.avlp.vector.v1.MutateInteractiveRequest\x1a).avlp.vector.v1.MutateInteractiveResponse\x12U\n" +
+	"\x19RecordSubtopicInteraction\x12#.avlp.vector.v1.SubtopicInteraction\x1a\x13.avlp.vector.v1.AckB;Z9github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1b\x06proto3"
 
 var (
 	file_router_api_proto_rawDescOnce sync.Once
@@ -293,18 +306,30 @@ func file_router_api_proto_rawDescGZIP() []byte {
 
 var file_router_api_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_router_api_proto_goTypes = []any{
-	(*NodeResponse)(nil),       // 0: avlp.vector.v1.NodeResponse
-	(*LiveStationPending)(nil), // 1: avlp.vector.v1.LiveStationPending
-	(*RouteResult)(nil),        // 2: avlp.vector.v1.RouteResult
-	(*VectorQuery)(nil),        // 3: avlp.vector.v1.VectorQuery
+	(*NodeResponse)(nil),              // 0: avlp.vector.v1.NodeResponse
+	(*LiveStationPending)(nil),        // 1: avlp.vector.v1.LiveStationPending
+	(*RouteResult)(nil),               // 2: avlp.vector.v1.RouteResult
+	(*VectorQuery)(nil),               // 3: avlp.vector.v1.VectorQuery
+	(*NodeIdRequest)(nil),             // 4: avlp.vector.v1.NodeIdRequest
+	(*MutateInteractiveRequest)(nil),  // 5: avlp.vector.v1.MutateInteractiveRequest
+	(*SubtopicInteraction)(nil),       // 6: avlp.vector.v1.SubtopicInteraction
+	(*InteractiveVideoNode)(nil),      // 7: avlp.vector.v1.InteractiveVideoNode
+	(*MutateInteractiveResponse)(nil), // 8: avlp.vector.v1.MutateInteractiveResponse
+	(*Ack)(nil),                       // 9: avlp.vector.v1.Ack
 }
 var file_router_api_proto_depIdxs = []int32{
 	0, // 0: avlp.vector.v1.RouteResult.matched:type_name -> avlp.vector.v1.NodeResponse
 	1, // 1: avlp.vector.v1.RouteResult.pending:type_name -> avlp.vector.v1.LiveStationPending
 	3, // 2: avlp.vector.v1.VectorRouter.QueryNearestNode:input_type -> avlp.vector.v1.VectorQuery
-	2, // 3: avlp.vector.v1.VectorRouter.QueryNearestNode:output_type -> avlp.vector.v1.RouteResult
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
+	4, // 3: avlp.vector.v1.VectorRouter.GetInteractiveNode:input_type -> avlp.vector.v1.NodeIdRequest
+	5, // 4: avlp.vector.v1.VectorRouter.MutateInteractiveNode:input_type -> avlp.vector.v1.MutateInteractiveRequest
+	6, // 5: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:input_type -> avlp.vector.v1.SubtopicInteraction
+	2, // 6: avlp.vector.v1.VectorRouter.QueryNearestNode:output_type -> avlp.vector.v1.RouteResult
+	7, // 7: avlp.vector.v1.VectorRouter.GetInteractiveNode:output_type -> avlp.vector.v1.InteractiveVideoNode
+	8, // 8: avlp.vector.v1.VectorRouter.MutateInteractiveNode:output_type -> avlp.vector.v1.MutateInteractiveResponse
+	9, // 9: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:output_type -> avlp.vector.v1.Ack
+	6, // [6:10] is the sub-list for method output_type
+	2, // [2:6] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -316,6 +341,7 @@ func file_router_api_proto_init() {
 		return
 	}
 	file_student_state_proto_init()
+	file_interactive_node_proto_init()
 	file_router_api_proto_msgTypes[2].OneofWrappers = []any{
 		(*RouteResult_Matched)(nil),
 		(*RouteResult_Pending)(nil),

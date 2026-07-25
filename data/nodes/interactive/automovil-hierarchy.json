@@ -1,0 +1,69 @@
+{
+  "node_id": "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FC0",
+  "dimension_dua": "Representacion",
+  "titulo": "¿Qué es un Automóvil?",
+  "layout_type": "interactive_dashboard",
+  "stage_media_default": "https://cdn.example.com/videos/auto/macro-45s.mp4",
+  "embedding": [0.5, 0.4, 0.1, 0.2, 0.3],
+  "botonera": [
+    {
+      "id_btn": "ask_different",
+      "label": "+ Tengo una duda diferente",
+      "action_type": "ask_agent",
+      "vector_delta": [0.0, 0.0, 0.2, 0.0, 0.2]
+    }
+  ],
+  "hierarchy": {
+    "main_topic_title": "El Automóvil",
+    "macro_media_url": "https://cdn.example.com/videos/auto/macro-45s.mp4",
+    "subtopics": [
+      {
+        "subtopic_id": "sub_caja_central",
+        "title": "Caja Central",
+        "depth_level": "component",
+        "is_optional": true,
+        "media_url": "https://cdn.example.com/videos/auto/caja-overview.mp4",
+        "duration_seconds": 40,
+        "orbit_delta": [0.05, 0.0, 0.0, 0.0, 0.0],
+        "child_subtopics": [
+          {
+            "subtopic_id": "sub_asientos",
+            "title": "Asientos",
+            "depth_level": "micro",
+            "is_optional": true,
+            "media_url": "https://cdn.example.com/videos/auto/asientos-30s.mp4",
+            "duration_seconds": 30,
+            "orbit_delta": [0.02, 0.05, 0.0, 0.0, 0.0]
+          },
+          {
+            "subtopic_id": "sub_volante",
+            "title": "Volante",
+            "depth_level": "micro",
+            "is_optional": true,
+            "media_url": "https://cdn.example.com/videos/auto/volante-45s.mp4",
+            "duration_seconds": 45,
+            "orbit_delta": [0.02, 0.0, 0.05, 0.0, 0.0]
+          },
+          {
+            "subtopic_id": "sub_motor",
+            "title": "Motor",
+            "depth_level": "micro",
+            "is_optional": true,
+            "media_url": "https://cdn.example.com/videos/auto/motor-60s.mp4",
+            "duration_seconds": 60,
+            "orbit_delta": [0.08, 0.0, 0.0, 0.05, 0.0]
+          }
+        ]
+      },
+      {
+        "subtopic_id": "sub_4_ruedas",
+        "title": "4 Ruedas",
+        "depth_level": "component",
+        "is_optional": true,
+        "media_url": "https://cdn.example.com/videos/auto/ruedas-macro.mp4",
+        "duration_seconds": 35,
+        "orbit_delta": [0.0, 0.06, 0.0, 0.0, 0.0]
+      }
+    ]
+  }
+}

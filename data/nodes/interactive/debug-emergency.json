@@ -1,0 +1,36 @@
+{
+  "node_id": "dua::Accion::basico::practica::01ARZ3NDEKTSV4RRFFQ69G5FB1",
+  "dimension_dua": "Accion",
+  "titulo": "Debug de variables — Modo emergencia",
+  "layout_type": "interactive_dashboard",
+  "stage_media_default": "https://cdn.example.com/videos/debug/stage.mp4",
+  "embedding": [0.3, 0.2, 0.8, 0.2, 0.3],
+  "botonera_schema": {
+    "kind": "emergency",
+    "topic_title": "Bloqueo: Undefined variable",
+    "emergency_options": [
+      {
+        "variant_id": "common_errors",
+        "label": "¿Por qué me da error?",
+        "media_url": "https://cdn.example.com/videos/debug/top3-errors.mp4",
+        "format_type": "video",
+        "preference_delta": [0.1, 0.0, -0.2, 0.0, 0.1]
+      },
+      {
+        "variant_id": "hint",
+        "label": "Ver la pista (Hint)",
+        "hint_text": "Es normal trabarse aquí. ¿La variable que usás fue declarada en el mismo scope donde la leés?",
+        "format_type": "text_hint",
+        "preference_delta": [0.0, 0.0, -0.3, 0.0, 0.2]
+      },
+      {
+        "variant_id": "test_cases",
+        "label": "Casos de prueba resueltos",
+        "media_url": "https://cdn.example.com/videos/debug/walkthrough.mp4",
+        "walkthrough_url": "https://cdn.example.com/videos/debug/walkthrough.mp4",
+        "format_type": "video",
+        "preference_delta": [0.2, 0.0, -0.1, 0.0, 0.1]
+      }
+    ]
+  }
+}
