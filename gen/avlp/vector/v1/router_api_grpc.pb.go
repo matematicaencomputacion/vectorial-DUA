@@ -19,16 +19,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	VectorRouter_QueryNearestNode_FullMethodName = "/avlp.vector.v1.VectorRouter/QueryNearestNode"
+	VectorRouter_QueryNearestNode_FullMethodName          = "/avlp.vector.v1.VectorRouter/QueryNearestNode"
+	VectorRouter_GetInteractiveNode_FullMethodName        = "/avlp.vector.v1.VectorRouter/GetInteractiveNode"
+	VectorRouter_MutateInteractiveNode_FullMethodName     = "/avlp.vector.v1.VectorRouter/MutateInteractiveNode"
+	VectorRouter_RecordSubtopicInteraction_FullMethodName = "/avlp.vector.v1.VectorRouter/RecordSubtopicInteraction"
 )
 
 // VectorRouterClient is the client API for VectorRouter service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// VectorRouter is the adaptive routing API consumed by Agent/IDE.
+// VectorRouter is the adaptive routing API consumed by Agent/IDE/Master.
 type VectorRouterClient interface {
 	QueryNearestNode(ctx context.Context, in *VectorQuery, opts ...grpc.CallOption) (*RouteResult, error)
+	GetInteractiveNode(ctx context.Context, in *NodeIdRequest, opts ...grpc.CallOption) (*InteractiveVideoNode, error)
+	MutateInteractiveNode(ctx context.Context, in *MutateInteractiveRequest, opts ...grpc.CallOption) (*MutateInteractiveResponse, error)
+	RecordSubtopicInteraction(ctx context.Context, in *SubtopicInteraction, opts ...grpc.CallOption) (*Ack, error)
 }
 
 type vectorRouterClient struct {
@@ -49,13 +55,46 @@ func (c *vectorRouterClient) QueryNearestNode(ctx context.Context, in *VectorQue
 	return out, nil
 }
 
+func (c *vectorRouterClient) GetInteractiveNode(ctx context.Context, in *NodeIdRequest, opts ...grpc.CallOption) (*InteractiveVideoNode, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InteractiveVideoNode)
+	err := c.cc.Invoke(ctx, VectorRouter_GetInteractiveNode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vectorRouterClient) MutateInteractiveNode(ctx context.Context, in *MutateInteractiveRequest, opts ...grpc.CallOption) (*MutateInteractiveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MutateInteractiveResponse)
+	err := c.cc.Invoke(ctx, VectorRouter_MutateInteractiveNode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vectorRouterClient) RecordSubtopicInteraction(ctx context.Context, in *SubtopicInteraction, opts ...grpc.CallOption) (*Ack, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Ack)
+	err := c.cc.Invoke(ctx, VectorRouter_RecordSubtopicInteraction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VectorRouterServer is the server API for VectorRouter service.
 // All implementations must embed UnimplementedVectorRouterServer
 // for forward compatibility.
 //
-// VectorRouter is the adaptive routing API consumed by Agent/IDE.
+// VectorRouter is the adaptive routing API consumed by Agent/IDE/Master.
 type VectorRouterServer interface {
 	QueryNearestNode(context.Context, *VectorQuery) (*RouteResult, error)
+	GetInteractiveNode(context.Context, *NodeIdRequest) (*InteractiveVideoNode, error)
+	MutateInteractiveNode(context.Context, *MutateInteractiveRequest) (*MutateInteractiveResponse, error)
+	RecordSubtopicInteraction(context.Context, *SubtopicInteraction) (*Ack, error)
 	mustEmbedUnimplementedVectorRouterServer()
 }
 
@@ -68,6 +107,15 @@ type UnimplementedVectorRouterServer struct{}
 
 func (UnimplementedVectorRouterServer) QueryNearestNode(context.Context, *VectorQuery) (*RouteResult, error) {
 	return nil, status.Error(codes.Unimplemented, "method QueryNearestNode not implemented")
+}
+func (UnimplementedVectorRouterServer) GetInteractiveNode(context.Context, *NodeIdRequest) (*InteractiveVideoNode, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInteractiveNode not implemented")
+}
+func (UnimplementedVectorRouterServer) MutateInteractiveNode(context.Context, *MutateInteractiveRequest) (*MutateInteractiveResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MutateInteractiveNode not implemented")
+}
+func (UnimplementedVectorRouterServer) RecordSubtopicInteraction(context.Context, *SubtopicInteraction) (*Ack, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordSubtopicInteraction not implemented")
 }
 func (UnimplementedVectorRouterServer) mustEmbedUnimplementedVectorRouterServer() {}
 func (UnimplementedVectorRouterServer) testEmbeddedByValue()                      {}
@@ -108,6 +156,60 @@ func _VectorRouter_QueryNearestNode_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VectorRouter_GetInteractiveNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NodeIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VectorRouterServer).GetInteractiveNode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VectorRouter_GetInteractiveNode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VectorRouterServer).GetInteractiveNode(ctx, req.(*NodeIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VectorRouter_MutateInteractiveNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MutateInteractiveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VectorRouterServer).MutateInteractiveNode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VectorRouter_MutateInteractiveNode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VectorRouterServer).MutateInteractiveNode(ctx, req.(*MutateInteractiveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VectorRouter_RecordSubtopicInteraction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubtopicInteraction)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VectorRouterServer).RecordSubtopicInteraction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VectorRouter_RecordSubtopicInteraction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VectorRouterServer).RecordSubtopicInteraction(ctx, req.(*SubtopicInteraction))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VectorRouter_ServiceDesc is the grpc.ServiceDesc for VectorRouter service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -118,6 +220,18 @@ var VectorRouter_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryNearestNode",
 			Handler:    _VectorRouter_QueryNearestNode_Handler,
+		},
+		{
+			MethodName: "GetInteractiveNode",
+			Handler:    _VectorRouter_GetInteractiveNode_Handler,
+		},
+		{
+			MethodName: "MutateInteractiveNode",
+			Handler:    _VectorRouter_MutateInteractiveNode_Handler,
+		},
+		{
+			MethodName: "RecordSubtopicInteraction",
+			Handler:    _VectorRouter_RecordSubtopicInteraction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -30,9 +30,11 @@ type NodeRecord struct {
 	DimensionDua string `protobuf:"bytes,2,opt,name=dimension_dua,json=dimensionDua,proto3" json:"dimension_dua,omitempty"`
 	Difficulty   string `protobuf:"bytes,3,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
 	// visual | conceptual | practica
-	Format        string    `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
-	ResourceUrl   string    `protobuf:"bytes,5,opt,name=resource_url,json=resourceUrl,proto3" json:"resource_url,omitempty"`
-	Embedding     []float32 `protobuf:"fixed32,6,rep,packed,name=embedding,proto3" json:"embedding,omitempty"`
+	Format      string    `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
+	ResourceUrl string    `protobuf:"bytes,5,opt,name=resource_url,json=resourceUrl,proto3" json:"resource_url,omitempty"`
+	Embedding   []float32 `protobuf:"fixed32,6,rep,packed,name=embedding,proto3" json:"embedding,omitempty"`
+	// When set to "interactive_dashboard", full payload lives in InteractiveVideoNode registry.
+	LayoutType    string `protobuf:"bytes,7,opt,name=layout_type,json=layoutType,proto3" json:"layout_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -109,11 +111,18 @@ func (x *NodeRecord) GetEmbedding() []float32 {
 	return nil
 }
 
+func (x *NodeRecord) GetLayoutType() string {
+	if x != nil {
+		return x.LayoutType
+	}
+	return ""
+}
+
 var File_node_schema_proto protoreflect.FileDescriptor
 
 const file_node_schema_proto_rawDesc = "" +
 	"\n" +
-	"\x11node_schema.proto\x12\x0eavlp.vector.v1\"\xc3\x01\n" +
+	"\x11node_schema.proto\x12\x0eavlp.vector.v1\"\xe4\x01\n" +
 	"\n" +
 	"NodeRecord\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12#\n" +
@@ -123,7 +132,9 @@ const file_node_schema_proto_rawDesc = "" +
 	"difficulty\x12\x16\n" +
 	"\x06format\x18\x04 \x01(\tR\x06format\x12!\n" +
 	"\fresource_url\x18\x05 \x01(\tR\vresourceUrl\x12\x1c\n" +
-	"\tembedding\x18\x06 \x03(\x02R\tembeddingB;Z9github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1b\x06proto3"
+	"\tembedding\x18\x06 \x03(\x02R\tembedding\x12\x1f\n" +
+	"\vlayout_type\x18\a \x01(\tR\n" +
+	"layoutTypeB;Z9github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1b\x06proto3"
 
 var (
 	file_node_schema_proto_rawDescOnce sync.Once

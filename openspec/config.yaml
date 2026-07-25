@@ -7,6 +7,7 @@ context: |
   Tech stack: Go 1.22+, gRPC, Protocol Buffers, in-memory cosine k-NN, ULID node IDs
   Control plane: harness/{evals,sandbox,load,telemetry} + cmd/harness
   RAG: pkg/rag + pkg/livestation; knowledge_base at data/knowledge_base; HashEmbedder default
+  Interactive nodes: Stage+botonera InteractiveVideoNode (pkg/dua); MutateInteractiveNode via RAG
   Miss path: NodeNotFound → RAG retrieve → rogerian prompt → live ULID node (AVLP_RAG_ENABLED)
   Performance: p99 routing/retrieve latency < 15ms; cosine ops > 100,000/sec; load error_rate < 1%
   Node ID format: dua::<dimension>::<dificultad>::<formato>::<ulid>

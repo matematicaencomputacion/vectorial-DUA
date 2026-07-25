@@ -16,6 +16,7 @@ New-Item -ItemType Directory -Force -Path "gen\avlp\vector\v1" | Out-Null
 $protos = @(
   "proto/student_state.proto",
   "proto/node_schema.proto",
+  "proto/interactive_node.proto",
   "proto/router_api.proto",
   "proto/events.proto",
   "proto/harness_eval.proto"

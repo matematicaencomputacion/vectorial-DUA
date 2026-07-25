@@ -1,0 +1,54 @@
+{
+  "node_id": "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FAV",
+  "dimension_dua": "Representacion",
+  "titulo": "Variables y Scope — Zoom de profundidad",
+  "layout_type": "interactive_dashboard",
+  "stage_media_default": "https://cdn.example.com/videos/vars/intro.mp4",
+  "embedding": [0.91, 0.12, 0.08, 0.22, 0.18],
+  "botonera": [
+    {
+      "id_btn": "ask_different",
+      "label": "+ Tengo una duda diferente",
+      "action_type": "ask_agent",
+      "vector_delta": [0.0, 0.0, 0.2, 0.0, 0.3]
+    }
+  ],
+  "botonera_schema": {
+    "kind": "depth",
+    "topic_title": "Variables y Scope",
+    "depth_options": [
+      {
+        "variant_id": "express_30s",
+        "label": "ELITE / TL;DR (30–45s)",
+        "media_url": "https://cdn.example.com/videos/vars/express.mp4",
+        "duration_seconds": 40,
+        "format_type": "video",
+        "preference_delta": [0.0, 0.0, 0.0, 0.3, 0.0]
+      },
+      {
+        "variant_id": "core",
+        "label": "Concepto Core (2–3 min)",
+        "media_url": "https://cdn.example.com/videos/vars/core.mp4",
+        "duration_seconds": 150,
+        "format_type": "video",
+        "preference_delta": [0.1, 0.1, 0.0, 0.0, 0.0]
+      },
+      {
+        "variant_id": "deep_dive",
+        "label": "Deep Dive (5–8 min)",
+        "media_url": "https://cdn.example.com/videos/vars/deep.mp4",
+        "duration_seconds": 360,
+        "format_type": "video",
+        "preference_delta": [0.2, 0.0, 0.0, -0.2, 0.1]
+      },
+      {
+        "variant_id": "under_the_hood",
+        "label": "Under the Hood (10+ min)",
+        "media_url": "https://cdn.example.com/videos/vars/internals.mp4",
+        "duration_seconds": 720,
+        "format_type": "video",
+        "preference_delta": [0.3, 0.0, 0.0, -0.3, 0.2]
+      }
+    ]
+  }
+}

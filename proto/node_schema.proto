@@ -15,4 +15,6 @@ message NodeRecord {
   string format = 4;
   string resource_url = 5;
   repeated float embedding = 6;
+  // When set to "interactive_dashboard", full payload lives in InteractiveVideoNode registry.
+  string layout_type = 7;
 }

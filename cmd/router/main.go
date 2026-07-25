@@ -11,9 +11,12 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
+	"github.com/vectorial-dua/avlp/pkg/dua"
 	"github.com/vectorial-dua/avlp/pkg/livestation"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/vector"
@@ -23,7 +26,10 @@ const defaultAddr = ":50051"
 
 type server struct {
 	vectorv1.UnimplementedVectorRouterServer
-	router *vector.Router
+	router       *vector.Router
+	reg          *dua.Registry
+	mutator      *dua.Mutator
+	interactions *dua.InteractionStore
 }
 
 type liveBridge struct {
@@ -78,16 +84,21 @@ func (s *server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 	}
 
 	if outcome.Matched {
+		hasInteractive := false
+		if s.reg != nil {
+			_, hasInteractive = s.reg.Get(outcome.Node.ID)
+		}
 		return &vectorv1.RouteResult{
 			Outcome: &vectorv1.RouteResult_Matched{
 				Matched: &vectorv1.NodeResponse{
-					NodeId:            outcome.Node.ID,
-					DimensionDua:      outcome.Node.DimensionDUA,
-					ResourceUrl:       outcome.Node.ResourceURL,
-					SimilarityScore:   outcome.Similarity,
-					IsLiveGenerated:   outcome.IsLiveGenerated,
-					RetrievedSources:  outcome.RetrievedSources,
-					LiveContent:       outcome.LiveContent,
+					NodeId:                outcome.Node.ID,
+					DimensionDua:          outcome.Node.DimensionDUA,
+					ResourceUrl:           outcome.Node.ResourceURL,
+					SimilarityScore:       outcome.Similarity,
+					IsLiveGenerated:       outcome.IsLiveGenerated,
+					RetrievedSources:      outcome.RetrievedSources,
+					LiveContent:           outcome.LiveContent,
+					HasInteractivePayload: hasInteractive,
 				},
 			},
 		}, nil
@@ -102,6 +113,61 @@ func (s *server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 			},
 		},
 	}, nil
+}
+
+func (s *server) GetInteractiveNode(ctx context.Context, req *vectorv1.NodeIdRequest) (*vectorv1.InteractiveVideoNode, error) {
+	_ = ctx
+	if s.reg == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interactive nodes disabled")
+	}
+	n, ok := s.reg.Get(req.GetNodeId())
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetNodeId())
+	}
+	return dua.ToProto(n), nil
+}
+
+func (s *server) MutateInteractiveNode(ctx context.Context, req *vectorv1.MutateInteractiveRequest) (*vectorv1.MutateInteractiveResponse, error) {
+	if s.mutator == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interactive mutation disabled")
+	}
+	res, err := s.mutator.Mutate(ctx, dua.MutateRequest{
+		NodeID:         req.GetNodeId(),
+		StudentID:      req.GetStudentId(),
+		DoubtText:      req.GetDoubtText(),
+		QueryEmbedding: req.GetQueryEmbedding(),
+		Frustration:    req.GetFrustration(),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	return &vectorv1.MutateInteractiveResponse{
+		Button: dua.ButtonToProto(res.Button),
+		Node:   dua.ToProto(res.Node),
+	}, nil
+}
+
+func (s *server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.SubtopicInteraction) (*vectorv1.Ack, error) {
+	_ = ctx
+	if s.interactions == nil {
+		return nil, status.Error(codes.FailedPrecondition, "subtopic interactions disabled")
+	}
+	if req.GetStudentId() == "" || req.GetParentNodeId() == "" || req.GetSubtopicId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "student_id, parent_node_id, and subtopic_id are required")
+	}
+	if s.reg != nil {
+		n, ok := s.reg.Get(req.GetParentNodeId())
+		if !ok {
+			return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
+		}
+		if n.Hierarchy != nil {
+			if _, found := n.Hierarchy.FindByID(req.GetSubtopicId()); !found {
+				return nil, status.Errorf(codes.NotFound, "subtopic %q not found under %q", req.GetSubtopicId(), req.GetParentNodeId())
+			}
+		}
+	}
+	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), req.GetPreferenceDelta())
+	return &vectorv1.Ack{Ok: true, Message: "recorded"}, nil
 }
 
 func main() {
@@ -131,9 +197,11 @@ func main() {
 		kb = abs
 	}
 
+	var store *rag.Store
+	var emb rag.Embedder
 	if router.Enabled {
-		store := rag.NewStore()
-		emb := rag.DefaultEmbedder()
+		store = rag.NewStore()
+		emb = rag.DefaultEmbedder()
 		n, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: kb, Embedder: emb})
 		if err != nil {
 			log.Printf("RAG ingest warning: %v (miss path will stay pending)", err)
@@ -149,8 +217,54 @@ func main() {
 		log.Printf("RAG disabled (AVLP_RAG_ENABLED=false)")
 	}
 
+	srvImpl := &server{router: router, interactions: dua.NewInteractionStore()}
+
+	if dua.EnabledFromEnv() {
+		reg := dua.NewRegistry()
+		nodesDir := os.Getenv("AVLP_INTERACTIVE_NODES_DIR")
+		if nodesDir == "" {
+			nodesDir = "data/nodes/interactive"
+		}
+		if abs, err := filepath.Abs(nodesDir); err == nil {
+			nodesDir = abs
+		}
+		n, err := reg.LoadDir(nodesDir)
+		if err != nil {
+			log.Printf("interactive nodes load warning: %v", err)
+		} else {
+			log.Printf("interactive nodes loaded: %d from %s", n, nodesDir)
+			// Index embeddings into vector space for nearest routing.
+			reg.ForEach(func(node *dua.InteractiveVideoNode) {
+				if len(node.Embedding) == 0 {
+					return
+				}
+				if err := index.Upsert(vector.Node{
+					ID:           node.NodeID,
+					DimensionDUA: node.DimensionDUA,
+					Difficulty:   "basico",
+					Format:       "visual",
+					ResourceURL:  "interactive://" + node.NodeID,
+					Embedding:    append([]float32(nil), node.Embedding...),
+				}); err != nil {
+					log.Printf("index interactive node %s: %v", node.NodeID, err)
+				}
+			})
+		}
+		srvImpl.reg = reg
+		if store != nil && emb != nil {
+			srvImpl.mutator = &dua.Mutator{
+				Registry:  reg,
+				Retriever: rag.NewRetriever(store, emb, 3),
+			}
+		} else {
+			srvImpl.mutator = &dua.Mutator{Registry: reg}
+		}
+	} else {
+		log.Printf("interactive nodes disabled (AVLP_INTERACTIVE_NODES=false)")
+	}
+
 	srv := grpc.NewServer()
-	vectorv1.RegisterVectorRouterServer(srv, &server{router: router})
+	vectorv1.RegisterVectorRouterServer(srv, srvImpl)
 	reflection.Register(srv)
 
 	lis, err := net.Listen("tcp", addr)

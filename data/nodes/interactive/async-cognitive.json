@@ -1,0 +1,43 @@
+{
+  "node_id": "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FB0",
+  "dimension_dua": "Representacion",
+  "titulo": "Async/Await — Estilos cognitivos",
+  "layout_type": "interactive_dashboard",
+  "stage_media_default": "https://cdn.example.com/videos/async/intro.mp4",
+  "embedding": [0.2, 0.7, 0.1, 0.3, 0.4],
+  "botonera_schema": {
+    "kind": "cognitive",
+    "topic_title": "Async/Await",
+    "cognitive_options": [
+      {
+        "variant_id": "animation",
+        "label": "Modo Animación / Analogía",
+        "media_url": "https://cdn.example.com/videos/async/analogy.mp4",
+        "format_type": "video",
+        "preference_delta": [0.0, 0.4, 0.0, 0.0, 0.0]
+      },
+      {
+        "variant_id": "live_coding",
+        "label": "Modo Live Coding",
+        "media_url": "https://cdn.example.com/videos/async/live.mp4",
+        "cell_code": "async function load() { return await fetch('/api'); }",
+        "format_type": "live_code",
+        "preference_delta": [0.2, 0.0, 0.0, 0.1, 0.2]
+      },
+      {
+        "variant_id": "diagram",
+        "label": "Modo Diagrama / CheatSheet",
+        "media_url": "https://cdn.example.com/canvas/async/flow.svg",
+        "format_type": "diagram",
+        "preference_delta": [0.0, 0.3, 0.0, 0.2, 0.0]
+      },
+      {
+        "variant_id": "debate",
+        "label": "Modo Debate / Entrevista",
+        "media_url": "https://cdn.example.com/audio/async/debate.mp3",
+        "format_type": "audio_debate",
+        "preference_delta": [0.0, 0.2, 0.0, 0.0, 0.1]
+      }
+    ]
+  }
+}
