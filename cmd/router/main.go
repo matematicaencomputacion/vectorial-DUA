@@ -199,14 +199,11 @@ func (s *server) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.Bo
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetNodeId())
 	}
-	if n.BotoneraSchema == nil {
-		return nil, status.Errorf(codes.NotFound, "node %q has no botonera_schema", req.GetNodeId())
-	}
-	if !dua.HasBotoneraVariant(n.BotoneraSchema, req.GetVariantId(), req.GetFormatId()) {
-		return nil, status.Errorf(codes.NotFound, "variant %q not found in botonera schema for node %q", req.GetVariantId(), req.GetNodeId())
+	if !dua.HasBotoneraVariant(n, req.GetVariantId(), req.GetFormatId()) {
+		return nil, status.Errorf(codes.NotFound, "variant %q not found in botonera for node %q", req.GetVariantId(), req.GetNodeId())
 	}
 
-	delta := dua.ResolveBotoneraDelta(n.BotoneraSchema, req.GetVariantId(), req.GetPreferenceDelta())
+	delta := dua.ResolveBotoneraDelta(n, req.GetVariantId(), req.GetPreferenceDelta())
 	if len(delta) == 0 {
 		return neutralAck(), nil
 	}
