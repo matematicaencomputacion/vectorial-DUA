@@ -41,4 +41,7 @@ func TestGenerateLiveStationWithSources(t *testing.T) {
 	if idx.Len() != 1 {
 		t.Fatalf("expected node registered, len=%d", idx.Len())
 	}
+	if len(res.Node.Embedding) != vector.ContentEmbedDims {
+		t.Fatalf("live node embedding dims=%d want %d", len(res.Node.Embedding), vector.ContentEmbedDims)
+	}
 }

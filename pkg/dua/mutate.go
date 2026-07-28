@@ -10,6 +10,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/vectorial-dua/avlp/pkg/rag"
+	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
 // Mutator appends live botonera entries from novel doubts via RAG.
@@ -65,12 +66,16 @@ func (m *Mutator) Mutate(ctx context.Context, req MutateRequest) (MutateResult, 
 		if err != nil {
 			return MutateResult{}, err
 		}
-		if len(delta) > 5 {
-			delta = delta[:5]
-		}
 	}
+	// VectorDelta lives in content embedding space (ContentEmbedDims), not V_e.
+	// FitContentEmbedding zero-pads legacy short vectors; refuses silent truncate.
 	if len(delta) == 0 {
-		delta = []float32{0.1, 0.1, 0.2, 0.1, 0.1}
+		delta = make([]float32, vector.ContentEmbedDims)
+		delta[0] = 1
+	}
+	delta, err = vector.FitContentEmbedding(delta)
+	if err != nil {
+		return MutateResult{}, fmt.Errorf("vector_delta content projection: %w", err)
 	}
 
 	label := truncateLabel(req.DoubtText, 64)

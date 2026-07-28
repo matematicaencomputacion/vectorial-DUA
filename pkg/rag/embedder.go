@@ -6,9 +6,13 @@ import (
 	"math"
 	"os"
 	"strings"
+
+	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
-const DefaultEmbedDims = 64
+// DefaultEmbedDims is the content-embedding dimensionality shared with the
+// routing index (vector.ContentEmbedDims). Distinct from learner V_e (5 axes).
+const DefaultEmbedDims = vector.ContentEmbedDims
 
 // Embedder produces fixed-dimension embeddings for text.
 type Embedder interface {

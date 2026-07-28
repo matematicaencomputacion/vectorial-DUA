@@ -26,20 +26,39 @@ type Match struct {
 // Index is a concurrent in-memory k-NN store with ULID uniqueness checks.
 type Index struct {
 	mu    sync.RWMutex
-	nodes map[string]Node // keyed by full node_id
+	dims  int                 // required content embedding length (ContentEmbedDims)
+	nodes map[string]Node     // keyed by full node_id
 	ring  map[string]struct{} // ULID segment uniqueness ring
 	order []string
 }
 
-// NewIndex creates an empty vector index.
+// NewIndex creates an empty vector index locked to ContentEmbedDims.
 func NewIndex() *Index {
+	return NewIndexWithDims(ContentEmbedDims)
+}
+
+// NewIndexWithDims creates an index that rejects embeddings of any other length.
+func NewIndexWithDims(dims int) *Index {
+	if dims <= 0 {
+		dims = ContentEmbedDims
+	}
 	return &Index{
+		dims:  dims,
 		nodes: make(map[string]Node),
 		ring:  make(map[string]struct{}),
 	}
 }
 
-// Upsert registers or replaces a node. Enforces unique ULID segments.
+// Dims returns the required content embedding dimensionality for this index.
+func (idx *Index) Dims() int {
+	if idx == nil || idx.dims <= 0 {
+		return ContentEmbedDims
+	}
+	return idx.dims
+}
+
+// Upsert registers or replaces a node. Enforces unique ULID segments and
+// embedding dimensionality matching the index.
 func (idx *Index) Upsert(node Node) error {
 	if !ValidateNodeID(node.ID) {
 		return fmt.Errorf("invalid node id: %s", node.ID)
@@ -50,6 +69,11 @@ func (idx *Index) Upsert(node Node) error {
 	}
 	if len(node.Embedding) == 0 {
 		return fmt.Errorf("embedding required for node %s", node.ID)
+	}
+	want := idx.Dims()
+	if len(node.Embedding) != want {
+		return fmt.Errorf("embedding dims mismatch for node %s: got %d, index requires %d (content space; not V_e)",
+			node.ID, len(node.Embedding), want)
 	}
 
 	idx.mu.Lock()
@@ -103,7 +127,12 @@ func (idx *Index) Nearest(query []float32) Match {
 }
 
 // RegisterNode creates a hierarchical ULID id and upserts the node.
+// Short embeddings are projected into content space via FitContentEmbedding.
 func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32) (Node, error) {
+	fitted, err := FitContentEmbedding(embedding)
+	if err != nil {
+		return Node{}, err
+	}
 	id, err := NewNodeID(dimensionDUA, difficulty, format)
 	if err != nil {
 		return Node{}, err
@@ -114,7 +143,7 @@ func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL str
 		Difficulty:   difficulty,
 		Format:       format,
 		ResourceURL:  resourceURL,
-		Embedding:    append([]float32(nil), embedding...),
+		Embedding:    fitted,
 	}
 	if err := idx.Upsert(node); err != nil {
 		return Node{}, err
@@ -123,6 +152,7 @@ func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL str
 }
 
 // SeedDemoNodes loads a small static curriculum for demos/tests.
+// Legacy 5-float literals are explicitly padded into ContentEmbedDims.
 func SeedDemoNodes(idx *Index) error {
 	seeds := []struct {
 		dim, diff, format, url string

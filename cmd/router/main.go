@@ -238,13 +238,18 @@ func main() {
 				if len(node.Embedding) == 0 {
 					return
 				}
+				fitted, err := vector.FitContentEmbedding(node.Embedding)
+				if err != nil {
+					log.Printf("index interactive node %s: %v", node.NodeID, err)
+					return
+				}
 				if err := index.Upsert(vector.Node{
 					ID:           node.NodeID,
 					DimensionDUA: node.DimensionDUA,
 					Difficulty:   "basico",
 					Format:       "visual",
 					ResourceURL:  "interactive://" + node.NodeID,
-					Embedding:    append([]float32(nil), node.Embedding...),
+					Embedding:    fitted,
 				}); err != nil {
 					log.Printf("index interactive node %s: %v", node.NodeID, err)
 				}
