@@ -29,6 +29,9 @@
 
     *, *::before, *::after { box-sizing: border-box; }
 
+    /* display explícito en .ask-box no debe ganar al atributo hidden */
+    [hidden] { display: none !important; }
+
     html, body {
       margin: 0;
       min-height: 100%;
@@ -643,7 +646,20 @@
     } else if (err && err.message && String(err.message).trim()) {
       msg = err.message;
     }
+    msg = sanitizeStudentError(msg, err && err.status);
     setStatus(msg, "error");
+  }
+
+  function sanitizeStudentError(msg, status) {
+    var raw = String(msg || "");
+    var technical = /dial tcp|transport:|connection error|ECONNREFUSED|rpc error|bad gateway|502|503|504/i.test(raw);
+    if ((status && status >= 500) || technical) {
+      if (raw && raw !== "No pudimos conectar con el tutor en este momento; probá de nuevo en un instante") {
+        console.log("detalle técnico (oculto al estudiante):", status, raw);
+      }
+      return "No pudimos conectar con el tutor en este momento; probá de nuevo en un instante";
+    }
+    return raw || "Algo no salió bien; probá de nuevo o reformulá la duda.";
   }
 
   function setAskMode(interactive) {
@@ -751,6 +767,9 @@
       const err = new Error((data && (data.student_message || data.message)) || res.statusText);
       err.status = res.status;
       err.data = data;
+      if (data && (data.message || data.student_message)) {
+        console.log("api error detail:", res.status, data);
+      }
       reportError(err);
       throw err;
     }

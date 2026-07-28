@@ -29,6 +29,8 @@ Soportado donde exista `SpeechRecognition` / `webkitSpeechRecognition`. Si no ha
 - [ ] Segundo toque (o Ctrl+M de nuevo) cancela a mitad de dictado; estado visible
 - [ ] Denegar permiso de micrófono → mensaje amable en el área de estado (`aria-live` assertive), nunca silencio
 - [ ] Con nodo interactivo: el mismo micrófono aparece en «+ Tengo una duda diferente»; dictás, revisás y confirmás con «Generar botón en vivo»
+- [ ] Página fresca: el bloque «+ Tengo una duda diferente» **no** es visible (evidencia Playwright: `verify/out/01-fresh-ask-box-hidden.png`)
+- [ ] Con router caído: el estado muestra mensaje contenedor en español, **sin** `dial tcp` / transport (evidencia: `verify/out/02-router-down-friendly.png`)
 
 ## Teclado
 

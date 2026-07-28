@@ -4,6 +4,7 @@ package webgateway
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -14,6 +15,9 @@ import (
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
 )
+
+// StudentUnavailableMessage is the person-centered copy for transport / 5xx failures.
+const StudentUnavailableMessage = "No pudimos conectar con el tutor en este momento; probá de nuevo en un instante"
 
 var (
 	marshalOpts = protojson.MarshalOptions{
@@ -203,7 +207,8 @@ func decodeProtoJSON(r *http.Request, msg proto.Message) error {
 func writeProto(w http.ResponseWriter, code int, msg proto.Message) {
 	b, err := marshalOpts.Marshal(msg)
 	if err != nil {
-		writeAPIError(w, http.StatusInternalServerError, "internal", err.Error(), "")
+		log.Printf("webgateway marshal: %v", err)
+		writeAPIError(w, http.StatusInternalServerError, "internal", StudentUnavailableMessage, "")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -227,17 +232,45 @@ func writeAPIError(w http.ResponseWriter, httpCode int, code, message, studentMe
 	})
 }
 
+func isTechnicalTransportMessage(msg string) bool {
+	m := strings.ToLower(msg)
+	return strings.Contains(m, "dial tcp") ||
+		strings.Contains(m, "transport:") ||
+		strings.Contains(m, "connection error") ||
+		strings.Contains(m, "connection refused") ||
+		strings.Contains(m, "unavailable") && strings.Contains(m, "rpc")
+}
+
+func studentFacingGRPCMessage(code codes.Code, raw string) string {
+	switch code {
+	case codes.Unavailable, codes.Internal, codes.DeadlineExceeded, codes.Unknown:
+		return StudentUnavailableMessage
+	}
+	if isTechnicalTransportMessage(raw) {
+		return StudentUnavailableMessage
+	}
+	return raw
+}
+
 func writeGRPCError(w http.ResponseWriter, err error) {
 	st, ok := status.FromError(err)
 	if !ok {
-		writeAPIError(w, http.StatusBadGateway, "unavailable", err.Error(), "")
+		log.Printf("webgateway transport: %v", err)
+		writeAPIError(w, http.StatusBadGateway, "unavailable", StudentUnavailableMessage, StudentUnavailableMessage)
 		return
 	}
-	msg := st.Message()
+	raw := st.Message()
 	httpCode, code := mapGRPCCode(st.Code())
+	msg := studentFacingGRPCMessage(st.Code(), raw)
+	if msg != raw {
+		log.Printf("webgateway grpc %s (hidden from student): %v", st.Code(), err)
+	}
 	studentMsg := ""
 	if st.Code() == codes.NotFound {
-		studentMsg = msg
+		studentMsg = raw // rogerian / NotFound copy is already student-facing
+		msg = raw
+	} else if msg == StudentUnavailableMessage {
+		studentMsg = StudentUnavailableMessage
 	}
 	writeAPIError(w, httpCode, code, msg, studentMsg)
 }
