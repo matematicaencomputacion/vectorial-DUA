@@ -158,8 +158,8 @@ type TextEmbedder interface {
 }
 
 // SeedDemoNodes loads a small static curriculum for demos/tests.
-// Embeddings are generated from textual descriptors to share semantic space
-// with query_text embeddings.
+// Embeddings are generated from natural-language pedagogical descriptors so
+// paraphrased student queries can match under a semantic embedder.
 func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
 	if emb == nil {
 		return fmt.Errorf("seed embedder is required")
@@ -168,11 +168,26 @@ func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
 		dim, diff, format, url string
 		text                   string
 	}{
-		{"Representacion", "basico", "visual", "master://nodes/env-diagram", "variables de entorno .env visual diagrama representacion"},
-		{"Accion", "basico", "practica", "ide://cells/env-exercise", "ejercicio practico variables de entorno codigo accion"},
-		{"Compromiso", "basico", "conceptual", "agent://analogies/env-story", "por que importan variables de entorno seguridad motivacion compromiso"},
-		{"Representacion", "basico", "conceptual", "master://nodes/parameter-card", "que es un parametro explicacion conceptual representacion"},
-		{"Accion", "basico", "practica", "ide://cells/string-quotes", "comillas strings practica depuracion accion"},
+		{
+			"Representacion", "basico", "visual", "master://nodes/env-diagram",
+			"Diagrama visual que explica qué son las variables de entorno y el archivo .env: cómo se leen en ejecución y cómo representar la configuración separada del código.",
+		},
+		{
+			"Accion", "basico", "practica", "ide://cells/env-exercise",
+			"Ejercicio práctico para configurar y usar variables de entorno en código: crear un .env de ejemplo, leer valores y comprobar el comportamiento al ejecutar.",
+		},
+		{
+			"Compromiso", "basico", "conceptual", "agent://analogies/env-story",
+			"Explicación de por qué es importante configurar variables de entorno: proteger secretos y credenciales, separar configuración del código, y qué riesgos hay si no lo hacés.",
+		},
+		{
+			"Representacion", "basico", "conceptual", "master://nodes/parameter-card",
+			"Tarjeta conceptual que define qué es un parámetro en programación: para qué sirve, cómo se distingue de una variable de entorno, y un ejemplo breve de uso.",
+		},
+		{
+			"Accion", "basico", "practica", "ide://cells/string-quotes",
+			"Práctica de depuración con comillas y strings: errores comunes al abrir o cerrar comillas, cómo corregirlos en una celda y verificar la salida.",
+		},
 	}
 	for _, s := range seeds {
 		vec, err := emb.Embed(context.Background(), s.text)

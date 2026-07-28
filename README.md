@@ -65,10 +65,12 @@ Por defecto el router y el harness usan `HashEmbedder` offline (64 dims, léxico
 | `AVLP_EMBEDDING_API_KEY` | Bearer opcional |
 | `AVLP_EMBEDDING_DIMS` | Dims fijas; si se omite, se descubren en el primer call |
 | `AVLP_EMBEDDING_TIMEOUT` | Timeout HTTP (default `10s`) |
+| `AVLP_SIMILARITY_THRESHOLD` | Umbral coseno (0–1) cuando el request no trae umbral; default `0.85` |
 
-El índice de ruteo se construye con las dims del embedder activo (`NewIndexWithDims`). Evals CI usan hash; para un endpoint real:
+`0.85` está calibrado para hash/plumbing. Con embedders semánticos calibrá empíricamente (con bge-m3 el punto de partida sugerido es ~`0.6`). El índice de ruteo se construye con las dims del embedder activo (`NewIndexWithDims`). Evals CI usan hash; para un endpoint real:
 
 ```bash
+export AVLP_SIMILARITY_THRESHOLD=0.6   # opcional, calibración semántica
 go run ./cmd/harness -suite evals -embedder env
 ```
 

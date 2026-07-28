@@ -58,7 +58,7 @@ func main() {
 		if err := rag.EnsureEmbedderDims(context.Background(), emb); err != nil {
 			log.Fatalf("embedder dims: %v", err)
 		}
-		log.Printf("evals embedder=%s dims=%d", *embedderMode, emb.Dims())
+		log.Printf("evals embedder=%s dims=%d threshold=%.2f", *embedderMode, emb.Dims(), vector.EffectiveDefaultThreshold())
 
 		idx := vector.NewIndexWithDims(emb.Dims())
 		if err := vector.SeedDemoNodes(idx, emb); err != nil {
@@ -81,7 +81,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("load cases: %v", err)
 		}
-		report := (&evals.Runner{Router: router, Tel: tel, Embedder: emb}).Run(cases)
+		report := (&evals.Runner{Router: router, Tel: tel, Embedder: emb, Mode: *embedderMode}).Run(cases)
 		path := filepath.Join(*outDir, "eval_report.json")
 		if err := evals.WriteReport(path, report); err != nil {
 			log.Fatalf("write eval report: %v", err)

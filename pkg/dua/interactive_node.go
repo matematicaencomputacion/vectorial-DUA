@@ -29,15 +29,16 @@ type InteractiveButton struct {
 
 // InteractiveVideoNode is a Stage + botonera DUA resource.
 type InteractiveVideoNode struct {
-	NodeID            string               `json:"node_id"`
-	DimensionDUA      string               `json:"dimension_dua"`
-	Titulo            string               `json:"titulo"`
-	LayoutType        LayoutType           `json:"layout_type"`
-	StageMediaDefault string               `json:"stage_media_default"`
-	Botonera          []InteractiveButton  `json:"botonera,omitempty"`
-	Embedding         []float32            `json:"embedding,omitempty"`
-	BotoneraSchema    *DUANodeBotonera     `json:"botonera_schema,omitempty"`
-	Hierarchy         *DUAHierarchicalTree `json:"hierarchy,omitempty"`
+	NodeID               string               `json:"node_id"`
+	DimensionDUA         string               `json:"dimension_dua"`
+	Titulo               string               `json:"titulo"`
+	LayoutType           LayoutType           `json:"layout_type"`
+	StageMediaDefault    string               `json:"stage_media_default"`
+	Botonera             []InteractiveButton  `json:"botonera,omitempty"`
+	Embedding            []float32            `json:"embedding,omitempty"`
+	EmbeddingDescriptor  string               `json:"embedding_descriptor,omitempty"`
+	BotoneraSchema       *DUANodeBotonera     `json:"botonera_schema,omitempty"`
+	Hierarchy            *DUAHierarchicalTree `json:"hierarchy,omitempty"`
 }
 
 // Validate checks structural integrity of an interactive node.

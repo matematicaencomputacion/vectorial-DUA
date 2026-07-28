@@ -4,6 +4,7 @@
   "titulo": "Debug de variables — Modo emergencia",
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/debug/stage.mp4",
+  "embedding_descriptor": "Modo emergencia para depurar variables indefinidas: errores frecuentes, pista rogeriana y casos de prueba para desbloquear al estudiante sin inventar causas.",
   "embedding": [0.3, 0.2, 0.8, 0.2, 0.3],
   "botonera_schema": {
     "kind": "emergency",

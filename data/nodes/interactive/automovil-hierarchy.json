@@ -4,6 +4,7 @@
   "titulo": "¿Qué es un Automóvil?",
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/auto/macro-45s.mp4",
+  "embedding_descriptor": "Exploración jerárquica de qué es un automóvil: visión macro y subtemas opcionales como caja central y ruedas, sin forzar un recorrido lineal.",
   "embedding": [0.5, 0.4, 0.1, 0.2, 0.3],
   "botonera": [
     {
