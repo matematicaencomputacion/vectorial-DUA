@@ -6,12 +6,17 @@ El layout 70/30 (Stage + botonera) vive en ASCII del README; el contrato interac
 
 ## Alcance
 
-### PR 6.1 — gateway HTTP/JSON
+### PR 6.1 — ✅ gateway HTTP/JSON
 
 - `cmd/master-web` + `pkg/webgateway`: JSON sobre RPCs del router (`AVLP_WEB_ADDR`, `AVLP_ROUTER_ADDR`)
-- Estáticos embebidos (`web/`) con placeholder hasta 6.2
+- Estáticos embebidos (`web/`)
 - Tests con router gRPC in-process (bufconn)
 
-### PR 6.2 — frontend vanilla (fuera de este PR)
+### PR 6.2 — frontend vanilla
 
-`web/index.html` fiel al contrato + a11y DUA + checklist manual.
+- `cmd/master-web/web/index.html` (HTML+CSS+JS, sin build)
+- Tres modos: `botonera_schema`, legacy, `hierarchy`
+- Flujo query → nodo | pending+poll → ready; mutate; Record*
+- A11y DUA (teclado, ARIA, contraste AA, `prefers-reduced-motion`)
+- Panel de desarrollo plegado; `student_id` en memoria
+- README «Prototipo web» + `MANUAL_CHECKLIST.md`

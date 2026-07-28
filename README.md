@@ -79,6 +79,32 @@ go run ./cmd/router
 go run ./cmd/router-client -mode poll -student demo-student
 ```
 
+## Prototipo web
+
+UI Master de laboratorio (Stage ~70% + botonera ~30%) sobre el gateway HTTP/JSON. No es producción: es fiel al contrato interactivo y al camino de estaciones pendientes.
+
+```bash
+go run ./cmd/router                 # gRPC :50051
+go run ./cmd/master-web             # http://127.0.0.1:8080  (AVLP_WEB_ADDR / AVLP_ROUTER_ADDR)
+```
+
+Flujo esperado en texto:
+
+```text
+1. Escribís una duda (o usás un chip de ejemplo) → POST /api/query
+2a. Match + has_interactive_payload → GET /api/nodes/{id}
+    Stage muestra stage_media_default; botonera renderiza
+    schema (depth|cognitive|emergency|combined), legacy y/o hierarchy
+2b. Pending → pantalla de espera con student_message rogeriano
+    poll GET /api/stations/{ulid}?student_id=… cada 2s
+    ready → live_content (Markdown simple) en el Stage
+3. Toque de botonera/subtema → POST /api/interactions/…
+4. “+ Tengo una duda diferente” → POST /api/nodes/{id}/mutate
+    el botón LIVE aparece en la botonera sin recargar la página
+```
+
+Checklist manual (teclado + lector de pantalla): `cmd/master-web/MANUAL_CHECKLIST.md`.
+
 ## Embeddings
 
 Por defecto el router y el harness usan `HashEmbedder` offline (64 dims, léxico). Con URL remota se activa un cliente HTTP OpenAI-compatible (`POST …/embeddings`) sin fallback silencioso a hash.
@@ -126,8 +152,8 @@ El snapshot es versionado (`version`, `ve_dims`, `profiles`). Escritura atómica
 
 ```text
 vectorial-DUA/
-├── cmd/{router,router-client,harness}
-├── pkg/{vector,rag,livestation,dua,rogerian}
+├── cmd/{router,router-client,harness,master-web}
+├── pkg/{vector,rag,livestation,dua,rogerian,webgateway}
 ├── data/knowledge_base/
 ├── data/nodes/interactive/
 ├── proto/ + gen/
@@ -140,7 +166,8 @@ vectorial-DUA/
 │   ├── add-dua-botonera-schemas/
 │   ├── add-hierarchical-subtopic-node/
 │   ├── add-ola2-adaptive-debt/   (deuda Ola 2, saldada)
-│   └── add-ola3-station-ledger/  (Ola 3.a / C2 cerrada — tag v0.3.0-ola3a)
+│   ├── add-ola3-station-ledger/  (Ola 3.a / C2 cerrada — tag v0.3.0-ola3a)
+│   └── add-ola3-master-web/      (Ola 3.b / C1 — prototipo Stage + botonera)
 └── scripts/
 ```
 

@@ -3,46 +3,1192 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AVLP Master — prototipo (placeholder)</title>
+  <title>AVLP Master — Stage + botonera</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #1a1f24;
-      --fg: #e8eef2;
-      --muted: #9aa8b3;
-      --accent: #3d8bfd;
+      --ink: #14212b;
+      --ink-soft: #3a4a57;
+      --paper: #f3f6f4;
+      --panel: #ffffff;
+      --line: #c5d0d8;
+      --teal: #0f6b5c;
+      --teal-deep: #0a4f44;
+      --sand: #e7efe9;
+      --amber: #b45309;
+      --danger: #9f1239;
+      --focus: #0ea5e9;
+      --stage-bg: #0d1b22;
+      --stage-fg: #e8f1f4;
+      --radius: 6px;
+      --font-ui: "Source Sans 3", "Segoe UI", sans-serif;
+      --font-display: "Fraunces", Georgia, serif;
     }
-    body {
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
       margin: 0;
-      min-height: 100vh;
-      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-      background: radial-gradient(1200px 600px at 20% 0%, #243040, var(--bg));
-      color: var(--fg);
+      min-height: 100%;
+      font-family: var(--font-ui);
+      color: var(--ink);
+      background:
+        radial-gradient(900px 420px at 8% -10%, #d5ebe4 0%, transparent 55%),
+        radial-gradient(700px 380px at 100% 0%, #dce7f0 0%, transparent 50%),
+        var(--paper);
+    }
+
+    a { color: var(--teal-deep); }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -999px;
+      top: 0;
+      background: var(--ink);
+      color: #fff;
+      padding: 0.5rem 1rem;
+      z-index: 100;
+    }
+    .skip-link:focus { left: 0.5rem; top: 0.5rem; }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1rem 2.5rem;
+    }
+
+    .brand {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.75rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .brand h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 3vw, 2.1rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--teal-deep);
+    }
+    .brand p {
+      margin: 0;
+      color: var(--ink-soft);
+      max-width: 36rem;
+      font-size: 0.98rem;
+    }
+
+    .query-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.75rem;
+      align-items: end;
+      margin-bottom: 0.75rem;
+      padding: 0.9rem 1rem;
+      background: color-mix(in srgb, var(--panel) 88%, var(--sand));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .query-bar label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+    .query-bar textarea {
+      width: 100%;
+      min-height: 3.2rem;
+      resize: vertical;
+      font: inherit;
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+    }
+    .query-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      min-width: 9rem;
+    }
+    .frustration {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+    }
+    .frustration input { accent-color: var(--teal); }
+
+    button, .btn {
+      font: inherit;
+      font-weight: 600;
+      border-radius: var(--radius);
+      border: 2px solid var(--teal-deep);
+      background: var(--teal);
+      color: #fff;
+      padding: 0.55rem 0.9rem;
+      cursor: pointer;
+    }
+    button:hover, .btn:hover { background: var(--teal-deep); }
+    button.secondary, .btn.secondary {
+      background: #fff;
+      color: var(--teal-deep);
+    }
+    button.secondary:hover, .btn.secondary:hover {
+      background: var(--sand);
+    }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    button.ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--teal-deep);
+      text-decoration: underline;
+      padding: 0.25rem 0.4rem;
+      font-weight: 600;
+    }
+
+    .hints {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 0 0 1rem;
+    }
+    .hints button {
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.3rem 0.65rem;
+      background: #fff;
+      color: var(--ink-soft);
+      border: 1px solid var(--line);
+    }
+    .hints button:hover {
+      border-color: var(--teal);
+      color: var(--teal-deep);
+      background: var(--sand);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 7fr) minmax(240px, 3fr);
+      gap: 0;
+      min-height: 28rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: 0 12px 40px rgba(20, 33, 43, 0.08);
+    }
+
+    .stage {
+      background:
+        linear-gradient(160deg, #123039 0%, var(--stage-bg) 55%, #09141a 100%);
+      color: var(--stage-fg);
+      padding: 1rem 1.1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-height: 28rem;
+    }
+    .stage h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 500;
+    }
+    .stage-meta {
+      margin: 0;
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+    .stage-media {
+      flex: 1;
       display: grid;
       place-items: center;
-      padding: 2rem;
+      border: 1px dashed color-mix(in srgb, var(--stage-fg) 35%, transparent);
+      border-radius: var(--radius);
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.22);
+      min-height: 14rem;
     }
-    main {
+    .stage-media .placeholder-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      text-align: center;
+      margin: 0 0 0.5rem;
+    }
+    .stage-media .media-url {
+      font-size: 0.8rem;
+      word-break: break-all;
+      opacity: 0.75;
+      text-align: center;
+    }
+    .stage-media pre, .stage-media .md, .stage-media .hint {
+      width: 100%;
+      max-height: 18rem;
+      overflow: auto;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .stage-media .md h1, .stage-media .md h2, .stage-media .md h3 {
+      font-family: var(--font-display);
+      margin: 0.4rem 0;
+    }
+    .stage-media .md p { margin: 0.4rem 0; }
+    .stage-media .md code {
+      background: rgba(255,255,255,0.12);
+      padding: 0.05em 0.3em;
+      border-radius: 3px;
+    }
+
+    .waiting {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: flex-start;
       max-width: 36rem;
-      line-height: 1.5;
     }
-    h1 { font-weight: 600; font-size: 1.5rem; margin: 0 0 0.75rem; }
-    p { color: var(--muted); margin: 0 0 0.75rem; }
-    code {
-      color: var(--accent);
-      background: rgba(61, 139, 253, 0.12);
-      padding: 0.1em 0.35em;
-      border-radius: 4px;
+    .waiting .pulse {
+      width: 2.5rem;
+      height: 0.35rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #2dd4bf, #38bdf8, #2dd4bf);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s linear infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .waiting .pulse { animation: none; opacity: 0.7; }
+      * { scroll-behavior: auto !important; }
+    }
+
+    .rail {
+      background: #f7faf8;
+      border-left: 1px solid var(--line);
+      padding: 0.85rem 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 70vh;
+      overflow: auto;
+    }
+    .rail h3 {
+      margin: 0;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .rail .topic {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      color: var(--teal-deep);
+    }
+
+    .tablist, .btn-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .tablist [role="tab"], .btn-list button, .matrix button, .accordion-trigger, .legacy-btn {
+      width: 100%;
+      text-align: left;
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      padding: 0.55rem 0.7rem;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+    .tablist [role="tab"][aria-selected="true"],
+    .btn-list button[aria-pressed="true"],
+    .matrix button[aria-pressed="true"],
+    .legacy-btn[aria-pressed="true"] {
+      border-color: var(--teal);
+      background: var(--sand);
+      color: var(--teal-deep);
+      box-shadow: inset 3px 0 0 var(--teal);
+    }
+    .tablist [role="tab"]:hover,
+    .btn-list button:hover,
+    .matrix button:hover,
+    .legacy-btn:hover,
+    .accordion-trigger:hover {
+      border-color: var(--teal);
+    }
+
+    .matrix {
+      display: grid;
+      gap: 0.35rem;
+      overflow-x: auto;
+    }
+    .matrix .axis-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.25rem;
+    }
+    .matrix button {
+      min-height: 2.6rem;
+      font-size: 0.78rem;
+      padding: 0.35rem;
+    }
+    .matrix button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .accordion { display: flex; flex-direction: column; gap: 0.35rem; }
+    .accordion-item {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+    .accordion-trigger {
+      border: 0;
+      border-radius: var(--radius);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      background: transparent;
+    }
+    .accordion-trigger .chev {
+      transition: transform 0.15s ease;
+      color: var(--teal);
+    }
+    .accordion-trigger[aria-expanded="true"] .chev {
+      transform: rotate(90deg);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .accordion-trigger .chev { transition: none; }
+    }
+    .accordion-panel {
+      padding: 0 0.55rem 0.55rem;
+      display: none;
+    }
+    .accordion-panel.open { display: block; }
+    .subtopic-select {
+      width: 100%;
+      text-align: left;
+      margin-top: 0.3rem;
+      background: var(--sand);
+      border: 1px solid var(--line);
+      color: var(--teal-deep);
+      font-weight: 600;
+      padding: 0.4rem 0.55rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    .ask-box {
+      border-top: 1px solid var(--line);
+      padding-top: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .ask-box textarea {
+      width: 100%;
+      min-height: 3rem;
+      font: inherit;
+      padding: 0.45rem 0.55rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .status-line {
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--ink-soft);
+    }
+    .status-line[data-tone="error"] { color: var(--danger); }
+    .status-line[data-tone="ok"] { color: var(--teal-deep); }
+
+    details.dev {
+      margin-top: 1rem;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      padding: 0.4rem 0.75rem 0.75rem;
+      background: color-mix(in srgb, #fff 70%, var(--sand));
+    }
+    details.dev summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink-soft);
+      padding: 0.35rem 0;
+    }
+    details.dev pre {
+      margin: 0.5rem 0 0;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--ink);
+    }
+
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+      .rail {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        max-height: none;
+      }
+      .query-bar { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>AVLP Master — placeholder</h1>
-    <p>
-      Gateway HTTP/JSON activo. El Stage + botonera del contrato llega en el PR 6.2
-      (<code>web/index.html</code> completo).
-    </p>
-    <p>API: <code>POST /api/query</code>, <code>GET /api/nodes/{id}</code>, estaciones y mutaciones.</p>
-  </main>
+  <a class="skip-link" href="#stage">Saltar al Stage</a>
+  <div class="app">
+    <header class="brand">
+      <h1>AVLP Master</h1>
+      <p>Prototipo del nodo interactivo: Stage ~70% y botonera ~30%, conectado al router real.</p>
+    </header>
+
+    <form class="query-bar" id="query-form" aria-label="Buscar nodo pedagógico">
+      <div>
+        <label for="doubt">Tu duda</label>
+        <textarea id="doubt" name="doubt" required placeholder="Escribí tu duda en español…"></textarea>
+      </div>
+      <div class="query-actions">
+        <div class="frustration">
+          <label for="frustration">Frustración (opcional)</label>
+          <input id="frustration" type="range" min="0" max="1" step="0.05" value="0.35" />
+        </div>
+        <button type="submit" id="btn-query">Buscar estación</button>
+      </div>
+    </form>
+
+    <div class="hints" aria-label="Ejemplos de duda">
+      <button type="button" data-hint="no entiendo para qué sirve el archivo .env, ¿me lo mostrás con un diagrama?">.env / diagrama</button>
+      <button type="button" data-hint="estoy perdido: ¿qué diferencia hay entre un parámetro y una variable normal?">variables y scope</button>
+      <button type="button" data-hint="async await analogía animada">async/await</button>
+      <button type="button" data-hint="PostGIS ST_DWithin profundidad y formatos">PostGIS matriz</button>
+      <button type="button" data-hint="¿Qué es un Automóvil? caja central y motor">automóvil</button>
+      <button type="button" data-hint="Estoy bloqueado con un tema nuevo de PostGIS ST_DWithin que no está en la ruta estática">duda novel (live)</button>
+    </div>
+
+    <div class="workspace" aria-label="Nodo interactivo">
+      <section class="stage" id="stage" aria-labelledby="stage-title" aria-live="polite" aria-atomic="false">
+        <h2 id="stage-title">Esperando tu duda</h2>
+        <p class="stage-meta" id="stage-meta">El Stage muestra el clip o contenido activo.</p>
+        <div class="stage-media" id="stage-media">
+          <div>
+            <p class="placeholder-title">Escribí una duda arriba para cargar un nodo</p>
+            <p class="media-url">Layout del contrato: reproductor central + botonera lateral</p>
+          </div>
+        </div>
+      </section>
+
+      <aside class="rail" aria-label="Botonera DUA">
+        <h3>Botonera</h3>
+        <p class="topic" id="rail-topic">Sin nodo cargado</p>
+        <div id="rail-body">
+          <p style="margin:0;color:var(--ink-soft);font-size:0.92rem;">Cuando haya un nodo interactivo, acá aparecen profundidad, estilos, matriz o el acordeón de subtemas.</p>
+        </div>
+        <div class="ask-box" id="ask-box" hidden>
+          <label for="ask-doubt"><strong>+ Tengo una duda diferente</strong></label>
+          <textarea id="ask-doubt" placeholder="Otra duda sobre este nodo…"></textarea>
+          <button type="button" id="btn-mutate" class="secondary">Generar botón en vivo</button>
+        </div>
+      </aside>
+    </div>
+
+    <p class="status-line" id="status" role="status" aria-live="polite"></p>
+
+    <details class="dev">
+      <summary>Panel de desarrollo (plegado)</summary>
+      <pre id="dev-panel" aria-label="Estado de desarrollo"></pre>
+    </details>
+  </div>
+
+  <script>
+(function () {
+  "use strict";
+
+  const VE_LABELS = ["Dominio", "Sensorial", "Frustración", "Ritmo", "Autonomía"];
+  const studentId = "stu-" + Math.random().toString(36).slice(2, 10) + "-" + Date.now().toString(36);
+  let ve = [0.5, 0.5, 0.5, 0.5, 0.5];
+  let lastSimilarity = null;
+  let currentNode = null;
+  let pollTimer = null;
+  let activeTabId = null;
+
+  const el = {
+    form: document.getElementById("query-form"),
+    doubt: document.getElementById("doubt"),
+    frustration: document.getElementById("frustration"),
+    stageTitle: document.getElementById("stage-title"),
+    stageMeta: document.getElementById("stage-meta"),
+    stageMedia: document.getElementById("stage-media"),
+    railTopic: document.getElementById("rail-topic"),
+    railBody: document.getElementById("rail-body"),
+    askBox: document.getElementById("ask-box"),
+    askDoubt: document.getElementById("ask-doubt"),
+    btnMutate: document.getElementById("btn-mutate"),
+    status: document.getElementById("status"),
+    dev: document.getElementById("dev-panel"),
+  };
+
+  function setStatus(msg, tone) {
+    el.status.textContent = msg || "";
+    el.status.dataset.tone = tone || "";
+  }
+
+  function clamp01(x) {
+    return Math.max(0, Math.min(1, x));
+  }
+
+  function applyDelta(delta) {
+    if (!Array.isArray(delta) || !delta.length) return;
+    for (let i = 0; i < ve.length; i++) {
+      ve[i] = clamp01(ve[i] + (Number(delta[i]) || 0));
+    }
+    renderDev();
+  }
+
+  function renderDev() {
+    const lines = [
+      "student_id (sesión en memoria): " + studentId,
+      "V_e estimado (sesión; se actualiza con preference_delta de Record*):",
+      ve.map((v, i) => "  [" + i + "] " + VE_LABELS[i] + " = " + v.toFixed(3)).join("\n"),
+      "última similitud de ruteo: " + (lastSimilarity == null ? "—" : Number(lastSimilarity).toFixed(4)),
+      "nodo actual: " + (currentNode && currentNode.node_id ? currentNode.node_id : "—"),
+    ];
+    el.dev.textContent = lines.join("\n");
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function simpleMarkdown(md) {
+    const lines = String(md || "").split(/\r?\n/);
+    const out = [];
+    let inCode = false;
+    let codeBuf = [];
+    function flushCode() {
+      if (!codeBuf.length) return;
+      out.push("<pre><code>" + escapeHtml(codeBuf.join("\n")) + "</code></pre>");
+      codeBuf = [];
+    }
+    for (const raw of lines) {
+      if (raw.trim().startsWith("```")) {
+        if (inCode) { flushCode(); inCode = false; }
+        else { inCode = true; }
+        continue;
+      }
+      if (inCode) { codeBuf.push(raw); continue; }
+      let line = escapeHtml(raw);
+      line = line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      line = line.replace(/`([^`]+)`/g, "<code>$1</code>");
+      if (/^### /.test(raw)) out.push("<h3>" + escapeHtml(raw.slice(4)) + "</h3>");
+      else if (/^## /.test(raw)) out.push("<h2>" + escapeHtml(raw.slice(3)) + "</h2>");
+      else if (/^# /.test(raw)) out.push("<h1>" + escapeHtml(raw.slice(2)) + "</h1>");
+      else if (/^[-*] /.test(raw)) out.push("<li>" + line.replace(/^[-*] /, "") + "</li>");
+      else if (raw.trim() === "") out.push("");
+      else out.push("<p>" + line + "</p>");
+    }
+    flushCode();
+    return out.join("\n");
+  }
+
+  function schemaKind(schema) {
+    const k = (schema && schema.kind) || "";
+    const s = String(k).toLowerCase();
+    if (s.includes("depth") || s === "1") return "depth";
+    if (s.includes("cognitive") || s === "2") return "cognitive";
+    if (s.includes("emergency") || s === "3") return "emergency";
+    if (s.includes("combined") || s === "4") return "combined";
+    if (s.includes("flat") || s === "0") return "flat";
+    return s || "flat";
+  }
+
+  function actionIsAsk(btn) {
+    const a = String(btn.action_type || "").toUpperCase();
+    return a.includes("ASK_AGENT") || a === "2" || btn.id_btn === "ask_different";
+  }
+
+  async function api(path, opts) {
+    const res = await fetch(path, opts);
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) { data = { message: text }; }
+    if (!res.ok) {
+      const err = new Error((data && (data.student_message || data.message)) || res.statusText);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  function stopPoll() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function showWaiting(message, tracking) {
+    el.stageTitle.textContent = "Preparando tu estación";
+    el.stageMeta.textContent = tracking ? ("seguimiento " + tracking) : "";
+    el.stageMedia.innerHTML =
+      '<div class="waiting">' +
+      '<div class="pulse" aria-hidden="true"></div>' +
+      "<p><strong>" + escapeHtml(message || "Estamos preparando una estación para tu duda.") + "</strong></p>" +
+      "<p>Seguimos consultando el estado; este mensaje se actualiza solo.</p>" +
+      "</div>";
+    el.railTopic.textContent = "Estación en vivo";
+    el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Cuando esté lista, el contenido aparece en el Stage.</p>";
+    el.askBox.hidden = true;
+  }
+
+  function showStageContent(title, meta, contentHtml) {
+    el.stageTitle.textContent = title || "Stage";
+    el.stageMeta.textContent = meta || "";
+    el.stageMedia.innerHTML = contentHtml;
+  }
+
+  function mediaPlaceholder(title, mediaUrl, extraHtml) {
+    return (
+      "<div>" +
+      '<p class="placeholder-title">' + escapeHtml(title || "Clip activo") + "</p>" +
+      (mediaUrl ? '<p class="media-url">' + escapeHtml(mediaUrl) + "</p>" : "") +
+      (extraHtml || "") +
+      '<p class="media-url" style="margin-top:0.75rem">Vista prototipo: la URL del contrato se muestra aunque el CDN de ejemplo no sirva bytes.</p>' +
+      "</div>"
+    );
+  }
+
+  function setStageFromMedia(opts) {
+    const title = opts.title || (currentNode && currentNode.titulo) || "Stage";
+    const meta = opts.meta || "";
+    if (opts.hintText) {
+      showStageContent(title, meta, '<div class="hint">' + escapeHtml(opts.hintText) + "</div>");
+      return;
+    }
+    if (opts.cellCode) {
+      showStageContent(title, meta, "<pre><code>" + escapeHtml(opts.cellCode) + "</code></pre>");
+      return;
+    }
+    if (opts.markdown) {
+      showStageContent(title, meta, '<div class="md">' + simpleMarkdown(opts.markdown) + "</div>");
+      return;
+    }
+    showStageContent(title, meta, mediaPlaceholder(opts.clipTitle || title, opts.mediaUrl));
+  }
+
+  async function recordBotonera(variantId, formatId, preferenceDelta, kind) {
+    if (!currentNode) return;
+    const body = {
+      node_id: currentNode.node_id,
+      student_id: studentId,
+      schema_kind: kind || (currentNode.botonera_schema && currentNode.botonera_schema.kind) || "BOTONERA_SCHEMA_FLAT",
+      variant_id: variantId,
+      format_id: formatId || "",
+      preference_delta: preferenceDelta || [],
+      timestamp_unix_ms: Date.now(),
+    };
+    try {
+      await api("/api/interactions/botonera", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      applyDelta(preferenceDelta);
+      setStatus("Preferencia registrada en el perfil.", "ok");
+    } catch (e) {
+      setStatus("No pude registrar la botonera: " + e.message, "error");
+    }
+  }
+
+  async function recordSubtopic(subtopicId, pathIds, orbitDelta) {
+    if (!currentNode) return;
+    const body = {
+      parent_node_id: currentNode.node_id,
+      student_id: studentId,
+      subtopic_id: subtopicId,
+      path_ids: pathIds || [],
+      preference_delta: orbitDelta || [],
+      timestamp_unix_ms: Date.now(),
+    };
+    try {
+      await api("/api/interactions/subtopic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      applyDelta(orbitDelta);
+      setStatus("Subtema registrado.", "ok");
+    } catch (e) {
+      setStatus("No pude registrar el subtema: " + e.message, "error");
+    }
+  }
+
+  function renderLegacyButtons(buttons, mount) {
+    const list = document.createElement("div");
+    list.className = "btn-list";
+    list.setAttribute("role", "group");
+    list.setAttribute("aria-label", "Botones del nodo");
+    (buttons || []).forEach(function (btn) {
+      if (actionIsAsk(btn)) return; // handled by ask-box
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "legacy-btn";
+      b.textContent = btn.label || btn.id_btn;
+      if (btn.is_live_generated) b.textContent = (btn.label || "LIVE") + " ✦";
+      b.addEventListener("click", async function () {
+        list.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+        b.setAttribute("aria-pressed", "true");
+        setStageFromMedia({
+          title: currentNode.titulo,
+          meta: btn.is_live_generated ? "Generado en vivo" : "Botón legacy",
+          mediaUrl: btn.media_url,
+          cellCode: btn.cell_code,
+          clipTitle: btn.label,
+        });
+        // Legacy flat: RecordBotonera with variant_id = id_btn
+        await recordBotonera(btn.id_btn, "", btn.vector_delta, "BOTONERA_SCHEMA_FLAT");
+      });
+      list.appendChild(b);
+    });
+    mount.appendChild(list);
+  }
+
+  function renderSchemaTabs(options, kind, mount) {
+    const tablist = document.createElement("div");
+    tablist.className = "tablist";
+    tablist.setAttribute("role", "tablist");
+    tablist.setAttribute("aria-label", "Opciones de botonera");
+    const tabs = [];
+
+    options.forEach(function (opt, idx) {
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.setAttribute("role", "tab");
+      tab.id = "tab-" + (opt.variant_id || idx);
+      tab.setAttribute("aria-selected", "false");
+      tab.setAttribute("tabindex", idx === 0 ? "0" : "-1");
+      tab.textContent = opt.label || opt.variant_id;
+      tab.addEventListener("click", async function () {
+        activateTab(idx);
+        setStageFromMedia({
+          title: currentNode.titulo,
+          meta: kind,
+          mediaUrl: opt.media_url || opt.walkthrough_url,
+          cellCode: opt.cell_code,
+          hintText: opt.hint_text,
+          clipTitle: opt.label,
+        });
+        await recordBotonera(opt.variant_id, "", opt.preference_delta, currentNode.botonera_schema.kind);
+      });
+      tab.addEventListener("keydown", function (ev) {
+        const keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+        if (!(ev.key in keys)) return;
+        ev.preventDefault();
+        const next = (idx + keys[ev.key] + options.length) % options.length;
+        tabs[next].focus();
+        tabs[next].click();
+      });
+      tabs.push(tab);
+      tablist.appendChild(tab);
+    });
+
+    function activateTab(i) {
+      tabs.forEach(function (t, j) {
+        t.setAttribute("aria-selected", j === i ? "true" : "false");
+        t.setAttribute("tabindex", j === i ? "0" : "-1");
+      });
+      activeTabId = options[i] && options[i].variant_id;
+    }
+
+    mount.appendChild(tablist);
+  }
+
+  function renderCombinedMatrix(schema, mount) {
+    const depths = schema.depth_axis || [];
+    const formats = schema.format_axis || [];
+    const cells = schema.matrix_cells || [];
+    const byKey = {};
+    cells.forEach(function (c) {
+      byKey[c.depth_id + "|" + c.format_id] = c;
+    });
+
+    const grid = document.createElement("div");
+    grid.className = "matrix";
+    grid.style.gridTemplateColumns = "minmax(4.5rem,auto) repeat(" + formats.length + ", minmax(4.5rem,1fr))";
+    grid.setAttribute("role", "grid");
+    grid.setAttribute("aria-label", "Matriz profundidad × formato");
+
+    const corner = document.createElement("div");
+    corner.className = "axis-label";
+    corner.textContent = "prof. \\ fmt";
+    grid.appendChild(corner);
+    formats.forEach(function (f) {
+      const h = document.createElement("div");
+      h.className = "axis-label";
+      h.textContent = f;
+      grid.appendChild(h);
+    });
+
+    depths.forEach(function (d) {
+      const lab = document.createElement("div");
+      lab.className = "axis-label";
+      lab.textContent = d;
+      grid.appendChild(lab);
+      formats.forEach(function (f) {
+        const cell = byKey[d + "|" + f];
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.setAttribute("role", "gridcell");
+        if (!cell) {
+          btn.disabled = true;
+          btn.textContent = "—";
+        } else {
+          btn.textContent = f;
+          btn.title = d + " × " + f;
+          btn.addEventListener("click", async function () {
+            grid.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+            btn.setAttribute("aria-pressed", "true");
+            setStageFromMedia({
+              title: currentNode.titulo,
+              meta: "combined · " + d + " × " + f,
+              mediaUrl: cell.media_url,
+              cellCode: cell.cell_code,
+              clipTitle: d + " / " + f,
+            });
+            await recordBotonera(d, f, cell.preference_delta || [], schema.kind);
+          });
+        }
+        grid.appendChild(btn);
+      });
+    });
+    mount.appendChild(grid);
+  }
+
+  function renderHierarchy(tree, mount) {
+    const root = document.createElement("div");
+    root.className = "accordion";
+    root.setAttribute("aria-label", tree.main_topic_title || "Subtemas");
+
+    const macro = document.createElement("button");
+    macro.type = "button";
+    macro.className = "subtopic-select";
+    macro.textContent = "Vista macro: " + (tree.main_topic_title || "tema");
+    macro.addEventListener("click", function () {
+      setStageFromMedia({
+        title: currentNode.titulo,
+        meta: "Jerarquía · macro",
+        mediaUrl: tree.macro_media_url || currentNode.stage_media_default,
+        clipTitle: tree.main_topic_title,
+      });
+    });
+    mount.appendChild(macro);
+
+    function addNodes(nodes, parentEl, path) {
+      (nodes || []).forEach(function (node) {
+        const item = document.createElement("div");
+        item.className = "accordion-item";
+        const id = "acc-" + node.subtopic_id;
+        const trigger = document.createElement("button");
+        trigger.type = "button";
+        trigger.className = "accordion-trigger";
+        trigger.setAttribute("aria-expanded", "false");
+        trigger.setAttribute("aria-controls", id);
+        trigger.innerHTML = "<span>" + escapeHtml(node.title) + (node.is_optional ? " (opcional)" : "") +
+          '</span><span class="chev" aria-hidden="true">▸</span>';
+
+        const panel = document.createElement("div");
+        panel.className = "accordion-panel";
+        panel.id = id;
+        panel.hidden = true;
+
+        const select = document.createElement("button");
+        select.type = "button";
+        select.className = "subtopic-select";
+        select.textContent = "Abrir en Stage: " + node.title;
+        select.addEventListener("click", async function () {
+          const nextPath = path.concat(node.subtopic_id);
+          setStageFromMedia({
+            title: currentNode.titulo,
+            meta: "Subtema · " + node.title,
+            mediaUrl: node.media_url,
+            clipTitle: node.title,
+          });
+          await recordSubtopic(node.subtopic_id, nextPath, node.orbit_delta);
+        });
+        panel.appendChild(select);
+
+        trigger.addEventListener("click", function () {
+          const open = trigger.getAttribute("aria-expanded") === "true";
+          trigger.setAttribute("aria-expanded", open ? "false" : "true");
+          panel.hidden = open;
+          panel.classList.toggle("open", !open);
+        });
+
+        item.appendChild(trigger);
+        item.appendChild(panel);
+        parentEl.appendChild(item);
+
+        if (node.child_subtopics && node.child_subtopics.length) {
+          const childWrap = document.createElement("div");
+          childWrap.style.marginLeft = "0.55rem";
+          childWrap.style.marginTop = "0.35rem";
+          panel.appendChild(childWrap);
+          addNodes(node.child_subtopics, childWrap, path.concat(node.subtopic_id));
+        }
+      });
+    }
+
+    addNodes(tree.subtopics, root, []);
+    mount.appendChild(root);
+  }
+
+  function renderRail(node) {
+    el.railBody.innerHTML = "";
+    el.railTopic.textContent = (node.botonera_schema && node.botonera_schema.topic_title) ||
+      (node.hierarchy && node.hierarchy.main_topic_title) ||
+      node.titulo ||
+      "Botonera";
+
+    const schema = node.botonera_schema;
+    if (schema) {
+      const kind = schemaKind(schema);
+      if (kind === "depth") renderSchemaTabs(schema.depth_options || [], kind, el.railBody);
+      else if (kind === "cognitive") renderSchemaTabs(schema.cognitive_options || [], kind, el.railBody);
+      else if (kind === "emergency") renderSchemaTabs(schema.emergency_options || [], kind, el.railBody);
+      else if (kind === "combined") renderCombinedMatrix(schema, el.railBody);
+      else if (schema.flat_buttons && schema.flat_buttons.length) renderLegacyButtons(schema.flat_buttons, el.railBody);
+    }
+
+    if (node.hierarchy) {
+      const sep = document.createElement("h3");
+      sep.textContent = "Acordeón / subtemas";
+      sep.style.marginTop = "0.5rem";
+      el.railBody.appendChild(sep);
+      renderHierarchy(node.hierarchy, el.railBody);
+    }
+
+    if (node.botonera && node.botonera.length) {
+      const sep = document.createElement("h3");
+      sep.textContent = "Acciones";
+      sep.style.marginTop = "0.5rem";
+      el.railBody.appendChild(sep);
+      renderLegacyButtons(node.botonera, el.railBody);
+    }
+
+    const hasAsk = (node.botonera || []).some(actionIsAsk) || true;
+    el.askBox.hidden = !hasAsk;
+  }
+
+  async function loadInteractiveNode(nodeId) {
+    const node = await api("/api/nodes/" + encodeURIComponent(nodeId));
+    currentNode = node;
+    renderRail(node);
+    setStageFromMedia({
+      title: node.titulo,
+      meta: (node.dimension_dua || "") + " · interactivo",
+      mediaUrl: node.stage_media_default || (node.hierarchy && node.hierarchy.macro_media_url),
+      clipTitle: node.titulo,
+    });
+    renderDev();
+    setStatus("Nodo interactivo cargado.", "ok");
+  }
+
+  async function handleMatched(matched) {
+    lastSimilarity = matched.similarity_score;
+    renderDev();
+    if (matched.has_interactive_payload) {
+      await loadInteractiveNode(matched.node_id);
+      return;
+    }
+    currentNode = null;
+    el.askBox.hidden = true;
+    el.railTopic.textContent = "Nodo estático";
+    el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Sin payload interactivo. Mostramos el recurso ruteado.</p>";
+    if (matched.live_content) {
+      setStageFromMedia({
+        title: "Estación en vivo",
+        meta: "similitud " + Number(matched.similarity_score || 0).toFixed(3),
+        markdown: matched.live_content,
+      });
+    } else {
+      setStageFromMedia({
+        title: matched.node_id || "Nodo",
+        meta: (matched.dimension_dua || "") + " · sim " + Number(matched.similarity_score || 0).toFixed(3),
+        mediaUrl: matched.resource_url,
+        clipTitle: matched.node_id,
+      });
+    }
+    setStatus(matched.is_live_generated ? "Estación generada en el miss path." : "Match estático.", "ok");
+  }
+
+  async function pollStation(trackingUlid) {
+    stopPoll();
+    const tick = async function () {
+      try {
+        const st = await api("/api/stations/" + encodeURIComponent(trackingUlid) + "?student_id=" + encodeURIComponent(studentId));
+        const msg = st.student_message || "Seguimos preparando tu estación…";
+        if (st.status === "ready") {
+          stopPoll();
+          lastSimilarity = null;
+          if (st.node_id) {
+            try {
+              await loadInteractiveNode(st.node_id);
+              if (st.live_content) {
+                setStageFromMedia({
+                  title: currentNode.titulo || "Estación lista",
+                  meta: "listo · " + (st.retrieved_sources || []).join(", "),
+                  markdown: st.live_content,
+                });
+              }
+            } catch (_) {
+              setStageFromMedia({
+                title: "Estación lista",
+                meta: st.node_id || "",
+                markdown: st.live_content || msg,
+              });
+            }
+          } else {
+            setStageFromMedia({
+              title: "Estación lista",
+              meta: (st.retrieved_sources || []).join(", "),
+              markdown: st.live_content || msg,
+            });
+            el.railTopic.textContent = "Estación en vivo";
+            el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Contenido listo en el Stage.</p>";
+          }
+          setStatus("La estación está lista.", "ok");
+          return;
+        }
+        if (st.status === "failed") {
+          stopPoll();
+          showWaiting(msg, trackingUlid);
+          setStatus(msg, "error");
+          return;
+        }
+        showWaiting(msg, trackingUlid);
+        setStatus(msg, "");
+      } catch (e) {
+        stopPoll();
+        showWaiting((e.data && e.data.student_message) || e.message, trackingUlid);
+        setStatus(e.message, "error");
+      }
+    };
+    await tick();
+    pollTimer = setInterval(tick, 2000);
+  }
+
+  el.form.addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    stopPoll();
+    const queryText = el.doubt.value.trim();
+    if (!queryText) return;
+    const frustration = Number(el.frustration.value);
+    setStatus("Consultando el router…", "");
+    try {
+      const route = await api("/api/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_id: studentId,
+          query_text: queryText,
+          frustration: frustration,
+        }),
+      });
+      if (route.matched) {
+        await handleMatched(route.matched);
+      } else if (route.pending) {
+        currentNode = null;
+        lastSimilarity = null;
+        renderDev();
+        showWaiting(route.pending.message, route.pending.tracking_ulid);
+        setStatus(route.pending.message || "Estación pendiente…", "");
+        await pollStation(route.pending.tracking_ulid);
+      } else {
+        setStatus("Respuesta de ruteo inesperada.", "error");
+      }
+    } catch (e) {
+      setStatus("Error de consulta: " + e.message, "error");
+    }
+  });
+
+  el.btnMutate.addEventListener("click", async function () {
+    if (!currentNode) return;
+    const doubt = el.askDoubt.value.trim();
+    if (!doubt) {
+      setStatus("Escribí la duda diferente antes de generar el botón.", "error");
+      el.askDoubt.focus();
+      return;
+    }
+    el.btnMutate.disabled = true;
+    try {
+      const res = await api("/api/nodes/" + encodeURIComponent(currentNode.node_id) + "/mutate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_id: studentId,
+          doubt_text: doubt,
+          frustration: Number(el.frustration.value),
+        }),
+      });
+      currentNode = res.node || currentNode;
+      renderRail(currentNode);
+      if (res.button) {
+        setStageFromMedia({
+          title: currentNode.titulo,
+          meta: "Nuevo botón en vivo",
+          mediaUrl: res.button.media_url,
+          cellCode: res.button.cell_code,
+          clipTitle: res.button.label,
+        });
+      }
+      el.askDoubt.value = "";
+      setStatus("Botón en vivo agregado a la botonera.", "ok");
+      renderDev();
+    } catch (e) {
+      setStatus("Mutación falló: " + e.message, "error");
+    } finally {
+      el.btnMutate.disabled = false;
+    }
+  });
+
+  document.querySelectorAll(".hints [data-hint]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      el.doubt.value = btn.getAttribute("data-hint");
+      el.doubt.focus();
+    });
+  });
+
+  renderDev();
+})();
+  </script>
 </body>
 </html>
