@@ -123,10 +123,11 @@ func (x *NodeResponse) GetHasInteractivePayload() bool {
 }
 
 type LiveStationPending struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TrackingUlid  string                 `protobuf:"bytes,1,opt,name=tracking_ulid,json=trackingUlid,proto3" json:"tracking_ulid,omitempty"`
-	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // "in_progress"
-	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	TrackingUlid string                 `protobuf:"bytes,1,opt,name=tracking_ulid,json=trackingUlid,proto3" json:"tracking_ulid,omitempty"`
+	Status       string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // "in_progress" | "failed"
+	// Student-facing rogerian message (Spanish); not a technical diagnostic.
+	Message       string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -182,6 +183,142 @@ func (x *LiveStationPending) GetMessage() string {
 	return ""
 }
 
+type LiveStationQuery struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TrackingUlid  string                 `protobuf:"bytes,1,opt,name=tracking_ulid,json=trackingUlid,proto3" json:"tracking_ulid,omitempty"`
+	StudentId     string                 `protobuf:"bytes,2,opt,name=student_id,json=studentId,proto3" json:"student_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LiveStationQuery) Reset() {
+	*x = LiveStationQuery{}
+	mi := &file_router_api_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LiveStationQuery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LiveStationQuery) ProtoMessage() {}
+
+func (x *LiveStationQuery) ProtoReflect() protoreflect.Message {
+	mi := &file_router_api_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LiveStationQuery.ProtoReflect.Descriptor instead.
+func (*LiveStationQuery) Descriptor() ([]byte, []int) {
+	return file_router_api_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *LiveStationQuery) GetTrackingUlid() string {
+	if x != nil {
+		return x.TrackingUlid
+	}
+	return ""
+}
+
+func (x *LiveStationQuery) GetStudentId() string {
+	if x != nil {
+		return x.StudentId
+	}
+	return ""
+}
+
+type LiveStationStatus struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TrackingUlid     string                 `protobuf:"bytes,1,opt,name=tracking_ulid,json=trackingUlid,proto3" json:"tracking_ulid,omitempty"`
+	Status           string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // in_progress | ready | failed
+	StudentMessage   string                 `protobuf:"bytes,3,opt,name=student_message,json=studentMessage,proto3" json:"student_message,omitempty"`
+	NodeId           string                 `protobuf:"bytes,4,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	LiveContent      string                 `protobuf:"bytes,5,opt,name=live_content,json=liveContent,proto3" json:"live_content,omitempty"`
+	RetrievedSources []string               `protobuf:"bytes,6,rep,name=retrieved_sources,json=retrievedSources,proto3" json:"retrieved_sources,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *LiveStationStatus) Reset() {
+	*x = LiveStationStatus{}
+	mi := &file_router_api_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LiveStationStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LiveStationStatus) ProtoMessage() {}
+
+func (x *LiveStationStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_router_api_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LiveStationStatus.ProtoReflect.Descriptor instead.
+func (*LiveStationStatus) Descriptor() ([]byte, []int) {
+	return file_router_api_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *LiveStationStatus) GetTrackingUlid() string {
+	if x != nil {
+		return x.TrackingUlid
+	}
+	return ""
+}
+
+func (x *LiveStationStatus) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *LiveStationStatus) GetStudentMessage() string {
+	if x != nil {
+		return x.StudentMessage
+	}
+	return ""
+}
+
+func (x *LiveStationStatus) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *LiveStationStatus) GetLiveContent() string {
+	if x != nil {
+		return x.LiveContent
+	}
+	return ""
+}
+
+func (x *LiveStationStatus) GetRetrievedSources() []string {
+	if x != nil {
+		return x.RetrievedSources
+	}
+	return nil
+}
+
 type RouteResult struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Outcome:
@@ -195,7 +332,7 @@ type RouteResult struct {
 
 func (x *RouteResult) Reset() {
 	*x = RouteResult{}
-	mi := &file_router_api_proto_msgTypes[2]
+	mi := &file_router_api_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -207,7 +344,7 @@ func (x *RouteResult) String() string {
 func (*RouteResult) ProtoMessage() {}
 
 func (x *RouteResult) ProtoReflect() protoreflect.Message {
-	mi := &file_router_api_proto_msgTypes[2]
+	mi := &file_router_api_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -220,7 +357,7 @@ func (x *RouteResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RouteResult.ProtoReflect.Descriptor instead.
 func (*RouteResult) Descriptor() ([]byte, []int) {
-	return file_router_api_proto_rawDescGZIP(), []int{2}
+	return file_router_api_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RouteResult) GetOutcome() isRouteResult_Outcome {
@@ -281,17 +418,29 @@ const file_router_api_proto_rawDesc = "" +
 	"\x12LiveStationPending\x12#\n" +
 	"\rtracking_ulid\x18\x01 \x01(\tR\ftrackingUlid\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"\x92\x01\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"V\n" +
+	"\x10LiveStationQuery\x12#\n" +
+	"\rtracking_ulid\x18\x01 \x01(\tR\ftrackingUlid\x12\x1d\n" +
+	"\n" +
+	"student_id\x18\x02 \x01(\tR\tstudentId\"\xe2\x01\n" +
+	"\x11LiveStationStatus\x12#\n" +
+	"\rtracking_ulid\x18\x01 \x01(\tR\ftrackingUlid\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12'\n" +
+	"\x0fstudent_message\x18\x03 \x01(\tR\x0estudentMessage\x12\x17\n" +
+	"\anode_id\x18\x04 \x01(\tR\x06nodeId\x12!\n" +
+	"\flive_content\x18\x05 \x01(\tR\vliveContent\x12+\n" +
+	"\x11retrieved_sources\x18\x06 \x03(\tR\x10retrievedSources\"\x92\x01\n" +
 	"\vRouteResult\x128\n" +
 	"\amatched\x18\x01 \x01(\v2\x1c.avlp.vector.v1.NodeResponseH\x00R\amatched\x12>\n" +
 	"\apending\x18\x02 \x01(\v2\".avlp.vector.v1.LiveStationPendingH\x00R\apendingB\t\n" +
-	"\aoutcome2\xd3\x03\n" +
+	"\aoutcome2\xaa\x04\n" +
 	"\fVectorRouter\x12L\n" +
 	"\x10QueryNearestNode\x12\x1b.avlp.vector.v1.VectorQuery\x1a\x1b.avlp.vector.v1.RouteResult\x12Y\n" +
 	"\x12GetInteractiveNode\x12\x1d.avlp.vector.v1.NodeIdRequest\x1a$.avlp.vector.v1.InteractiveVideoNode\x12l\n" +
 	"\x15MutateInteractiveNode\x12(.avlp.vector.v1.MutateInteractiveRequest\x1a).avlp.vector.v1.MutateInteractiveResponse\x12U\n" +
 	"\x19RecordSubtopicInteraction\x12#.avlp.vector.v1.SubtopicInteraction\x1a\x13.avlp.vector.v1.Ack\x12U\n" +
-	"\x19RecordBotoneraInteraction\x12#.avlp.vector.v1.BotoneraInteraction\x1a\x13.avlp.vector.v1.AckB;Z9github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1b\x06proto3"
+	"\x19RecordBotoneraInteraction\x12#.avlp.vector.v1.BotoneraInteraction\x1a\x13.avlp.vector.v1.Ack\x12U\n" +
+	"\x0eGetLiveStation\x12 .avlp.vector.v1.LiveStationQuery\x1a!.avlp.vector.v1.LiveStationStatusB;Z9github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1b\x06proto3"
 
 var (
 	file_router_api_proto_rawDescOnce sync.Once
@@ -305,35 +454,39 @@ func file_router_api_proto_rawDescGZIP() []byte {
 	return file_router_api_proto_rawDescData
 }
 
-var file_router_api_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_router_api_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_router_api_proto_goTypes = []any{
 	(*NodeResponse)(nil),              // 0: avlp.vector.v1.NodeResponse
 	(*LiveStationPending)(nil),        // 1: avlp.vector.v1.LiveStationPending
-	(*RouteResult)(nil),               // 2: avlp.vector.v1.RouteResult
-	(*VectorQuery)(nil),               // 3: avlp.vector.v1.VectorQuery
-	(*NodeIdRequest)(nil),             // 4: avlp.vector.v1.NodeIdRequest
-	(*MutateInteractiveRequest)(nil),  // 5: avlp.vector.v1.MutateInteractiveRequest
-	(*SubtopicInteraction)(nil),       // 6: avlp.vector.v1.SubtopicInteraction
-	(*BotoneraInteraction)(nil),       // 7: avlp.vector.v1.BotoneraInteraction
-	(*InteractiveVideoNode)(nil),      // 8: avlp.vector.v1.InteractiveVideoNode
-	(*MutateInteractiveResponse)(nil), // 9: avlp.vector.v1.MutateInteractiveResponse
-	(*Ack)(nil),                       // 10: avlp.vector.v1.Ack
+	(*LiveStationQuery)(nil),          // 2: avlp.vector.v1.LiveStationQuery
+	(*LiveStationStatus)(nil),         // 3: avlp.vector.v1.LiveStationStatus
+	(*RouteResult)(nil),               // 4: avlp.vector.v1.RouteResult
+	(*VectorQuery)(nil),               // 5: avlp.vector.v1.VectorQuery
+	(*NodeIdRequest)(nil),             // 6: avlp.vector.v1.NodeIdRequest
+	(*MutateInteractiveRequest)(nil),  // 7: avlp.vector.v1.MutateInteractiveRequest
+	(*SubtopicInteraction)(nil),       // 8: avlp.vector.v1.SubtopicInteraction
+	(*BotoneraInteraction)(nil),       // 9: avlp.vector.v1.BotoneraInteraction
+	(*InteractiveVideoNode)(nil),      // 10: avlp.vector.v1.InteractiveVideoNode
+	(*MutateInteractiveResponse)(nil), // 11: avlp.vector.v1.MutateInteractiveResponse
+	(*Ack)(nil),                       // 12: avlp.vector.v1.Ack
 }
 var file_router_api_proto_depIdxs = []int32{
 	0,  // 0: avlp.vector.v1.RouteResult.matched:type_name -> avlp.vector.v1.NodeResponse
 	1,  // 1: avlp.vector.v1.RouteResult.pending:type_name -> avlp.vector.v1.LiveStationPending
-	3,  // 2: avlp.vector.v1.VectorRouter.QueryNearestNode:input_type -> avlp.vector.v1.VectorQuery
-	4,  // 3: avlp.vector.v1.VectorRouter.GetInteractiveNode:input_type -> avlp.vector.v1.NodeIdRequest
-	5,  // 4: avlp.vector.v1.VectorRouter.MutateInteractiveNode:input_type -> avlp.vector.v1.MutateInteractiveRequest
-	6,  // 5: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:input_type -> avlp.vector.v1.SubtopicInteraction
-	7,  // 6: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:input_type -> avlp.vector.v1.BotoneraInteraction
-	2,  // 7: avlp.vector.v1.VectorRouter.QueryNearestNode:output_type -> avlp.vector.v1.RouteResult
-	8,  // 8: avlp.vector.v1.VectorRouter.GetInteractiveNode:output_type -> avlp.vector.v1.InteractiveVideoNode
-	9,  // 9: avlp.vector.v1.VectorRouter.MutateInteractiveNode:output_type -> avlp.vector.v1.MutateInteractiveResponse
-	10, // 10: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:output_type -> avlp.vector.v1.Ack
-	10, // 11: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:output_type -> avlp.vector.v1.Ack
-	7,  // [7:12] is the sub-list for method output_type
-	2,  // [2:7] is the sub-list for method input_type
+	5,  // 2: avlp.vector.v1.VectorRouter.QueryNearestNode:input_type -> avlp.vector.v1.VectorQuery
+	6,  // 3: avlp.vector.v1.VectorRouter.GetInteractiveNode:input_type -> avlp.vector.v1.NodeIdRequest
+	7,  // 4: avlp.vector.v1.VectorRouter.MutateInteractiveNode:input_type -> avlp.vector.v1.MutateInteractiveRequest
+	8,  // 5: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:input_type -> avlp.vector.v1.SubtopicInteraction
+	9,  // 6: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:input_type -> avlp.vector.v1.BotoneraInteraction
+	2,  // 7: avlp.vector.v1.VectorRouter.GetLiveStation:input_type -> avlp.vector.v1.LiveStationQuery
+	4,  // 8: avlp.vector.v1.VectorRouter.QueryNearestNode:output_type -> avlp.vector.v1.RouteResult
+	10, // 9: avlp.vector.v1.VectorRouter.GetInteractiveNode:output_type -> avlp.vector.v1.InteractiveVideoNode
+	11, // 10: avlp.vector.v1.VectorRouter.MutateInteractiveNode:output_type -> avlp.vector.v1.MutateInteractiveResponse
+	12, // 11: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:output_type -> avlp.vector.v1.Ack
+	12, // 12: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:output_type -> avlp.vector.v1.Ack
+	3,  // 13: avlp.vector.v1.VectorRouter.GetLiveStation:output_type -> avlp.vector.v1.LiveStationStatus
+	8,  // [8:14] is the sub-list for method output_type
+	2,  // [2:8] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -346,7 +499,7 @@ func file_router_api_proto_init() {
 	}
 	file_student_state_proto_init()
 	file_interactive_node_proto_init()
-	file_router_api_proto_msgTypes[2].OneofWrappers = []any{
+	file_router_api_proto_msgTypes[4].OneofWrappers = []any{
 		(*RouteResult_Matched)(nil),
 		(*RouteResult_Pending)(nil),
 	}
@@ -356,7 +509,7 @@ func file_router_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_router_api_proto_rawDesc), len(file_router_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -52,16 +52,22 @@ type RouteOutcome struct {
 type Router struct {
 	Index   *Index
 	Bus     *EventBus
-	Live    LiveGenerator // optional RAG pipeline
-	Enabled bool          // when false, miss stays pending-only
+	Live    LiveGenerator  // optional RAG pipeline
+	Ledger  *StationLedger // pending station registry
+	Enabled bool           // when false, miss stays pending-only
 }
 
-// NewRouter wires an index and event bus.
+// NewRouter wires an index and event bus with a station ledger.
 func NewRouter(index *Index, bus *EventBus) *Router {
 	if bus == nil {
 		bus = NewEventBus()
 	}
-	return &Router{Index: index, Bus: bus, Enabled: RAGEnabledFromEnv()}
+	return &Router{
+		Index:   index,
+		Bus:     bus,
+		Ledger:  NewStationLedger(StationTTLFromEnv()),
+		Enabled: RAGEnabledFromEnv(),
+	}
 }
 
 // RAGEnabledFromEnv reads AVLP_RAG_ENABLED (default true).
@@ -132,37 +138,82 @@ func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, 
 	}
 	r.Bus.EmitNodeNotFound(evt)
 
+	liveReq := LiveRequest{
+		StudentID:      studentID,
+		DoubtText:      opt.DoubtText,
+		QueryEmbedding: fitted,
+		Frustration:    opt.Frustration,
+		Dimension:      opt.Dimension,
+		Format:         opt.Format,
+		TrackingULID:   tracking,
+	}
+	if r.Ledger != nil {
+		r.Ledger.RegisterInProgress(tracking, studentID, liveReq)
+	}
+
 	if r.Enabled && r.Live != nil {
-		live, err := r.Live.GenerateLive(ctx, LiveRequest{
-			StudentID:      studentID,
-			DoubtText:      opt.DoubtText,
-			QueryEmbedding: fitted,
-			Frustration:    opt.Frustration,
-			Dimension:      opt.Dimension,
-			Format:         opt.Format,
-			TrackingULID:   tracking,
-		})
+		// Acquire Retrying before GenerateLive so concurrent LookupStation polls
+		// do not start a second generation for the same ULID.
+		if r.Ledger != nil {
+			if _, should, _ := r.Ledger.TryBeginRetry(tracking); !should {
+				status := StationInProgress
+				if rec := r.Ledger.Get(tracking); rec != nil {
+					status = rec.Status
+				}
+				return RouteOutcome{
+					Matched:           false,
+					Similarity:        best,
+					TrackingULID:      tracking,
+					LiveStatus:        status,
+					LiveMessage:       pendingStudentMessage(status),
+					NodeNotFoundEvent: &evt,
+				}, nil
+			}
+		}
+		live, err := r.Live.GenerateLive(ctx, liveReq)
 		if err == nil {
+			if r.Ledger != nil {
+				r.Ledger.MarkReady(tracking, live)
+			}
 			return RouteOutcome{
-				Matched:          true,
-				IsLiveGenerated:  true,
-				Node:             live.Node,
-				Similarity:       best,
-				TrackingULID:     live.TrackingULID,
-				LiveContent:      live.Content,
-				RetrievedSources: append([]string(nil), live.Sources...),
+				Matched:           true,
+				IsLiveGenerated:   true,
+				Node:              live.Node,
+				Similarity:        best,
+				TrackingULID:      live.TrackingULID,
+				LiveContent:       live.Content,
+				RetrievedSources:  append([]string(nil), live.Sources...),
 				NodeNotFoundEvent: &evt,
 			}, nil
 		}
+		if r.Ledger != nil {
+			r.Ledger.MarkFailed(tracking, err.Error())
+		}
 		// fall through to pending on RAG failure
+	}
+
+	status := StationInProgress
+	if r.Ledger != nil {
+		if rec := r.Ledger.Get(tracking); rec != nil {
+			status = rec.Status
+		}
 	}
 
 	return RouteOutcome{
 		Matched:           false,
 		Similarity:        best,
 		TrackingULID:      tracking,
-		LiveStatus:        "in_progress",
-		LiveMessage:       "No static DUA node met the similarity threshold; live station generation requested",
+		LiveStatus:        status,
+		LiveMessage:       pendingStudentMessage(status),
 		NodeNotFoundEvent: &evt,
 	}, nil
+}
+
+func pendingStudentMessage(status string) string {
+	switch status {
+	case StationFailed:
+		return "No encontré material verificado todavía; probemos reformular la duda juntos."
+	default:
+		return "Estamos preparando una estación para tu duda; en un momento va a estar lista. Tu pregunta vale la pena."
+	}
 }
