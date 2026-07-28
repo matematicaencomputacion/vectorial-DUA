@@ -304,11 +304,13 @@ func main() {
 	}
 
 	profiles, profileCloser := openProfileStore()
+	interactions := dua.NewInteractionStoreWithProfiles(profiles)
+	interactions.Logf = log.Printf
 	srvImpl := &server{
 		router:        router,
 		queryEmbedder: emb,
 		profiles:      profiles,
-		interactions:  dua.NewInteractionStoreWithProfiles(profiles),
+		interactions:  interactions,
 	}
 
 	if dua.EnabledFromEnv() {
@@ -410,6 +412,7 @@ func openProfileStore() (dua.ProfileRepository, interface{ Close() error }) {
 	if err != nil {
 		log.Fatalf("profile store: %v", err)
 	}
+	store.Logf = log.Printf
 	log.Printf("profile store: file snapshot at %s", path)
 	return store, store
 }

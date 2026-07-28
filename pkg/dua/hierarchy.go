@@ -2,7 +2,6 @@ package dua
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 )
@@ -178,6 +177,7 @@ type InteractionStore struct {
 	mu       sync.RWMutex
 	seen     map[string]map[string]struct{} // key: student|parent → set of subtopic ids
 	profiles ProfileRepository              // optional; nil => tracking only
+	Logf     Logf                           // optional; nil = silent
 }
 
 // NewInteractionStore creates an empty store.
@@ -220,7 +220,7 @@ func (s *InteractionStore) Record(studentID, parentNodeID, subtopicID string, de
 		return
 	}
 	if _, err := profiles.Apply(studentID, delta); err != nil {
-		log.Printf("interaction profile delta skipped student=%s parent=%s subtopic=%s: %v",
+		s.Logf.printf("interaction profile delta skipped student=%s parent=%s subtopic=%s: %v",
 			studentID, parentNodeID, subtopicID, err)
 	}
 }

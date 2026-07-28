@@ -3,7 +3,6 @@ package dua
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -29,6 +28,7 @@ type FileProfileStore struct {
 	mem      *ProfileStore
 	path     string
 	debounce time.Duration
+	Logf     Logf // optional; nil = silent
 
 	mu             sync.Mutex
 	dirty          bool
@@ -60,7 +60,7 @@ func NewFileProfileStoreWithDebounce(path string, debounce time.Duration) (*File
 		debounce: debounce,
 	}
 	if err := f.load(); err != nil {
-		log.Printf("profile store: snapshot load skipped (%s): %v — starting empty", path, err)
+		f.Logf.printf("profile store: snapshot load skipped (%s): %v — starting empty", path, err)
 	}
 	return f, nil
 }
@@ -113,7 +113,7 @@ func (f *FileProfileStore) scheduleFlush() {
 		f.flushScheduled = false
 		f.mu.Unlock()
 		if err := f.flush(false); err != nil {
-			log.Printf("profile store: flush failed (%s): %v", f.path, err)
+			f.Logf.printf("profile store: flush failed (%s): %v", f.path, err)
 		}
 	})
 }
@@ -222,7 +222,7 @@ func (f *FileProfileStore) load() error {
 	loaded := make(map[string][]float32)
 	for id, ve := range doc.Profiles {
 		if len(ve) != VeDims {
-			log.Printf("profile store: discarding student %q: dims=%d want=%d", id, len(ve), VeDims)
+			f.Logf.printf("profile store: discarding student %q: dims=%d want=%d", id, len(ve), VeDims)
 			continue
 		}
 		loaded[id] = ve
