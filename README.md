@@ -67,7 +67,16 @@ Por defecto el router y el harness usan `HashEmbedder` offline (64 dims, léxico
 | `AVLP_EMBEDDING_TIMEOUT` | Timeout HTTP (default `10s`) |
 | `AVLP_SIMILARITY_THRESHOLD` | Umbral coseno (0–1) cuando el request no trae umbral; default `0.85` |
 
-`0.85` está calibrado para hash/plumbing. Con embedders semánticos calibrá empíricamente (con bge-m3 el punto de partida sugerido es ~`0.55`). La discriminación entre nodos del mismo tema depende de descriptores con *doc-expansion* (preguntas típicas embebidas); usá la matriz de similitud para elegir umbral y prosa con datos:
+`0.85` está calibrado para hash/plumbing. Con **bge-m3** (Ollama, 1024 dims) la calibración con `simmatrix` cerró en umbral **`0.55`**:
+
+| Señal (bge-m3) | Rango de referencia |
+|----------------|---------------------|
+| Match correcto (paráfrasis → nodo esperado) | 0.665–0.765 |
+| Fuera de manifold (novel / live) | ≤ 0.386 |
+| Brecha static−live | ~0.28 |
+| Umbral validado | **0.55** |
+
+La discriminación entre nodos del mismo tema usa *doc-expansion* (preguntas típicas embebidas). Re-calibrá con `simmatrix` al crecer el corpus:
 
 ```bash
 export AVLP_SIMILARITY_THRESHOLD=0.55
@@ -75,7 +84,7 @@ go run ./cmd/harness -suite simmatrix -embedder env   # → harness/out/simmatri
 go run ./cmd/harness -suite evals -embedder env
 ```
 
-Deuda (g): calibración automática al crecer el corpus. El índice de ruteo se construye con las dims del embedder activo (`NewIndexWithDims`). Evals CI usan hash.
+Deuda (g): `simmatrix` existe; falta automatizar la elección del umbral. El índice de ruteo se construye con las dims del embedder activo (`NewIndexWithDims`). Evals CI usan hash.
 
 ## Árbol del repositorio
 

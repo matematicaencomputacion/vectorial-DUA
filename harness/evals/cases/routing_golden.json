@@ -2,7 +2,7 @@
   {
     "case_id": "env-visual-static",
     "description": "Duda sobre .env con preferencia visual → nodo Representacion/visual",
-    "comment": "Paráfrasis natural (no copia el descriptor). Bajo hash → live; con embedder=env → static.",
+    "comment": "Paráfrasis natural (no copia el descriptor). Bajo hash → live; con embedder=env + umbral 0.55 (bge-m3: matches 0.665–0.765, fuera-manifold ≤0.386) → static.",
     "student_id": "stu-env-1",
     "query_embedding": [],
     "query_text": "no entiendo para qué sirve el archivo .env, ¿me lo mostrás con un diagrama?",
@@ -16,7 +16,7 @@
   {
     "case_id": "parameter-conceptual-static",
     "description": "Qué es un parámetro → tarjeta conceptual",
-    "comment": "Paráfrasis natural. Bajo hash → live; con embedder=env → static.",
+    "comment": "Paráfrasis natural. Bajo hash → live; con embedder=env + umbral 0.55 (bge-m3) → static.",
     "student_id": "stu-param-1",
     "query_embedding": [],
     "query_text": "estoy perdido: ¿qué diferencia hay entre un parámetro y una variable normal?",
@@ -30,7 +30,7 @@
   {
     "case_id": "quotes-practica-static",
     "description": "Comillas/string → celda práctica",
-    "comment": "Paráfrasis natural. Bajo hash → live; con embedder=env → static.",
+    "comment": "Paráfrasis natural. Bajo hash → live; con embedder=env + umbral 0.55 (bge-m3) → static.",
     "student_id": "stu-str-1",
     "query_embedding": [],
     "query_text": "mi código se rompe por las comillas del string, ¿puedo probarlo en una celda?",
@@ -44,7 +44,7 @@
   {
     "case_id": "env-compromiso-static",
     "description": "Por qué importan .env y secretos → nodo Compromiso/conceptual",
-    "comment": "Paráfrasis natural. Bajo hash → live; con embedder=env → static.",
+    "comment": "Paráfrasis natural. Bajo hash → live; con embedder=env + umbral 0.55 (bge-m3) → static.",
     "student_id": "stu-eng-1",
     "query_embedding": [],
     "query_text": "¿por qué debería importarme configurar el .env y cuidar los secretos?",
@@ -58,7 +58,7 @@
   {
     "case_id": "env-compromiso-natural-phrasing",
     "description": "Fraseo natural sobre .env → static con embedder semántico; live bajo hash",
-    "comment": "Con HashEmbedder → expected_outcome_hash live. Con embedder=env + umbral ~0.55 y descriptores con doc-expansion (preguntas típicas) debería ser static Compromiso. Usar -suite simmatrix para ver competencia query×nodo. Deuda (g): calibración automática al crecer el corpus.",
+    "comment": "Con HashEmbedder → expected_outcome_hash live. Con embedder=env + umbral 0.55 (bge-m3 calibrado: matches 0.665–0.765, fuera-manifold ≤0.386, brecha ~0.28) y doc-expansion → static Compromiso. Usar -suite simmatrix al re-calibrar. Deuda (g): automatizar elección de umbral al crecer el corpus.",
     "student_id": "stu-eng-natural-1",
     "query_embedding": [],
     "query_text": "¿por qué debería importarme configurar el .env?",

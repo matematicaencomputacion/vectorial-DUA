@@ -11,12 +11,12 @@ Planificar y priorizar mejoras que desbloqueen ruteo semántico real, persistenc
 ## Alcance incluido (Ola 2)
 
 1. **`HTTPEmbedder` real** — ✅ PR 2.1 (`feat/ola2-pr-2.1`): cliente OpenAI-compatible, dims del índice vía embedder activo, sin fallback silencioso.
-2. **Golden adicional con fraseo natural** — ✅ PR 2.2 / 2.3: paráfrasis + `expected_outcome_hash`; umbral sugerido bge-m3 ~0.55; discriminación entre nodos del mismo tema vía descriptores diferenciados.
+2. **Golden adicional con fraseo natural** — ✅ PR 2.2 / 2.3: paráfrasis + `expected_outcome_hash`; umbral bge-m3 validado **0.55** (matches 0.665–0.765, fuera-manifold ≤0.386, brecha ~0.28).
 3. **Persistencia de `ProfileStore`** — Hoy in-memory; sobrevive solo al proceso del router.
 4. **Logger inyectado en `pkg/dua`** — Reemplazar `log.Printf` disperso por interfaz inyectable (tests, niveles, correlación).
 5. **Botones legacy (`Botonera` sin schema)** — Fuera del RPC `RecordBotoneraInteraction`; migración o shim explícito.
 6. **`go` directive en `go.mod`** — Bajar `go 1.26.5` a la versión mínima real soportada por el código y CI.
-7. **Calibración automática de umbral/descriptores** — Parcialmente adelantada por `-suite simmatrix` (matriz query×nodo). Queda automatizar sugerencias de umbral/descriptores al crecer el corpus.
+7. **Calibración automática de umbral/descriptores** — 🟡 Parcialmente resuelto: existe `-suite simmatrix` (matriz query×nodo). Falta automatizar la elección del umbral; **re-calibrar con simmatrix al crecer el corpus**.
 
 ## Fuera de alcance
 
