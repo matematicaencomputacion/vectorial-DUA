@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -30,7 +31,7 @@ type server struct {
 	reg           *dua.Registry
 	mutator       *dua.Mutator
 	queryEmbedder rag.Embedder
-	profiles      *dua.ProfileStore
+	profiles      dua.ProfileRepository
 	interactions  *dua.InteractionStore
 }
 
@@ -302,7 +303,7 @@ func main() {
 		log.Printf("RAG disabled (AVLP_RAG_ENABLED=false)")
 	}
 
-	profiles := dua.NewProfileStore()
+	profiles, profileCloser := openProfileStore()
 	srvImpl := &server{
 		router:        router,
 		queryEmbedder: emb,
@@ -390,6 +391,27 @@ func main() {
 	case <-time.After(5 * time.Second):
 		srv.Stop()
 	}
+	if profileCloser != nil {
+		if err := profileCloser.Close(); err != nil {
+			log.Printf("profile store close: %v", err)
+		} else {
+			log.Printf("profile store flushed")
+		}
+	}
+}
+
+func openProfileStore() (dua.ProfileRepository, interface{ Close() error }) {
+	path := strings.TrimSpace(os.Getenv("AVLP_PROFILE_STORE_PATH"))
+	if path == "" {
+		log.Printf("profile store: in-memory (set AVLP_PROFILE_STORE_PATH to persist)")
+		return dua.NewProfileStore(), nil
+	}
+	store, err := dua.NewFileProfileStore(path)
+	if err != nil {
+		log.Fatalf("profile store: %v", err)
+	}
+	log.Printf("profile store: file snapshot at %s", path)
+	return store, store
 }
 
 func formatFromNodeID(nodeID string) string {
