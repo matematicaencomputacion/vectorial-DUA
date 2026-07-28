@@ -8,15 +8,19 @@ Ola 1 cerró el bucle adaptativo de $V_e$, el ruteo DUA dinámico desde `Student
 
 Planificar y priorizar mejoras que desbloqueen ruteo semántico real, persistencia de perfil y limpieza operativa del stack DUA/router.
 
+## Estado
+
+**Ola 2 saldada por completo** (ítems 1–7 ✅). Tags: `v0.2.1-ola2a` … `v0.2.4-ola2d`. Multi-instancia/SQLite de perfiles queda fuera de esta ola (anotado en ítem 3).
+
 ## Alcance incluido (Ola 2)
 
 1. **`HTTPEmbedder` real** — ✅ PR 2.1 (`feat/ola2-pr-2.1`): cliente OpenAI-compatible, dims del índice vía embedder activo, sin fallback silencioso.
 2. **Golden adicional con fraseo natural** — ✅ PR 2.2 / 2.3: paráfrasis + `expected_outcome_hash`; umbral bge-m3 validado **0.55** (matches 0.665–0.765, fuera-manifold ≤0.386, brecha ~0.28).
 3. **Persistencia de `ProfileStore`** — ✅ PR 3.1: `ProfileRepository` + `FileProfileStore` (snapshot JSON via `AVLP_PROFILE_STORE_PATH`). Multi-instancia / SQLite queda para cuando se necesite.
-4. **Logger inyectado en `pkg/dua`** — Reemplazar `log.Printf` disperso por interfaz inyectable (tests, niveles, correlación).
-5. **Botones legacy (`Botonera` sin schema)** — Fuera del RPC `RecordBotoneraInteraction`; migración o shim explícito.
-6. **`go` directive en `go.mod`** — Bajar `go 1.26.5` a la versión mínima real soportada por el código y CI.
-7. **Calibración automática de umbral/descriptores** — 🟡 Parcialmente resuelto: existe `-suite simmatrix` (matriz query×nodo). Falta automatizar la elección del umbral; **re-calibrar con simmatrix al crecer el corpus**.
+4. **Logger inyectado en `pkg/dua`** — ✅ PR 4.1: campo `Logf` opcional (nil = silencioso); router inyecta `log.Printf`.
+5. **Botones legacy (`Botonera` sin schema)** — ✅ PR 4.1: `HasBotoneraVariant` acepta `id_btn`; `vector_delta` legacy nunca se aplica a $V_e$.
+6. **`go` directive en `go.mod`** — ✅ PR 4.1: bajado a `go 1.25.0` (mínimo real; `grpc` v1.82 exige ≥1.25; 1.24 no compila).
+7. **Calibración automática de umbral/descriptores** — ✅ PR 4.1: `-suite calibrate` sugiere umbral (punto medio worst_correct / best_incorrect) + margen; re-correr al crecer el corpus.
 
 ## Fuera de alcance
 

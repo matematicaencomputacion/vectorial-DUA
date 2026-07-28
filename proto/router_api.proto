@@ -13,9 +13,9 @@ service VectorRouter {
   rpc GetInteractiveNode(NodeIdRequest) returns (InteractiveVideoNode);
   rpc MutateInteractiveNode(MutateInteractiveRequest) returns (MutateInteractiveResponse);
   rpc RecordSubtopicInteraction(SubtopicInteraction) returns (Ack);
-  // Limitation (current phase): this RPC validates only node-level botonera_schema
-  // variants. Legacy node-level flat botonera entries (InteractiveVideoNode.botonera)
-  // are not resolved here and return NotFound.
+  // Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
+  // Legacy vector_delta is content-embedding space and is NEVER applied to V_e;
+  // without a client preference_delta the RPC returns Ack without Apply.
   rpc RecordBotoneraInteraction(BotoneraInteraction) returns (Ack);
 }
 
