@@ -170,6 +170,56 @@ func TestFileProfileStoreDebounceFewerWritesThanApplies(t *testing.T) {
 	}
 }
 
+func TestFileProfileStoreFlushFailureKeepsDirtyAndRetries(t *testing.T) {
+	dir := t.TempDir()
+	goodPath := filepath.Join(dir, "profiles.json")
+	// Parent path component is a file → MkdirAll fails for nested snapshot.
+	blocked := filepath.Join(dir, "blocked")
+	if err := os.WriteFile(blocked, []byte("not-a-dir"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	badPath := filepath.Join(blocked, "profiles.json")
+
+	store, err := dua.NewFileProfileStoreWithDebounce(goodPath, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	want, err := store.Apply("stu-1", []float32{0.15, 0, 0, 0, 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store.Relocate(badPath)
+	if err := store.Flush(); err == nil {
+		t.Fatal("expected flush failure on invalid path")
+	}
+	if store.WriteCount() != 0 {
+		t.Fatalf("expected no durable write after failure, got %d", store.WriteCount())
+	}
+
+	store.Relocate(goodPath)
+	if err := store.Flush(); err != nil {
+		t.Fatalf("retry flush: %v", err)
+	}
+	if store.WriteCount() != 1 {
+		t.Fatalf("writes=%d want 1", store.WriteCount())
+	}
+
+	reloaded, err := dua.NewFileProfileStoreWithDebounce(goodPath, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reloaded.Close()
+	got := reloaded.Get("stu-1")
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("persisted mismatch at %d: got=%v want=%v", i, got[i], want[i])
+		}
+	}
+}
+
 func TestFileProfileStoreConcurrentAppliesRace(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "profiles.json")

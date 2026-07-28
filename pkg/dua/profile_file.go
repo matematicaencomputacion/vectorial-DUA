@@ -118,6 +118,13 @@ func (f *FileProfileStore) scheduleFlush() {
 	})
 }
 
+// Relocate changes the snapshot path (tests / recovery after a bad mount).
+func (f *FileProfileStore) Relocate(path string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.path = filepath.Clean(path)
+}
+
 func (f *FileProfileStore) flush(force bool) error {
 	f.mu.Lock()
 	if !force && !f.dirty {
@@ -128,6 +135,21 @@ func (f *FileProfileStore) flush(force bool) error {
 	path := f.path
 	f.mu.Unlock()
 
+	if err := f.writeSnapshot(path); err != nil {
+		f.mu.Lock()
+		f.dirty = true
+		closed := f.closed
+		f.mu.Unlock()
+		if !closed {
+			f.scheduleFlush()
+		}
+		return err
+	}
+	f.writes.Add(1)
+	return nil
+}
+
+func (f *FileProfileStore) writeSnapshot(path string) error {
 	snap := f.mem.Snapshot()
 	doc := profileSnapshotFile{
 		Version:  profileSnapshotVersion,
@@ -171,7 +193,6 @@ func (f *FileProfileStore) flush(force bool) error {
 		return fmt.Errorf("rename snapshot: %w", err)
 	}
 	cleanup = false
-	f.writes.Add(1)
 	return nil
 }
 
