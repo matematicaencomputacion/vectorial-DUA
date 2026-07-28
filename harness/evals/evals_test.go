@@ -40,7 +40,7 @@ func (b liveBridge) GenerateLive(ctx context.Context, req vector.LiveRequest) (v
 
 func TestGoldenRoutingEvalsPass(t *testing.T) {
 	idx := vector.NewIndex()
-	if err := vector.SeedDemoNodes(idx); err != nil {
+	if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
 		t.Fatal(err)
 	}
 	store := rag.NewStore()

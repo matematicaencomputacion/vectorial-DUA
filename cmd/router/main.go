@@ -26,11 +26,12 @@ const defaultAddr = ":50051"
 
 type server struct {
 	vectorv1.UnimplementedVectorRouterServer
-	router       *vector.Router
-	reg          *dua.Registry
-	mutator      *dua.Mutator
-	profiles     *dua.ProfileStore
-	interactions *dua.InteractionStore
+	router        *vector.Router
+	reg           *dua.Registry
+	mutator       *dua.Mutator
+	queryEmbedder rag.Embedder
+	profiles      *dua.ProfileStore
+	interactions  *dua.InteractionStore
 }
 
 const ackRecorded = "recorded"
@@ -98,7 +99,16 @@ func (s *server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 		FrustrationProvided: frustrationProvided,
 	})
 
-	outcome, err := s.router.QueryNearestWithOptions(ctx, studentID, req.GetQueryEmbedding(), req.GetMinSimilarityThreshold(), vector.QueryOptions{
+	queryEmbedding := append([]float32(nil), req.GetQueryEmbedding()...)
+	if len(queryEmbedding) == 0 && req.GetQueryText() != "" && s.queryEmbedder != nil {
+		embedded, err := s.queryEmbedder.Embed(ctx, req.GetQueryText())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "embed query_text: %v", err)
+		}
+		queryEmbedding = embedded
+	}
+
+	outcome, err := s.router.QueryNearestWithOptions(ctx, studentID, queryEmbedding, req.GetMinSimilarityThreshold(), vector.QueryOptions{
 		DoubtText:   req.GetQueryText(),
 		Frustration: resolvedFrustration,
 		Dimension:   dimension,
@@ -244,7 +254,7 @@ func main() {
 	}
 
 	index := vector.NewIndex()
-	if err := vector.SeedDemoNodes(index); err != nil {
+	if err := vector.SeedDemoNodes(index, rag.DefaultEmbedder()); err != nil {
 		log.Fatalf("seed demo nodes: %v", err)
 	}
 
@@ -286,9 +296,10 @@ func main() {
 
 	profiles := dua.NewProfileStore()
 	srvImpl := &server{
-		router:       router,
-		profiles:     profiles,
-		interactions: dua.NewInteractionStoreWithProfiles(profiles),
+		router:        router,
+		queryEmbedder: rag.DefaultEmbedder(),
+		profiles:      profiles,
+		interactions:  dua.NewInteractionStoreWithProfiles(profiles),
 	}
 
 	if dua.EnabledFromEnv() {

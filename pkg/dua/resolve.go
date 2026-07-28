@@ -31,12 +31,12 @@ func ResolveRoutingHints(in ResolveRoutingHintsInput) (dimension, format string,
 }
 
 func inferDimension(dims []float32, frustration float32) string {
+	if frustration >= 0.65 {
+		return string(Accion)
+	}
 	autonomia := dimAt(dims, 4)
 	if autonomia >= 0.70 {
 		return string(Compromiso)
-	}
-	if frustration >= 0.65 {
-		return string(Accion)
 	}
 	return string(Representacion)
 }

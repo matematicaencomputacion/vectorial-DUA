@@ -43,6 +43,16 @@ func TestResolveRoutingHints_InferDimensionCompromisoFromAutonomia(t *testing.T)
 	}
 }
 
+func TestResolveRoutingHints_FrustrationOverridesAutonomia(t *testing.T) {
+	dim, _, _ := dua.ResolveRoutingHints(dua.ResolveRoutingHintsInput{
+		Dimensions:          []float32{0.4, 0.4, 0.9, 0.4, 0.8},
+		FrustrationProvided: false,
+	})
+	if dim != string(dua.Accion) {
+		t.Fatalf("dimension=%s want=%s", dim, dua.Accion)
+	}
+}
+
 func TestResolveRoutingHints_InferDimensionRepresentacionDefault(t *testing.T) {
 	dim, _, _ := dua.ResolveRoutingHints(dua.ResolveRoutingHintsInput{
 		Dimensions:          []float32{0.4, 0.4, 0.3, 0.4, 0.4},

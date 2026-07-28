@@ -104,7 +104,7 @@ func TestIndexUpsertAcceptsFittedContentDims(t *testing.T) {
 
 func TestSeedDemoNodesShareContentDimsWithEmbedder(t *testing.T) {
 	idx := vector.NewIndex()
-	if err := vector.SeedDemoNodes(idx); err != nil {
+	if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
 		t.Fatal(err)
 	}
 	emb := rag.DefaultEmbedder()

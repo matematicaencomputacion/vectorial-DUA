@@ -1,6 +1,7 @@
 package vector
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -151,21 +152,34 @@ func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL str
 	return node, nil
 }
 
+// TextEmbedder is the content embedding contract used by seed loaders.
+type TextEmbedder interface {
+	Embed(ctx context.Context, text string) ([]float32, error)
+}
+
 // SeedDemoNodes loads a small static curriculum for demos/tests.
-// Legacy 5-float literals are explicitly padded into ContentEmbedDims.
-func SeedDemoNodes(idx *Index) error {
+// Embeddings are generated from textual descriptors to share semantic space
+// with query_text embeddings.
+func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
+	if emb == nil {
+		return fmt.Errorf("seed embedder is required")
+	}
 	seeds := []struct {
 		dim, diff, format, url string
-		emb                    []float32
+		text                   string
 	}{
-		{"Representacion", "basico", "visual", "master://nodes/env-diagram", []float32{0.92, 0.10, 0.05, 0.20, 0.15}},
-		{"Accion", "basico", "practica", "ide://cells/env-exercise", []float32{0.88, 0.25, 0.10, 0.30, 0.40}},
-		{"Compromiso", "basico", "conceptual", "agent://analogies/env-story", []float32{0.70, 0.55, 0.35, 0.25, 0.60}},
-		{"Representacion", "basico", "conceptual", "master://nodes/parameter-card", []float32{0.15, 0.90, 0.10, 0.20, 0.25}},
-		{"Accion", "basico", "practica", "ide://cells/string-quotes", []float32{0.20, 0.15, 0.85, 0.30, 0.20}},
+		{"Representacion", "basico", "visual", "master://nodes/env-diagram", "variables de entorno .env visual diagrama representacion"},
+		{"Accion", "basico", "practica", "ide://cells/env-exercise", "ejercicio practico variables de entorno codigo accion"},
+		{"Compromiso", "basico", "conceptual", "agent://analogies/env-story", "por que importan variables de entorno seguridad motivacion compromiso"},
+		{"Representacion", "basico", "conceptual", "master://nodes/parameter-card", "que es un parametro explicacion conceptual representacion"},
+		{"Accion", "basico", "practica", "ide://cells/string-quotes", "comillas strings practica depuracion accion"},
 	}
 	for _, s := range seeds {
-		if _, err := idx.RegisterNode(s.dim, s.diff, s.format, s.url, s.emb); err != nil {
+		vec, err := emb.Embed(context.Background(), s.text)
+		if err != nil {
+			return err
+		}
+		if _, err := idx.RegisterNode(s.dim, s.diff, s.format, s.url, vec); err != nil {
 			return err
 		}
 		// Ensure chronological uniqueness under high-speed registration.

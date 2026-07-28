@@ -51,7 +51,7 @@ func main() {
 
 	runEvals := func() {
 		idx := vector.NewIndex()
-		if err := vector.SeedDemoNodes(idx); err != nil {
+		if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
 			log.Fatalf("seed: %v", err)
 		}
 		store := rag.NewStore()

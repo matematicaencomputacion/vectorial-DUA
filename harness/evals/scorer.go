@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/vectorial-dua/avlp/harness/telemetry"
+	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
@@ -184,11 +185,30 @@ func (r *Runner) Run(cases []Case) Report {
 
 	for _, c := range cases {
 		t0 := time.Now()
-		out, err := r.Router.QueryNearestWithOptions(context.Background(), c.StudentID, c.QueryEmbedding, c.MinSimilarityThreshold, vector.QueryOptions{
+		query := append([]float32(nil), c.QueryEmbedding...)
+		if len(query) == 0 && c.QueryText != "" {
+			var err error
+			query, err = rag.DefaultEmbedder().Embed(context.Background(), c.QueryText)
+			if err != nil {
+				result := CaseResult{CaseID: c.CaseID, Passed: false, Message: fmt.Sprintf("embed query_text: %v", err)}
+				report.Results = append(report.Results, result)
+				report.FailedCases++
+				continue
+			}
+		}
+		dim := c.ExpectedDimensionDUA
+		if dim == "" {
+			dim = "Representacion"
+		}
+		format := c.ExpectedFormat
+		if format == "" {
+			format = "conceptual"
+		}
+		out, err := r.Router.QueryNearestWithOptions(context.Background(), c.StudentID, query, c.MinSimilarityThreshold, vector.QueryOptions{
 			DoubtText:   c.QueryText,
 			Frustration: 0.6,
-			Dimension:   "Representacion",
-			Format:      "conceptual",
+			Dimension:   dim,
+			Format:      format,
 		})
 		if r.Tel != nil {
 			r.Tel.ObserveRouting(time.Since(t0))
