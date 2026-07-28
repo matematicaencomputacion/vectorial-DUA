@@ -76,15 +76,16 @@ Por defecto el router y el harness usan `HashEmbedder` offline (64 dims, léxico
 | Brecha static−live | ~0.28 |
 | Umbral validado | **0.55** |
 
-La discriminación entre nodos del mismo tema usa *doc-expansion* (preguntas típicas embebidas). Re-calibrá con `simmatrix` al crecer el corpus:
+La discriminación entre nodos del mismo tema usa *doc-expansion* (preguntas típicas embebidas). Re-calibrá al crecer el corpus:
 
 ```bash
 export AVLP_SIMILARITY_THRESHOLD=0.55
-go run ./cmd/harness -suite simmatrix -embedder env   # → harness/out/simmatrix.json
+go run ./cmd/harness -suite simmatrix -embedder env    # matriz query×nodo
+go run ./cmd/harness -suite calibrate -embedder env  # → harness/out/calibration.json
 go run ./cmd/harness -suite evals -embedder env
 ```
 
-Deuda (g): `simmatrix` existe; falta automatizar la elección del umbral. El índice de ruteo se construye con las dims del embedder activo (`NewIndexWithDims`). Evals CI usan hash.
+`calibrate` sugiere umbral = punto medio entre la peor similitud correcta y la mejor incorrecta (margen a cada lado; aviso si margen &lt; 0.05). El índice usa las dims del embedder activo. Evals CI usan hash.
 
 ## Perfiles del estudiante ($V_e$)
 

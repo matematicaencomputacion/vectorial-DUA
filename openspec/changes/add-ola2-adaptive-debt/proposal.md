@@ -16,7 +16,7 @@ Planificar y priorizar mejoras que desbloqueen ruteo semántico real, persistenc
 4. **Logger inyectado en `pkg/dua`** — ✅ PR 4.1: campo `Logf` opcional (nil = silencioso); router inyecta `log.Printf`.
 5. **Botones legacy (`Botonera` sin schema)** — ✅ PR 4.1: `HasBotoneraVariant` acepta `id_btn`; `vector_delta` legacy nunca se aplica a $V_e$.
 6. **`go` directive en `go.mod`** — ✅ PR 4.1: bajado a `go 1.25.0` (mínimo real; `grpc` v1.82 exige ≥1.25; 1.24 no compila).
-7. **Calibración automática de umbral/descriptores** — 🟡 Parcialmente resuelto: existe `-suite simmatrix` (matriz query×nodo). Falta automatizar la elección del umbral; **re-calibrar con simmatrix al crecer el corpus**.
+7. **Calibración automática de umbral/descriptores** — ✅ PR 4.1: `-suite calibrate` sugiere umbral (punto medio worst_correct / best_incorrect) + margen; re-correr al crecer el corpus.
 
 ## Fuera de alcance
 

@@ -33,7 +33,7 @@ func (b harnessLiveBridge) GenerateLive(ctx context.Context, req vector.LiveRequ
 }
 
 func main() {
-	suite := flag.String("suite", "evals", "evals | simmatrix | sandbox | load | all")
+	suite := flag.String("suite", "evals", "evals | simmatrix | calibrate | sandbox | load | all")
 	casesPath := flag.String("cases", "harness/evals/cases/routing_golden.json", "golden evals dataset")
 	outDir := flag.String("out", "harness/out", "output directory for reports")
 	addr := flag.String("addr", "127.0.0.1:50051", "router address for load suite")
@@ -125,6 +125,34 @@ func main() {
 		fmt.Printf("simmatrix → %s\n", path)
 	}
 
+	runCalibrate := func() {
+		emb, err := evals.ResolveEmbedder(*embedderMode)
+		if err != nil {
+			log.Fatalf("embedder: %v", err)
+		}
+		if err := rag.EnsureEmbedderDims(context.Background(), emb); err != nil {
+			log.Fatalf("embedder dims: %v", err)
+		}
+		log.Printf("calibrate embedder=%s dims=%d threshold=%.2f", *embedderMode, emb.Dims(), vector.EffectiveDefaultThreshold())
+
+		idx := seedIndex(emb)
+		cases, err := evals.LoadCases(*casesPath)
+		if err != nil {
+			log.Fatalf("load cases: %v", err)
+		}
+		matrix, err := evals.BuildSimMatrix(context.Background(), cases, idx, emb, *embedderMode)
+		if err != nil {
+			log.Fatalf("simmatrix: %v", err)
+		}
+		cal := evals.BuildCalibration(matrix, cases)
+		path := filepath.Join(*outDir, "calibration.json")
+		if err := evals.WriteCalibrationJSON(path, cal); err != nil {
+			log.Fatalf("write calibration: %v", err)
+		}
+		fmt.Print(evals.FormatCalibrationReport(cal))
+		fmt.Printf("calibration → %s\n", path)
+	}
+
 	runSandbox := func() {
 		ex := sandbox.Executor{Policy: sandbox.DefaultPolicy()}
 		res, err := ex.Run(context.Background(), sandbox.Request{
@@ -183,6 +211,8 @@ func main() {
 		runEvals()
 	case "simmatrix":
 		runSimMatrix()
+	case "calibrate":
+		runCalibrate()
 	case "sandbox":
 		runSandbox()
 	case "load":
