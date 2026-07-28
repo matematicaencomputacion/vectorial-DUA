@@ -114,6 +114,58 @@
       background: #fff;
       color: var(--ink);
     }
+    .field-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+    .field-head label { margin-bottom: 0; }
+    .field-head .shortcut-hint {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+    }
+    .input-with-mic {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.45rem;
+      align-items: start;
+    }
+    .mic-btn {
+      width: 2.75rem;
+      min-height: 3.2rem;
+      padding: 0.35rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      color: var(--teal-deep);
+      border: 2px solid var(--teal-deep);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .mic-btn:hover { background: var(--sand); }
+    .mic-btn[aria-pressed="true"] {
+      background: var(--teal);
+      color: #fff;
+      border-color: var(--teal-deep);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 35%, transparent);
+    }
+    .mic-btn[aria-pressed="true"] .mic-pulse {
+      animation: mic-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes mic-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.65; transform: scale(1.08); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .mic-btn[aria-pressed="true"] .mic-pulse { animation: none; }
+    }
+    .mic-btn svg { width: 1.25rem; height: 1.25rem; display: block; }
+    .ask-box .input-with-mic { margin-top: 0.15rem; }
+    .ask-box .mic-btn { min-height: 3rem; }
     .query-actions {
       display: flex;
       flex-direction: column;
@@ -476,8 +528,13 @@
 
     <form class="query-bar" id="query-form" aria-label="Buscar nodo pedagógico">
       <div>
-        <label for="doubt">Tu duda</label>
-        <textarea id="doubt" name="doubt" required placeholder="Escribí tu duda en español…"></textarea>
+        <div class="field-head">
+          <label for="doubt">Tu duda</label>
+          <span class="shortcut-hint" id="doubt-mic-hint" hidden>Atajo: Ctrl+M para dictar</span>
+        </div>
+        <div class="input-with-mic" id="doubt-mic-wrap">
+          <textarea id="doubt" name="doubt" required placeholder="Escribí tu duda en español…"></textarea>
+        </div>
       </div>
       <div class="query-actions">
         <div class="frustration">
@@ -518,8 +575,12 @@
           <p style="margin:0;color:var(--ink-soft);font-size:0.92rem;">Cuando haya un nodo interactivo, acá aparecen profundidad, estilos, matriz o el acordeón de subtemas.</p>
         </div>
         <div class="ask-box" id="ask-box" hidden>
-          <label for="ask-doubt"><strong>+ Tengo una duda diferente</strong></label>
-          <textarea id="ask-doubt" placeholder="Otra duda sobre este nodo…"></textarea>
+          <div class="field-head">
+            <label for="ask-doubt"><strong>+ Tengo una duda diferente</strong></label>
+          </div>
+          <div class="input-with-mic" id="ask-mic-wrap">
+            <textarea id="ask-doubt" placeholder="Otra duda sobre este nodo…"></textarea>
+          </div>
           <button type="button" id="btn-mutate" class="secondary">Generar botón en vivo</button>
         </div>
         <p id="ask-hint" class="ask-hint" hidden style="margin:0;color:var(--ink-soft);font-size:0.92rem;line-height:1.4;">
@@ -548,6 +609,7 @@
   let interactiveSession = false; // true only after successful GetInteractiveNode
   let pollTimer = null;
   let activeTabId = null;
+  let activeVoice = null; // sesión SpeechRecognition activa (o null)
 
   const el = {
     form: document.getElementById("query-form"),
@@ -590,6 +652,9 @@
     el.askHint.hidden = interactiveSession;
     if (!interactiveSession && el.askDoubt) {
       el.askDoubt.value = "";
+    }
+    if (!interactiveSession && activeVoice && activeVoice.textarea === el.askDoubt) {
+      stopActiveVoice({ cancelled: true });
     }
   }
 
@@ -1263,6 +1328,158 @@
 
   setAskMode(false);
   renderDev();
+
+  // —— Dictado por voz (progresivo: solo si el browser expone SpeechRecognition) ——
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+  function micIconSVG() {
+    return '<svg class="mic-pulse" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+      '<path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/>' +
+      "</svg>";
+  }
+
+  function voiceErrorMessage(code) {
+    switch (String(code || "")) {
+      case "not-allowed":
+      case "service-not-allowed":
+        return "No tengo permiso para usar el micrófono. Podés habilitarlo en el navegador o escribir la duda.";
+      case "audio-capture":
+        return "No encontré un micrófono disponible. Revisá el dispositivo o escribí la duda.";
+      case "no-speech":
+        return "No detecté voz. Probá de nuevo o escribí la duda.";
+      case "network":
+        return "El reconocimiento de voz tuvo un problema de red. Probá otra vez o escribí la duda.";
+      case "aborted":
+        return "";
+      default:
+        return "No pude completar el dictado. Probá de nuevo o escribí la duda.";
+    }
+  }
+
+  function stopActiveVoice(opts) {
+    opts = opts || {};
+    if (!activeVoice) return;
+    var session = activeVoice;
+    activeVoice = null;
+    try { session.recognition.onresult = null; session.recognition.onerror = null; session.recognition.onend = null; session.recognition.stop(); } catch (_) {}
+    session.btn.setAttribute("aria-pressed", "false");
+    session.btn.setAttribute("aria-label", session.idleLabel);
+    if (opts.cancelled) {
+      setStatus("Dictado cancelado. Podés editar el texto o volver a dictar.", "ok");
+    }
+  }
+
+  function startVoiceFor(textarea, btn, idleLabel, readyHint) {
+    if (!SpeechRec) return;
+    if (activeVoice && activeVoice.btn === btn) {
+      stopActiveVoice({ cancelled: true });
+      return;
+    }
+    if (activeVoice) {
+      stopActiveVoice({ cancelled: true });
+    }
+
+    var recognition = new SpeechRec();
+    recognition.lang = "es-AR";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    var base = textarea.value;
+    activeVoice = { recognition: recognition, btn: btn, textarea: textarea, base: base, idleLabel: idleLabel };
+
+    btn.setAttribute("aria-pressed", "true");
+    btn.setAttribute("aria-label", "Escuchando… tocá de nuevo para cancelar");
+    setStatus("Escuchando… hablá tu duda. Un segundo toque cancela.", "ok");
+
+    recognition.onresult = function (event) {
+      var interim = "";
+      var finalText = "";
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        var piece = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += piece;
+        else interim += piece;
+      }
+      var prefix = base && String(base).trim() ? String(base).replace(/\s+$/, "") + " " : "";
+      if (finalText) {
+        textarea.value = prefix + finalText.trim();
+        stopActiveVoice({});
+        setStatus(readyHint || "Dictado listo. Revisá el texto y confirmá con el botón correspondiente.", "ok");
+        textarea.focus();
+      } else {
+        textarea.value = prefix + interim;
+      }
+    };
+
+    recognition.onerror = function (event) {
+      var msg = voiceErrorMessage(event && event.error);
+      stopActiveVoice({});
+      if (msg) reportError(null, msg);
+    };
+
+    recognition.onend = function () {
+      if (activeVoice && activeVoice.recognition === recognition) {
+        stopActiveVoice({});
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      stopActiveVoice({});
+      reportError(e, "No pude iniciar el micrófono. Probá de nuevo o escribí la duda.");
+    }
+  }
+
+  function mountMicButton(wrap, textarea, opts) {
+    if (!SpeechRec || !wrap || !textarea) return null;
+    var idleLabel = opts.idleLabel || "Dictar por voz";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "mic-btn";
+    btn.setAttribute("aria-pressed", "false");
+    btn.setAttribute("aria-label", idleLabel);
+    btn.title = opts.title || idleLabel;
+    btn.innerHTML = micIconSVG();
+    btn.addEventListener("click", function () {
+      startVoiceFor(textarea, btn, idleLabel, opts.readyHint);
+    });
+    wrap.appendChild(btn);
+    return btn;
+  }
+
+  var doubtMicHint = document.getElementById("doubt-mic-hint");
+  var doubtMicBtn = mountMicButton(
+    document.getElementById("doubt-mic-wrap"),
+    el.doubt,
+    {
+      idleLabel: "Dictar tu duda por voz",
+      title: "Dictar (Ctrl+M). Segundo toque cancela.",
+      readyHint: "Dictado listo. Revisá el texto y pulsá «Buscar estación».",
+    }
+  );
+  var askMicBtn = mountMicButton(
+    document.getElementById("ask-mic-wrap"),
+    el.askDoubt,
+    {
+      idleLabel: "Dictar la duda diferente por voz",
+      title: "Dictar. Segundo toque cancela.",
+      readyHint: "Dictado listo. Revisá el texto y pulsá «Generar botón en vivo».",
+    }
+  );
+  if (doubtMicBtn && doubtMicHint) {
+    doubtMicHint.hidden = false;
+  }
+
+  document.addEventListener("keydown", function (ev) {
+    if (!(ev.ctrlKey || ev.metaKey) || String(ev.key).toLowerCase() !== "m") return;
+    if (!doubtMicBtn) return;
+    var tag = (ev.target && ev.target.tagName) || "";
+    // Permitir desde textarea de duda u otros controles; no interferir con inputs de contraseña ajenos.
+    if (tag === "INPUT" && ev.target !== el.frustration) return;
+    ev.preventDefault();
+    doubtMicBtn.click();
+  });
 })();
   </script>
 </body>

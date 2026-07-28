@@ -21,9 +21,19 @@ go run ./cmd/master-web
 - [ ] Error de API (p. ej. mutación inválida) aparece en la franja de estado con `aria-live="assertive"`
 - [ ] Label «Probá con:» + chips «Ejemplo: …»; al tocar un chip, el status indica que hay que pulsar «Buscar estación»
 
+## Voz (Chrome / Edge — Web Speech API)
+
+Soportado donde exista `SpeechRecognition` / `webkitSpeechRecognition`. Si no hay API, el botón de micrófono **no aparece** (sin mensaje de error). Probado en Chrome.
+
+- [ ] Micrófono junto a «Tu duda»: al tocar (o **Ctrl+M**) pasa a «escuchando» (`aria-pressed="true"`, aviso en estado); el texto aparece en el textarea; al cerrar la frase se detiene **sin** auto-enviar — revisás y pulsás «Buscar estación»
+- [ ] Segundo toque (o Ctrl+M de nuevo) cancela a mitad de dictado; estado visible
+- [ ] Denegar permiso de micrófono → mensaje amable en el área de estado (`aria-live` assertive), nunca silencio
+- [ ] Con nodo interactivo: el mismo micrófono aparece en «+ Tengo una duda diferente»; dictás, revisás y confirmás con «Generar botón en vivo»
+
 ## Teclado
 
-- [ ] Tab recorre: skip-link → duda → frustración → Buscar → chips → Stage → opciones de botonera → mutación → panel dev
+- [ ] Tab recorre: skip-link → duda → micrófono (si hay) → frustración → Buscar → chips → Stage → opciones de botonera → mutación → panel dev
+- [ ] Ctrl+M inicia/cancela dictado en «Tu duda» (Chrome/Edge)
 - [ ] En botonera tipo tabs (depth/cognitive/emergency): flechas ↑/↓ o ←/→ mueven selección; Enter/Espacio activa
 - [ ] En acordeón: Enter/Espacio expande/colapsa (`aria-expanded`); se puede abrir un hijo (p. ej. Motor) sin haber activado Asientos
 - [ ] Foco siempre visible (anillo azul)

@@ -103,7 +103,9 @@ Flujo esperado en texto:
     el botón LIVE aparece en la botonera sin recargar la página
 ```
 
-Checklist manual (teclado + lector de pantalla): `cmd/master-web/MANUAL_CHECKLIST.md`.
+Checklist manual (teclado + lector de pantalla + voz): `cmd/master-web/MANUAL_CHECKLIST.md`.
+
+Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
 
 El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**, calibrado con hash contra `data/knowledge_base`: PostGIS on-topic ~0.33, «que es un bit» ≤0.19). Sin hits queda el camino honesto («No encontré material verificado…»). Con embedders densos (bge-m3) conviene subir el piso.
 
