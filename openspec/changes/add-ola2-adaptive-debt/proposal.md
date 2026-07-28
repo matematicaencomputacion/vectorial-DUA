@@ -8,6 +8,10 @@ Ola 1 cerró el bucle adaptativo de $V_e$, el ruteo DUA dinámico desde `Student
 
 Planificar y priorizar mejoras que desbloqueen ruteo semántico real, persistencia de perfil y limpieza operativa del stack DUA/router.
 
+## Estado
+
+**Ola 2 saldada por completo** (ítems 1–7 ✅). Tags: `v0.2.1-ola2a` … `v0.2.4-ola2d`. Multi-instancia/SQLite de perfiles queda fuera de esta ola (anotado en ítem 3).
+
 ## Alcance incluido (Ola 2)
 
 1. **`HTTPEmbedder` real** — ✅ PR 2.1 (`feat/ola2-pr-2.1`): cliente OpenAI-compatible, dims del índice vía embedder activo, sin fallback silencioso.
