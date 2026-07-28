@@ -58,7 +58,7 @@
   {
     "case_id": "env-compromiso-natural-phrasing",
     "description": "Fraseo natural sobre .env → static con embedder semántico; live bajo hash",
-    "comment": "Con HashEmbedder la similitud queda bajo umbral → expected_outcome_hash live. Con embedder semántico (embedder=env) y umbral ~0.55 debería ser static Compromiso. La discriminación frente a Accion/env-exercise depende de descriptores diferenciados (hacer vs porqué); deuda (g): calibración automática al crecer el corpus.",
+    "comment": "Con HashEmbedder → expected_outcome_hash live. Con embedder=env + umbral ~0.55 y descriptores con doc-expansion (preguntas típicas) debería ser static Compromiso. Usar -suite simmatrix para ver competencia query×nodo. Deuda (g): calibración automática al crecer el corpus.",
     "student_id": "stu-eng-natural-1",
     "query_embedding": [],
     "query_text": "¿por qué debería importarme configurar el .env?",

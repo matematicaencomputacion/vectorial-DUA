@@ -16,7 +16,7 @@ Planificar y priorizar mejoras que desbloqueen ruteo semántico real, persistenc
 4. **Logger inyectado en `pkg/dua`** — Reemplazar `log.Printf` disperso por interfaz inyectable (tests, niveles, correlación).
 5. **Botones legacy (`Botonera` sin schema)** — Fuera del RPC `RecordBotoneraInteraction`; migración o shim explícito.
 6. **`go` directive en `go.mod`** — Bajar `go 1.26.5` a la versión mínima real soportada por el código y CI.
-7. **Calibración automática de umbral/descriptores** — Al crecer el corpus, nodos del mismo tema (p. ej. Accion vs Compromiso sobre `.env`) pueden competir; hoy la separación es manual en prosa.
+7. **Calibración automática de umbral/descriptores** — Parcialmente adelantada por `-suite simmatrix` (matriz query×nodo). Queda automatizar sugerencias de umbral/descriptores al crecer el corpus.
 
 ## Fuera de alcance
 
