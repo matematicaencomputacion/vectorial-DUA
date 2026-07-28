@@ -111,6 +111,19 @@ func (idx *Index) HasULID(ulid string) bool {
 	return ok
 }
 
+// Nodes returns a snapshot of all indexed nodes in insertion order.
+func (idx *Index) Nodes() []Node {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+	out := make([]Node, 0, len(idx.order))
+	for _, id := range idx.order {
+		n := idx.nodes[id]
+		n.Embedding = append([]float32(nil), n.Embedding...)
+		out = append(out, n)
+	}
+	return out
+}
+
 // Nearest finds the closest node by cosine similarity (k=1 brute-force k-NN).
 func (idx *Index) Nearest(query []float32) Match {
 	idx.mu.RLock()
@@ -158,8 +171,8 @@ type TextEmbedder interface {
 }
 
 // SeedDemoNodes loads a small static curriculum for demos/tests.
-// Embeddings are generated from textual descriptors to share semantic space
-// with query_text embeddings.
+// Embeddings are generated from natural-language pedagogical descriptors so
+// paraphrased student queries can match under a semantic embedder.
 func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
 	if emb == nil {
 		return fmt.Errorf("seed embedder is required")
@@ -168,11 +181,26 @@ func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
 		dim, diff, format, url string
 		text                   string
 	}{
-		{"Representacion", "basico", "visual", "master://nodes/env-diagram", "variables de entorno .env visual diagrama representacion"},
-		{"Accion", "basico", "practica", "ide://cells/env-exercise", "ejercicio practico variables de entorno codigo accion"},
-		{"Compromiso", "basico", "conceptual", "agent://analogies/env-story", "por que importan variables de entorno seguridad motivacion compromiso"},
-		{"Representacion", "basico", "conceptual", "master://nodes/parameter-card", "que es un parametro explicacion conceptual representacion"},
-		{"Accion", "basico", "practica", "ide://cells/string-quotes", "comillas strings practica depuracion accion"},
+		{
+			"Representacion", "basico", "visual", "master://nodes/env-diagram",
+			"Diagrama visual que explica qué son las variables de entorno y el archivo .env: cómo se leen en ejecución y cómo representar la configuración separada del código. Responde preguntas como: ¿qué es el archivo .env?, ¿me lo mostrás con un diagrama?, ¿cómo se ve la configuración fuera del código?",
+		},
+		{
+			"Accion", "basico", "practica", "ide://cells/env-exercise",
+			"Ejercicio guiado paso a paso para crear y leer un archivo .env en el IDE: escribir la variable, cargarla en el código y verificar que el programa la lee. Responde preguntas como: ¿cómo creo el archivo .env?, ¿cómo leo una variable de entorno desde mi código?",
+		},
+		{
+			"Compromiso", "basico", "conceptual", "agent://analogies/env-story",
+			"Por qué importan las variables de entorno y cuidar los secretos: motivación, qué riesgos de seguridad hay al exponer credenciales, y qué te ahorra separar la configuración del código. Responde preguntas como: ¿por qué debería importarme configurar el .env?, ¿qué riesgo hay si subo mis claves al repo?, ¿para qué separar la configuración del código?",
+		},
+		{
+			"Representacion", "basico", "conceptual", "master://nodes/parameter-card",
+			"Tarjeta conceptual que define qué es un parámetro en programación: para qué sirve, cómo se distingue de una variable de entorno, y un ejemplo breve de uso. Responde preguntas como: ¿qué es un parámetro?, ¿qué diferencia hay entre un parámetro y una variable normal?",
+		},
+		{
+			"Accion", "basico", "practica", "ide://cells/string-quotes",
+			"Práctica de depuración con comillas y strings: errores comunes al abrir o cerrar comillas, cómo corregirlos en una celda y verificar la salida. Responde preguntas como: ¿por qué se rompe mi string por las comillas?, ¿puedo probarlo en una celda?",
+		},
 	}
 	for _, s := range seeds {
 		vec, err := emb.Embed(context.Background(), s.text)

@@ -78,7 +78,8 @@ func TestIndexUniqueULIDRing(t *testing.T) {
 
 func TestRouterStaticMatchAboveThreshold(t *testing.T) {
 	idx := vector.NewIndex()
-	if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
+	emb := rag.DefaultEmbedder()
+	if err := vector.SeedDemoNodes(idx, emb); err != nil {
 		t.Fatal(err)
 	}
 	var emitted int32
@@ -87,7 +88,8 @@ func TestRouterStaticMatchAboveThreshold(t *testing.T) {
 		atomic.AddInt32(&emitted, 1)
 	})
 	r := vector.NewRouter(idx, bus)
-	query, err := rag.DefaultEmbedder().Embed(context.Background(), "variables de entorno .env visual diagrama representacion")
+	// Exact seed descriptor → hash match at similarity 1.0 (plumbing check).
+	query, err := emb.Embed(context.Background(), "Diagrama visual que explica qué son las variables de entorno y el archivo .env: cómo se leen en ejecución y cómo representar la configuración separada del código. Responde preguntas como: ¿qué es el archivo .env?, ¿me lo mostrás con un diagrama?, ¿cómo se ve la configuración fuera del código?")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,11 +151,12 @@ func TestRouterLiveStationOnMiss(t *testing.T) {
 
 func TestRouterInProcessLatencyP99(t *testing.T) {
 	idx := vector.NewIndex()
-	if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
+	emb := rag.DefaultEmbedder()
+	if err := vector.SeedDemoNodes(idx, emb); err != nil {
 		t.Fatal(err)
 	}
 	r := vector.NewRouter(idx, vector.NewEventBus())
-	query, err := rag.DefaultEmbedder().Embed(context.Background(), "variables de entorno .env visual diagrama representacion")
+	query, err := emb.Embed(context.Background(), "Diagrama visual que explica qué son las variables de entorno y el archivo .env: cómo se leen en ejecución y cómo representar la configuración separada del código. Responde preguntas como: ¿qué es el archivo .env?, ¿me lo mostrás con un diagrama?, ¿cómo se ve la configuración fuera del código?")
 	if err != nil {
 		t.Fatal(err)
 	}

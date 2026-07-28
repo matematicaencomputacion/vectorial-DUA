@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 
@@ -142,54 +141,26 @@ func describeInteractiveNode(n *InteractiveVideoNode) string {
 	if n == nil {
 		return ""
 	}
+	if d := strings.TrimSpace(n.EmbeddingDescriptor); d != "" {
+		return d
+	}
+	// Prefer short pedagogical prose over keyword bags when no explicit descriptor.
 	var parts []string
-	parts = append(parts, n.NodeID, n.DimensionDUA, n.Titulo, n.StageMediaDefault)
-	for _, b := range n.Botonera {
-		parts = append(parts, b.Label, b.CellCode)
+	if t := strings.TrimSpace(n.Titulo); t != "" {
+		parts = append(parts, t)
 	}
 	if n.BotoneraSchema != nil {
-		parts = append(parts, string(n.BotoneraSchema.Kind), n.BotoneraSchema.TopicTitle)
-		for _, d := range n.BotoneraSchema.DepthOptions {
-			parts = append(parts, d.VariantID, d.Label)
-		}
-		for _, c := range n.BotoneraSchema.CognitiveOptions {
-			parts = append(parts, c.VariantID, c.Label, c.CellCode)
-		}
-		for _, e := range n.BotoneraSchema.EmergencyOptions {
-			parts = append(parts, e.VariantID, e.Label, e.HintText)
-		}
-		for _, cell := range n.BotoneraSchema.MatrixCells {
-			parts = append(parts, cell.DepthID, cell.FormatID, cell.CellCode)
+		if t := strings.TrimSpace(n.BotoneraSchema.TopicTitle); t != "" {
+			parts = append(parts, "Tema: "+t+".")
 		}
 	}
 	if n.Hierarchy != nil {
-		parts = append(parts, n.Hierarchy.MainTopicTitle)
-		collectSubtopicText(n.Hierarchy.Subtopics, &parts)
-	}
-	return strings.Join(normalizeParts(parts), " ")
-}
-
-func collectSubtopicText(nodes []SubtopicNode, parts *[]string) {
-	for _, s := range nodes {
-		*parts = append(*parts, s.SubtopicID, s.Title)
-		collectSubtopicText(s.ChildSubtopics, parts)
-	}
-}
-
-func normalizeParts(in []string) []string {
-	out := make([]string, 0, len(in))
-	seen := map[string]struct{}{}
-	for _, p := range in {
-		p = strings.ToLower(strings.TrimSpace(p))
-		if p == "" {
-			continue
+		if t := strings.TrimSpace(n.Hierarchy.MainTopicTitle); t != "" {
+			parts = append(parts, "Jerarquía: "+t+".")
 		}
-		if _, ok := seen[p]; ok {
-			continue
-		}
-		seen[p] = struct{}{}
-		out = append(out, p)
 	}
-	sort.Strings(out)
-	return out
+	if len(parts) > 0 {
+		return strings.Join(parts, " ")
+	}
+	return n.NodeID
 }

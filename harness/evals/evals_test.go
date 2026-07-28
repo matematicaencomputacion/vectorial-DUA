@@ -58,7 +58,7 @@ func TestGoldenRoutingEvalsPass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report := (&evals.Runner{Router: router, Tel: telemetry.NewCollector(), Embedder: emb}).Run(cases)
+	report := (&evals.Runner{Router: router, Tel: telemetry.NewCollector(), Embedder: emb, Mode: "hash"}).Run(cases)
 	if report.FailedCases != 0 {
 		for _, r := range report.Results {
 			if !r.Passed {

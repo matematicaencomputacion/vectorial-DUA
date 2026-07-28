@@ -32,8 +32,17 @@ type Case struct {
 	MinSimilarityThreshold float32   `json:"min_similarity_threshold"`
 	ExpectedDimensionDUA   string    `json:"expected_dimension_dua"`
 	ExpectedFormat         string    `json:"expected_format"`
-	ExpectedOutcome        string    `json:"expected_outcome"` // static | live
+	ExpectedOutcome        string    `json:"expected_outcome"` // static | live (semantic / embedder=env)
+	ExpectedOutcomeHash    string    `json:"expected_outcome_hash,omitempty"` // when set, used under Mode=hash
 	ExpectedNodeIDPrefix   string    `json:"expected_node_id_prefix"`
+}
+
+// EffectiveExpectedOutcome selects expected_outcome_hash under hash mode when present.
+func (c Case) EffectiveExpectedOutcome(mode string) string {
+	if strings.EqualFold(strings.TrimSpace(mode), "hash") && strings.TrimSpace(c.ExpectedOutcomeHash) != "" {
+		return c.ExpectedOutcomeHash
+	}
+	return c.ExpectedOutcome
 }
 
 // SignalScores holds weighted quality signals.
@@ -96,9 +105,10 @@ func Score(c Case, out vector.RouteOutcome) CaseResult {
 	}
 
 	signals := SignalScores{}
+	expected := strings.ToLower(strings.TrimSpace(c.ExpectedOutcome))
 
 	// cosine_ok / outcome correctness
-	switch strings.ToLower(c.ExpectedOutcome) {
+	switch expected {
 	case "static":
 		if out.Matched && !out.IsLiveGenerated && out.Similarity >= vector.ResolveThreshold(c.MinSimilarityThreshold) {
 			signals.CosineOK = 1
@@ -113,34 +123,33 @@ func Score(c Case, out vector.RouteOutcome) CaseResult {
 		signals.CosineOK = 0
 	}
 
-	// dua dimension
-	if out.Matched && c.ExpectedDimensionDUA != "" {
-		if strings.EqualFold(out.Node.DimensionDUA, c.ExpectedDimensionDUA) {
-			signals.DUADimensionMatch = 1
-		}
-	} else if strings.EqualFold(c.ExpectedOutcome, "live") && (out.IsLiveGenerated || !out.Matched) {
+	// dua dimension / format: live expected uses partial credit (node may be synthesised)
+	if expected == "live" && (out.IsLiveGenerated || !out.Matched) {
 		signals.DUADimensionMatch = 0.7
-	}
-
-	// format
-	if out.Matched && c.ExpectedFormat != "" {
-		if strings.EqualFold(out.Node.Format, c.ExpectedFormat) {
-			signals.FormatMatch = 1
-		}
-	} else if strings.EqualFold(c.ExpectedOutcome, "live") && (out.IsLiveGenerated || !out.Matched) {
 		signals.FormatMatch = 0.7
+	} else {
+		if out.Matched && c.ExpectedDimensionDUA != "" {
+			if strings.EqualFold(out.Node.DimensionDUA, c.ExpectedDimensionDUA) {
+				signals.DUADimensionMatch = 1
+			}
+		}
+		if out.Matched && c.ExpectedFormat != "" {
+			if strings.EqualFold(out.Node.Format, c.ExpectedFormat) {
+				signals.FormatMatch = 1
+			}
+		}
 	}
 
 	// rogers_safety: live generated or pending is safe; forcing static when live expected is not
 	signals.RogersSafety = 1
-	if strings.EqualFold(c.ExpectedOutcome, "live") && out.Matched && !out.IsLiveGenerated {
+	if expected == "live" && out.Matched && !out.IsLiveGenerated {
 		signals.RogersSafety = 0
 	}
-	if strings.EqualFold(c.ExpectedOutcome, "static") && !out.Matched {
+	if expected == "static" && !out.Matched {
 		signals.RogersSafety = 0.4
 	}
 
-	if c.ExpectedNodeIDPrefix != "" && out.Matched {
+	if expected != "live" && c.ExpectedNodeIDPrefix != "" && out.Matched {
 		if !strings.HasPrefix(out.Node.ID, c.ExpectedNodeIDPrefix) {
 			signals.DUADimensionMatch *= 0.5
 		}
@@ -173,6 +182,7 @@ type Runner struct {
 	Router   *vector.Router
 	Tel      *telemetry.Collector
 	Embedder rag.Embedder // used to embed query_text; nil → hash offline
+	Mode     string       // hash | env — selects expected_outcome_hash when set
 }
 
 // ResolveEmbedder returns an embedder for eval mode: "hash" (default, CI-safe)
@@ -209,9 +219,16 @@ func (r *Runner) Run(cases []Case) Report {
 	if emb == nil {
 		emb = rag.NewHashEmbedder(rag.DefaultEmbedDims)
 	}
+	mode := strings.TrimSpace(r.Mode)
+	if mode == "" {
+		mode = "hash"
+	}
 
 	for _, c := range cases {
 		t0 := time.Now()
+		scored := c
+		scored.ExpectedOutcome = c.EffectiveExpectedOutcome(mode)
+
 		query := append([]float32(nil), c.QueryEmbedding...)
 		if len(query) == 0 && c.QueryText != "" {
 			var err error
@@ -223,11 +240,11 @@ func (r *Runner) Run(cases []Case) Report {
 				continue
 			}
 		}
-		dim := c.ExpectedDimensionDUA
+		dim := scored.ExpectedDimensionDUA
 		if dim == "" {
 			dim = "Representacion"
 		}
-		format := c.ExpectedFormat
+		format := scored.ExpectedFormat
 		if format == "" {
 			format = "conceptual"
 		}
@@ -244,7 +261,7 @@ func (r *Runner) Run(cases []Case) Report {
 		if err != nil {
 			result = CaseResult{CaseID: c.CaseID, Passed: false, Message: err.Error()}
 		} else {
-			result = Score(c, out)
+			result = Score(scored, out)
 		}
 		report.Results = append(report.Results, result)
 		if result.Passed {

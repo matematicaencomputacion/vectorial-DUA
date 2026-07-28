@@ -1,8 +1,14 @@
 package vector
 
-import "math"
+import (
+	"math"
+	"os"
+	"strconv"
+	"strings"
+)
 
-// DefaultSimilarityThreshold is the cosine cutoff for static DUA node matches.
+// DefaultSimilarityThreshold is the cosine cutoff for static DUA node matches
+// in offline HashEmbedder / plumbing mode.
 const DefaultSimilarityThreshold float32 = 0.85
 
 // CosineSimilarity returns the cosine similarity between a and b.
@@ -27,10 +33,28 @@ func CosineSimilarity(a, b []float32) float32 {
 	return float32(dot / (math.Sqrt(normA) * math.Sqrt(normB)))
 }
 
-// ResolveThreshold returns the query threshold or the default when unset/invalid.
-func ResolveThreshold(requested float32) float32 {
-	if requested <= 0 || requested > 1 {
+// EffectiveDefaultThreshold returns AVLP_SIMILARITY_THRESHOLD when set to a
+// valid float in (0, 1], otherwise DefaultSimilarityThreshold (0.85).
+//
+// 0.85 is calibrated for hash/plumbing. Semantic embedders (e.g. bge-m3)
+// typically need a lower cutoff (~0.6 as a starting point); validate empirically.
+func EffectiveDefaultThreshold() float32 {
+	v := strings.TrimSpace(os.Getenv("AVLP_SIMILARITY_THRESHOLD"))
+	if v == "" {
 		return DefaultSimilarityThreshold
 	}
-	return requested
+	f, err := strconv.ParseFloat(v, 32)
+	if err != nil || f <= 0 || f > 1 {
+		return DefaultSimilarityThreshold
+	}
+	return float32(f)
+}
+
+// ResolveThreshold returns the query threshold when in (0, 1]; otherwise the
+// effective default (env override or DefaultSimilarityThreshold).
+func ResolveThreshold(requested float32) float32 {
+	if requested > 0 && requested <= 1 {
+		return requested
+	}
+	return EffectiveDefaultThreshold()
 }

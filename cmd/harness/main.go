@@ -33,14 +33,14 @@ func (b harnessLiveBridge) GenerateLive(ctx context.Context, req vector.LiveRequ
 }
 
 func main() {
-	suite := flag.String("suite", "evals", "evals | sandbox | load | all")
+	suite := flag.String("suite", "evals", "evals | simmatrix | sandbox | load | all")
 	casesPath := flag.String("cases", "harness/evals/cases/routing_golden.json", "golden evals dataset")
 	outDir := flag.String("out", "harness/out", "output directory for reports")
 	addr := flag.String("addr", "127.0.0.1:50051", "router address for load suite")
 	concurrency := flag.Int("c", 32, "load concurrency")
 	requests := flag.Int("n", 500, "load total requests")
 	mode := flag.String("mode", "match", "load mode: match | miss")
-	embedderMode := flag.String("embedder", "hash", "evals embedder: hash (CI default) | env (AVLP_EMBEDDING_URL)")
+	embedderMode := flag.String("embedder", "hash", "evals/simmatrix embedder: hash (CI default) | env (AVLP_EMBEDDING_URL)")
 	flag.Parse()
 
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
@@ -50,6 +50,14 @@ func main() {
 	tel := telemetry.NewCollector()
 	var failed bool
 
+	seedIndex := func(emb rag.Embedder) *vector.Index {
+		idx := vector.NewIndexWithDims(emb.Dims())
+		if err := vector.SeedDemoNodes(idx, emb); err != nil {
+			log.Fatalf("seed: %v", err)
+		}
+		return idx
+	}
+
 	runEvals := func() {
 		emb, err := evals.ResolveEmbedder(*embedderMode)
 		if err != nil {
@@ -58,12 +66,9 @@ func main() {
 		if err := rag.EnsureEmbedderDims(context.Background(), emb); err != nil {
 			log.Fatalf("embedder dims: %v", err)
 		}
-		log.Printf("evals embedder=%s dims=%d", *embedderMode, emb.Dims())
+		log.Printf("evals embedder=%s dims=%d threshold=%.2f", *embedderMode, emb.Dims(), vector.EffectiveDefaultThreshold())
 
-		idx := vector.NewIndexWithDims(emb.Dims())
-		if err := vector.SeedDemoNodes(idx, emb); err != nil {
-			log.Fatalf("seed: %v", err)
-		}
+		idx := seedIndex(emb)
 		store := rag.NewStore()
 		kb := "data/knowledge_base"
 		if n, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: kb, Embedder: emb}); err != nil {
@@ -81,7 +86,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("load cases: %v", err)
 		}
-		report := (&evals.Runner{Router: router, Tel: tel, Embedder: emb}).Run(cases)
+		report := (&evals.Runner{Router: router, Tel: tel, Embedder: emb, Mode: *embedderMode}).Run(cases)
 		path := filepath.Join(*outDir, "eval_report.json")
 		if err := evals.WriteReport(path, report); err != nil {
 			log.Fatalf("write eval report: %v", err)
@@ -91,6 +96,33 @@ func main() {
 		if report.FailedCases > 0 {
 			failed = true
 		}
+	}
+
+	runSimMatrix := func() {
+		emb, err := evals.ResolveEmbedder(*embedderMode)
+		if err != nil {
+			log.Fatalf("embedder: %v", err)
+		}
+		if err := rag.EnsureEmbedderDims(context.Background(), emb); err != nil {
+			log.Fatalf("embedder dims: %v", err)
+		}
+		log.Printf("simmatrix embedder=%s dims=%d threshold=%.2f", *embedderMode, emb.Dims(), vector.EffectiveDefaultThreshold())
+
+		idx := seedIndex(emb)
+		cases, err := evals.LoadCases(*casesPath)
+		if err != nil {
+			log.Fatalf("load cases: %v", err)
+		}
+		report, err := evals.BuildSimMatrix(context.Background(), cases, idx, emb, *embedderMode)
+		if err != nil {
+			log.Fatalf("simmatrix: %v", err)
+		}
+		path := filepath.Join(*outDir, "simmatrix.json")
+		if err := evals.WriteSimMatrixJSON(path, report); err != nil {
+			log.Fatalf("write simmatrix: %v", err)
+		}
+		fmt.Print(evals.FormatSimMatrixTable(report))
+		fmt.Printf("simmatrix → %s\n", path)
 	}
 
 	runSandbox := func() {
@@ -149,6 +181,8 @@ func main() {
 	switch *suite {
 	case "evals":
 		runEvals()
+	case "simmatrix":
+		runSimMatrix()
 	case "sandbox":
 		runSandbox()
 	case "load":
