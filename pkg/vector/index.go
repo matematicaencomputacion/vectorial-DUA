@@ -128,9 +128,9 @@ func (idx *Index) Nearest(query []float32) Match {
 }
 
 // RegisterNode creates a hierarchical ULID id and upserts the node.
-// Short embeddings are projected into content space via FitContentEmbedding.
+// Embeddings must match the index dimensionality (see FitIndexEmbedding).
 func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32) (Node, error) {
-	fitted, err := FitContentEmbedding(embedding)
+	fitted, err := FitIndexEmbedding(embedding, idx.Dims())
 	if err != nil {
 		return Node{}, err
 	}

@@ -253,8 +253,18 @@ func main() {
 		addr = v
 	}
 
-	index := vector.NewIndex()
-	if err := vector.SeedDemoNodes(index, rag.DefaultEmbedder()); err != nil {
+	emb, err := rag.DefaultEmbedderE()
+	if err != nil {
+		log.Fatalf("embedder: %v", err)
+	}
+	ctx := context.Background()
+	if err := rag.EnsureEmbedderDims(ctx, emb); err != nil {
+		log.Fatalf("embedding backend: %v", err)
+	}
+	log.Printf("embedder active: dims=%d", emb.Dims())
+
+	index := vector.NewIndexWithDims(emb.Dims())
+	if err := vector.SeedDemoNodes(index, emb); err != nil {
 		log.Fatalf("seed demo nodes: %v", err)
 	}
 
@@ -275,11 +285,9 @@ func main() {
 	}
 
 	var store *rag.Store
-	var emb rag.Embedder
 	if router.Enabled {
 		store = rag.NewStore()
-		emb = rag.DefaultEmbedder()
-		n, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: kb, Embedder: emb})
+		n, err := rag.IngestWalk(ctx, store, rag.IngestOptions{Root: kb, Embedder: emb})
 		if err != nil {
 			log.Printf("RAG ingest warning: %v (miss path will stay pending)", err)
 		} else {
@@ -297,7 +305,7 @@ func main() {
 	profiles := dua.NewProfileStore()
 	srvImpl := &server{
 		router:        router,
-		queryEmbedder: rag.DefaultEmbedder(),
+		queryEmbedder: emb,
 		profiles:      profiles,
 		interactions:  dua.NewInteractionStoreWithProfiles(profiles),
 	}
@@ -321,7 +329,7 @@ func main() {
 				if len(node.Embedding) == 0 {
 					return
 				}
-				fitted, err := vector.FitContentEmbedding(node.Embedding)
+				fitted, err := vector.FitIndexEmbedding(node.Embedding, index.Dims())
 				if err != nil {
 					log.Printf("index interactive node %s: %v", node.NodeID, err)
 					return

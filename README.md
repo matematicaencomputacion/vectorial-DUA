@@ -54,6 +54,24 @@ Duda → Router k-NN
 
 En un nodo interactivo, **“+ Tengo una duda diferente”** llama a `MutateInteractiveNode` y appende un botón `is_live_generated=true`.
 
+## Embeddings
+
+Por defecto el router y el harness usan `HashEmbedder` offline (64 dims, léxico). Con URL remota se activa un cliente HTTP OpenAI-compatible (`POST …/embeddings`) sin fallback silencioso a hash.
+
+| Variable | Rol |
+|----------|-----|
+| `AVLP_EMBEDDING_URL` | Base del endpoint (p. ej. `http://localhost:11434/v1`); si está vacía → modo offline |
+| `AVLP_EMBEDDING_MODEL` | Modelo (default `text-embedding-3-small`) |
+| `AVLP_EMBEDDING_API_KEY` | Bearer opcional |
+| `AVLP_EMBEDDING_DIMS` | Dims fijas; si se omite, se descubren en el primer call |
+| `AVLP_EMBEDDING_TIMEOUT` | Timeout HTTP (default `10s`) |
+
+El índice de ruteo se construye con las dims del embedder activo (`NewIndexWithDims`). Evals CI usan hash; para un endpoint real:
+
+```bash
+go run ./cmd/harness -suite evals -embedder env
+```
+
 ## Árbol del repositorio
 
 ```text

@@ -52,6 +52,17 @@ func TestFitContentEmbeddingRejectsOversized(t *testing.T) {
 	}
 }
 
+func TestFitIndexEmbeddingRejectsOversizedForRemoteIndex(t *testing.T) {
+	tooLong := make([]float32, vector.ContentEmbedDims+1)
+	_, err := vector.FitIndexEmbedding(tooLong, 128)
+	if err == nil {
+		t.Fatal("expected error for oversized remote index dims")
+	}
+	if !strings.Contains(err.Error(), "refusing silent") {
+		t.Fatalf("expected explicit mismatch refusal, got %v", err)
+	}
+}
+
 func TestIndexUpsertRejectsDimMismatch(t *testing.T) {
 	idx := vector.NewIndex()
 	id, err := vector.NewNodeID("Representacion", "basico", "visual")

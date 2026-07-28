@@ -21,7 +21,11 @@ func IngestWalk(ctx context.Context, store *Store, opt IngestOptions) (int, erro
 		return 0, fmt.Errorf("store is nil")
 	}
 	if opt.Embedder == nil {
-		opt.Embedder = DefaultEmbedder()
+		emb, err := DefaultEmbedderE()
+		if err != nil {
+			return 0, fmt.Errorf("embedder: %w", err)
+		}
+		opt.Embedder = emb
 	}
 	root := opt.Root
 	if root == "" {
@@ -71,7 +75,11 @@ func IngestWalk(ctx context.Context, store *Store, opt IngestOptions) (int, erro
 
 // MustIngest is a helper for demos; panics on error.
 func MustIngest(store *Store, root string) int {
-	n, err := IngestWalk(context.Background(), store, IngestOptions{Root: root, Embedder: DefaultEmbedder()})
+	emb, err := DefaultEmbedderE()
+	if err != nil {
+		panic(err)
+	}
+	n, err := IngestWalk(context.Background(), store, IngestOptions{Root: root, Embedder: emb})
 	if err != nil {
 		panic(err)
 	}

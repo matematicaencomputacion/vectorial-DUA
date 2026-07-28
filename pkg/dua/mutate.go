@@ -61,19 +61,32 @@ func (m *Mutator) Mutate(ctx context.Context, req MutateRequest) (MutateResult, 
 	}
 
 	delta := req.QueryEmbedding
-	if len(delta) == 0 && m.Retriever != nil {
-		delta, err = m.Retriever.Embedder.Embed(ctx, req.DoubtText)
+	if len(delta) == 0 {
+		var emb rag.Embedder
+		if m.Retriever != nil && m.Retriever.Embedder != nil {
+			emb = m.Retriever.Embedder
+		} else {
+			emb, err = rag.DefaultEmbedderE()
+			if err != nil {
+				return MutateResult{}, fmt.Errorf("embedder: %w", err)
+			}
+		}
+		delta, err = emb.Embed(ctx, req.DoubtText)
 		if err != nil {
 			return MutateResult{}, err
 		}
 	}
-	// VectorDelta lives in content embedding space (ContentEmbedDims), not V_e.
-	// FitContentEmbedding zero-pads legacy short vectors; refuses silent truncate.
+	wantDims := vector.ContentEmbedDims
+	if m.Retriever != nil && m.Retriever.Embedder != nil && m.Retriever.Embedder.Dims() > 0 {
+		wantDims = m.Retriever.Embedder.Dims()
+	} else if len(delta) > 0 {
+		wantDims = len(delta)
+	}
 	if len(delta) == 0 {
-		delta = make([]float32, vector.ContentEmbedDims)
+		delta = make([]float32, wantDims)
 		delta[0] = 1
 	}
-	delta, err = vector.FitContentEmbedding(delta)
+	delta, err = vector.FitIndexEmbedding(delta, wantDims)
 	if err != nil {
 		return MutateResult{}, fmt.Errorf("vector_delta content projection: %w", err)
 	}

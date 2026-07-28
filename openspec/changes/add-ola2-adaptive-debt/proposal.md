@@ -10,8 +10,8 @@ Planificar y priorizar mejoras que desbloqueen ruteo semántico real, persistenc
 
 ## Alcance incluido (Ola 2)
 
-1. **`HTTPEmbedder` real** — Los goldens actuales validan plumbing con `HashEmbedder`. Con fraseo natural, similitudes caen a ~0.66 / ~0.14 y el ruteo semántico requiere un embedder HTTP (o equivalente) productivo.
-2. **Golden adicional con fraseo natural** — Caso en `harness/evals/cases/routing_golden.json` con `expected_outcome: live`, documentando la limitación del embedder hash hasta que (1) esté resuelto.
+1. **`HTTPEmbedder` real** — ✅ PR 2.1 (`feat/ola2-pr-2.1`): cliente OpenAI-compatible, dims del índice vía embedder activo, sin fallback silencioso.
+2. **Golden adicional con fraseo natural** — ✅ PR 2.2: caso `env-compromiso-natural-phrasing` con `expected_outcome: live` bajo hash; runner `-embedder hash|env`.
 3. **Persistencia de `ProfileStore`** — Hoy in-memory; sobrevive solo al proceso del router.
 4. **Logger inyectado en `pkg/dua`** — Reemplazar `log.Printf` disperso por interfaz inyectable (tests, niveles, correlación).
 5. **Botones legacy (`Botonera` sin schema)** — Fuera del RPC `RecordBotoneraInteraction`; migración o shim explícito.

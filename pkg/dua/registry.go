@@ -86,7 +86,10 @@ func (r *Registry) LoadDir(dir string) (int, error) {
 		return 0, err
 	}
 	count := 0
-	emb := rag.DefaultEmbedder()
+	emb, err := rag.DefaultEmbedderE()
+	if err != nil {
+		return 0, fmt.Errorf("embedder: %w", err)
+	}
 	for _, e := range entries {
 		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".json") {
 			continue
@@ -105,7 +108,7 @@ func (r *Registry) LoadDir(dir string) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("%s: embed descriptor: %w", path, err)
 		}
-		node.Embedding, err = vector.FitContentEmbedding(vec)
+		node.Embedding, err = vector.FitIndexEmbedding(vec, emb.Dims())
 		if err != nil {
 			return count, fmt.Errorf("%s: fit embedding: %w", path, err)
 		}

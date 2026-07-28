@@ -10,8 +10,12 @@ import (
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
-// DefaultEmbedDims is the content-embedding dimensionality shared with the
-// routing index (vector.ContentEmbedDims). Distinct from learner V_e (5 axes).
+// DefaultEmbedDims is the content-embedding dimensionality for the offline
+// HashEmbedder (vector.ContentEmbedDims). Remote HTTP embedders report their
+// own Dims(); the routing index must be built with NewIndexWithDims for the
+// active embedder — never silent truncate/pad between spaces.
+//
+// Distinct from learner V_e (5 axes: Dominio, Sensorial, Frustracion, Ritmo, Autonomia).
 const DefaultEmbedDims = vector.ContentEmbedDims
 
 // Embedder produces fixed-dimension embeddings for text.
@@ -85,41 +89,23 @@ func normalize(v []float32) {
 	}
 }
 
-// HTTPEmbedder documents the remote embedding extension point.
-type HTTPEmbedder struct {
-	URL    string
-	APIKey string
-	Model  string
-	dims   int
+// DefaultEmbedderE resolves the active embedder from the environment.
+// When AVLP_EMBEDDING_URL is set → HTTPEmbedder; otherwise → HashEmbedder
+// (ContentEmbedDims). Misconfigured URL/dims return an error (no panic, no
+// silent fallback to hash). Prefer this in library and main code.
+func DefaultEmbedderE() (Embedder, error) {
+	httpEmb, err := NewHTTPEmbedderFromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("AVLP_EMBEDDING_URL misconfigured: %w", err)
+	}
+	if httpEmb != nil {
+		return httpEmb, nil
+	}
+	return NewHashEmbedder(DefaultEmbedDims), nil
 }
 
-// NewHTTPEmbedderFromEnv returns an HTTP embedder if AVLP_EMBEDDING_URL is set.
-func NewHTTPEmbedderFromEnv(dims int) *HTTPEmbedder {
-	url := strings.TrimSpace(os.Getenv("AVLP_EMBEDDING_URL"))
-	if url == "" {
-		return nil
-	}
-	if dims <= 0 {
-		dims = DefaultEmbedDims
-	}
-	return &HTTPEmbedder{
-		URL:    url,
-		APIKey: os.Getenv("AVLP_EMBEDDING_API_KEY"),
-		Model:  envOr("AVLP_EMBEDDING_MODEL", "text-embedding-3-small"),
-		dims:   dims,
-	}
-}
-
-func (h *HTTPEmbedder) Dims() int { return h.dims }
-
-// Embed returns a clear MVP error; production should wire an HTTP client here.
-func (h *HTTPEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
-	_ = ctx
-	_ = text
-	return nil, fmt.Errorf("HTTPEmbedder not wired in MVP; configure HashEmbedder or implement client for %s", h.URL)
-}
-
-// DefaultEmbedder returns the offline HashEmbedder (HTTP is opt-in later).
+// DefaultEmbedder returns the offline HashEmbedder at ContentEmbedDims.
+// For env-aware resolution (HTTP when URL is set), use DefaultEmbedderE.
 func DefaultEmbedder() Embedder {
 	return NewHashEmbedder(DefaultEmbedDims)
 }

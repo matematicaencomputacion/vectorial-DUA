@@ -93,7 +93,7 @@ func (r *Router) QueryNearest(studentID string, query []float32, threshold float
 // QueryNearestWithOptions is the full miss→RAG path.
 func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, query []float32, threshold float32, opt QueryOptions) (RouteOutcome, error) {
 	th := ResolveThreshold(threshold)
-	fitted, err := FitContentEmbedding(query)
+	fitted, err := FitIndexEmbedding(query, r.Index.Dims())
 	if err != nil {
 		return RouteOutcome{}, fmt.Errorf("query embedding: %w", err)
 	}

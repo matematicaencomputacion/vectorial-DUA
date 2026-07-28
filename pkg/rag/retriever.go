@@ -13,9 +13,10 @@ type Retriever struct {
 }
 
 // NewRetriever builds a retriever with defaults.
+// Prefer an explicit Embedder; nil falls back to the offline HashEmbedder.
 func NewRetriever(store *Store, emb Embedder, topK int) *Retriever {
 	if emb == nil {
-		emb = DefaultEmbedder()
+		emb = NewHashEmbedder(DefaultEmbedDims)
 	}
 	if topK <= 0 {
 		topK = 3

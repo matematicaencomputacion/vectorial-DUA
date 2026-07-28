@@ -40,6 +40,7 @@ func main() {
 	concurrency := flag.Int("c", 32, "load concurrency")
 	requests := flag.Int("n", 500, "load total requests")
 	mode := flag.String("mode", "match", "load mode: match | miss")
+	embedderMode := flag.String("embedder", "hash", "evals embedder: hash (CI default) | env (AVLP_EMBEDDING_URL)")
 	flag.Parse()
 
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
@@ -50,12 +51,20 @@ func main() {
 	var failed bool
 
 	runEvals := func() {
-		idx := vector.NewIndex()
-		if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
+		emb, err := evals.ResolveEmbedder(*embedderMode)
+		if err != nil {
+			log.Fatalf("embedder: %v", err)
+		}
+		if err := rag.EnsureEmbedderDims(context.Background(), emb); err != nil {
+			log.Fatalf("embedder dims: %v", err)
+		}
+		log.Printf("evals embedder=%s dims=%d", *embedderMode, emb.Dims())
+
+		idx := vector.NewIndexWithDims(emb.Dims())
+		if err := vector.SeedDemoNodes(idx, emb); err != nil {
 			log.Fatalf("seed: %v", err)
 		}
 		store := rag.NewStore()
-		emb := rag.DefaultEmbedder()
 		kb := "data/knowledge_base"
 		if n, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: kb, Embedder: emb}); err != nil {
 			log.Printf("RAG ingest skip: %v", err)
@@ -72,7 +81,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("load cases: %v", err)
 		}
-		report := (&evals.Runner{Router: router, Tel: tel}).Run(cases)
+		report := (&evals.Runner{Router: router, Tel: tel, Embedder: emb}).Run(cases)
 		path := filepath.Join(*outDir, "eval_report.json")
 		if err := evals.WriteReport(path, report); err != nil {
 			log.Fatalf("write eval report: %v", err)

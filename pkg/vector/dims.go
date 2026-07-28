@@ -10,28 +10,37 @@ import "fmt"
 // be mixed via silent truncation.
 const ContentEmbedDims = 64
 
-// FitContentEmbedding projects a vector into content embedding space.
-//
-// Rules (explicit; no silent truncate-to-5):
-//   - len == ContentEmbedDims: defensive copy
-//   - 0 < len < ContentEmbedDims: zero-pad (legacy short seeds / queries)
-//   - len == 0 or len > ContentEmbedDims: error
-//
-// Callers that need preference-axis updates must use a documented V_e path
-// (preference_delta), not this function.
+// FitContentEmbedding projects a vector into the default hash offline space
+// (ContentEmbedDims). Prefer FitIndexEmbedding when the active index may use
+// remote embedder dimensionality.
 func FitContentEmbedding(v []float32) ([]float32, error) {
+	return FitIndexEmbedding(v, ContentEmbedDims)
+}
+
+// FitIndexEmbedding validates or projects v into an index embedding space.
+//
+// Rules (explicit; no silent truncate):
+//   - len == wantDims: defensive copy
+//   - 0 < len < wantDims and wantDims == ContentEmbedDims: zero-pad (legacy hash seeds)
+//   - len == 0 or any other mismatch: error
+func FitIndexEmbedding(v []float32, wantDims int) ([]float32, error) {
+	if wantDims <= 0 {
+		return nil, fmt.Errorf("index dims must be positive")
+	}
 	n := len(v)
 	switch {
 	case n == 0:
-		return nil, fmt.Errorf("content embedding is empty; want %d dims", ContentEmbedDims)
-	case n > ContentEmbedDims:
-		return nil, fmt.Errorf("content embedding length %d exceeds ContentEmbedDims=%d (refusing silent truncate)", n, ContentEmbedDims)
-	case n == ContentEmbedDims:
+		return nil, fmt.Errorf("embedding is empty; want %d dims", wantDims)
+	case n == wantDims:
 		return append([]float32(nil), v...), nil
-	default:
-		out := make([]float32, ContentEmbedDims)
+	case n < wantDims && wantDims == ContentEmbedDims:
+		out := make([]float32, wantDims)
 		copy(out, v)
 		return out, nil
+	case n > wantDims:
+		return nil, fmt.Errorf("embedding length %d exceeds index dims %d (refusing silent truncate)", n, wantDims)
+	default:
+		return nil, fmt.Errorf("embedding length %d does not match index dims %d (refusing silent pad)", n, wantDims)
 	}
 }
 
