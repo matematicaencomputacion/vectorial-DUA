@@ -66,25 +66,43 @@ func (b liveBridge) GenerateLive(ctx context.Context, req vector.LiveRequest) (v
 
 func (s *server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery) (*vectorv1.RouteResult, error) {
 	studentID := ""
-	frustration := float32(0.5)
+	var dims []float32
+	preferredDimension := ""
 	format := ""
+	frustration := float32(0)
+	frustrationProvided := false
+
 	if st := req.GetStudentState(); st != nil {
 		studentID = st.GetStudentId()
+		dims = append([]float32(nil), st.GetDimensions()...)
 		if sess := st.GetSession(); sess != nil {
-			frustration = sess.GetFrustrationSignal()
 			format = sess.GetPreferredFormat()
-		}
-		dims := st.GetDimensions()
-		if frustration == 0 && len(dims) >= 3 {
-			frustration = dims[2]
+			preferredDimension = sess.GetPreferredDimensionDua()
+			if sess.FrustrationSignal != nil {
+				frustration = sess.GetFrustrationSignal()
+				frustrationProvided = true
+			}
 		}
 	}
 
+	// Ola 1 merge rule (no blend): request dimensions win; otherwise profile store.
+	if len(dims) == 0 && s.profiles != nil && studentID != "" {
+		dims = s.profiles.Get(studentID)
+	}
+
+	dimension, resolvedFormat, resolvedFrustration := dua.ResolveRoutingHints(dua.ResolveRoutingHintsInput{
+		Dimensions:          dims,
+		PreferredDimension:  preferredDimension,
+		PreferredFormat:     format,
+		FrustrationSignal:   frustration,
+		FrustrationProvided: frustrationProvided,
+	})
+
 	outcome, err := s.router.QueryNearestWithOptions(ctx, studentID, req.GetQueryEmbedding(), req.GetMinSimilarityThreshold(), vector.QueryOptions{
 		DoubtText:   req.GetQueryText(),
-		Frustration: frustration,
-		Dimension:   "Representacion",
-		Format:      format,
+		Frustration: resolvedFrustration,
+		Dimension:   dimension,
+		Format:      resolvedFormat,
 	})
 	if err != nil {
 		return nil, err
@@ -301,7 +319,7 @@ func main() {
 					ID:           node.NodeID,
 					DimensionDUA: node.DimensionDUA,
 					Difficulty:   "basico",
-					Format:       "visual",
+					Format:       formatFromNodeID(node.NodeID),
 					ResourceURL:  "interactive://" + node.NodeID,
 					Embedding:    fitted,
 				}); err != nil {
@@ -353,4 +371,12 @@ func main() {
 	case <-time.After(5 * time.Second):
 		srv.Stop()
 	}
+}
+
+func formatFromNodeID(nodeID string) string {
+	parts, err := vector.ParseNodeID(nodeID)
+	if err != nil || parts.Format == "" {
+		return "visual"
+	}
+	return parts.Format
 }

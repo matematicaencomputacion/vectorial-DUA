@@ -8,10 +8,11 @@ option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
 message StudentSessionMeta {
   string preferred_format = 1;     // visual | conceptual | practica
   string engagement_tone = 2;      // calm | encouraging | challenge
-  float frustration_signal = 3;    // 0..1 observed affective load
+  optional float frustration_signal = 3; // 0..1 observed affective load; distinguish unset from explicit 0.0
   bool needs_scaffolding = 4;
   string cohort_id = 5;
   string active_story_point = 6;
+  string preferred_dimension_dua = 7; // Representacion | Accion | Compromiso
 }
 
 // StudentVector represents the learner state in N DUA/Rogers dimensions.

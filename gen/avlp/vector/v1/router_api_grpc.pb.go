@@ -36,6 +36,9 @@ type VectorRouterClient interface {
 	GetInteractiveNode(ctx context.Context, in *NodeIdRequest, opts ...grpc.CallOption) (*InteractiveVideoNode, error)
 	MutateInteractiveNode(ctx context.Context, in *MutateInteractiveRequest, opts ...grpc.CallOption) (*MutateInteractiveResponse, error)
 	RecordSubtopicInteraction(ctx context.Context, in *SubtopicInteraction, opts ...grpc.CallOption) (*Ack, error)
+	// Limitation (current phase): this RPC validates only node-level botonera_schema
+	// variants. Legacy node-level flat botonera entries (InteractiveVideoNode.botonera)
+	// are not resolved here and return NotFound.
 	RecordBotoneraInteraction(ctx context.Context, in *BotoneraInteraction, opts ...grpc.CallOption) (*Ack, error)
 }
 
@@ -107,6 +110,9 @@ type VectorRouterServer interface {
 	GetInteractiveNode(context.Context, *NodeIdRequest) (*InteractiveVideoNode, error)
 	MutateInteractiveNode(context.Context, *MutateInteractiveRequest) (*MutateInteractiveResponse, error)
 	RecordSubtopicInteraction(context.Context, *SubtopicInteraction) (*Ack, error)
+	// Limitation (current phase): this RPC validates only node-level botonera_schema
+	// variants. Legacy node-level flat botonera entries (InteractiveVideoNode.botonera)
+	// are not resolved here and return NotFound.
 	RecordBotoneraInteraction(context.Context, *BotoneraInteraction) (*Ack, error)
 	mustEmbedUnimplementedVectorRouterServer()
 }
