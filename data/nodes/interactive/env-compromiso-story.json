@@ -4,7 +4,7 @@
   "titulo": "¿Por qué importan las variables de entorno?",
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/env/why-story.mp4",
-  "embedding_descriptor": "Explicación de por qué es importante configurar variables de entorno: proteger secretos y credenciales, separar configuración del código, y qué riesgos hay si no lo hacés.",
+  "embedding_descriptor": "Por qué importan las variables de entorno y cuidar los secretos: motivación, qué riesgos de seguridad hay al exponer credenciales, y qué te ahorra separar la configuración del código.",
   "botonera_schema": {
     "kind": "cognitive",
     "topic_title": "Sentido práctico de .env",

@@ -174,11 +174,11 @@ func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
 		},
 		{
 			"Accion", "basico", "practica", "ide://cells/env-exercise",
-			"Ejercicio práctico para configurar y usar variables de entorno en código: crear un .env de ejemplo, leer valores y comprobar el comportamiento al ejecutar.",
+			"Ejercicio guiado paso a paso para crear y leer un archivo .env en el IDE: escribir la variable, cargarla en el código y verificar que el programa la lee.",
 		},
 		{
 			"Compromiso", "basico", "conceptual", "agent://analogies/env-story",
-			"Explicación de por qué es importante configurar variables de entorno: proteger secretos y credenciales, separar configuración del código, y qué riesgos hay si no lo hacés.",
+			"Por qué importan las variables de entorno y cuidar los secretos: motivación, qué riesgos de seguridad hay al exponer credenciales, y qué te ahorra separar la configuración del código.",
 		},
 		{
 			"Representacion", "basico", "conceptual", "master://nodes/parameter-card",
