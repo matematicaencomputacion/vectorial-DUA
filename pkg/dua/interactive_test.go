@@ -8,6 +8,7 @@ import (
 
 	"github.com/vectorial-dua/avlp/pkg/dua"
 	"github.com/vectorial-dua/avlp/pkg/rag"
+	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
 func seedDir(t *testing.T) string {
@@ -91,8 +92,8 @@ func TestMutateAppendsLiveButton(t *testing.T) {
 	if !res.Button.IsLiveGenerated {
 		t.Fatal("expected is_live_generated")
 	}
-	if len(res.Button.VectorDelta) == 0 {
-		t.Fatal("expected vector_delta")
+	if len(res.Button.VectorDelta) != vector.ContentEmbedDims {
+		t.Fatalf("vector_delta dims=%d want content space %d (not V_e)", len(res.Button.VectorDelta), vector.ContentEmbedDims)
 	}
 	if len(res.Node.Botonera) != len(before.Botonera)+1 {
 		t.Fatalf("botonera size=%d want %d", len(res.Node.Botonera), len(before.Botonera)+1)

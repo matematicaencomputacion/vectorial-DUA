@@ -1,12 +1,17 @@
 package dua
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
+
+	"github.com/vectorial-dua/avlp/pkg/rag"
+	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
 // Registry is a concurrent in-memory store of interactive video nodes.
@@ -81,6 +86,7 @@ func (r *Registry) LoadDir(dir string) (int, error) {
 		return 0, err
 	}
 	count := 0
+	emb := rag.DefaultEmbedder()
 	for _, e := range entries {
 		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".json") {
 			continue
@@ -93,6 +99,15 @@ func (r *Registry) LoadDir(dir string) (int, error) {
 		var node InteractiveVideoNode
 		if err := json.Unmarshal(raw, &node); err != nil {
 			return count, fmt.Errorf("%s: %w", path, err)
+		}
+		desc := describeInteractiveNode(&node)
+		vec, err := emb.Embed(context.Background(), desc)
+		if err != nil {
+			return count, fmt.Errorf("%s: embed descriptor: %w", path, err)
+		}
+		node.Embedding, err = vector.FitContentEmbedding(vec)
+		if err != nil {
+			return count, fmt.Errorf("%s: fit embedding: %w", path, err)
 		}
 		if err := r.Put(&node); err != nil {
 			return count, fmt.Errorf("%s: %w", path, err)
@@ -118,4 +133,60 @@ func EnabledFromEnv() bool {
 		return true
 	}
 	return !strings.EqualFold(v, "false") && v != "0"
+}
+
+func describeInteractiveNode(n *InteractiveVideoNode) string {
+	if n == nil {
+		return ""
+	}
+	var parts []string
+	parts = append(parts, n.NodeID, n.DimensionDUA, n.Titulo, n.StageMediaDefault)
+	for _, b := range n.Botonera {
+		parts = append(parts, b.Label, b.CellCode)
+	}
+	if n.BotoneraSchema != nil {
+		parts = append(parts, string(n.BotoneraSchema.Kind), n.BotoneraSchema.TopicTitle)
+		for _, d := range n.BotoneraSchema.DepthOptions {
+			parts = append(parts, d.VariantID, d.Label)
+		}
+		for _, c := range n.BotoneraSchema.CognitiveOptions {
+			parts = append(parts, c.VariantID, c.Label, c.CellCode)
+		}
+		for _, e := range n.BotoneraSchema.EmergencyOptions {
+			parts = append(parts, e.VariantID, e.Label, e.HintText)
+		}
+		for _, cell := range n.BotoneraSchema.MatrixCells {
+			parts = append(parts, cell.DepthID, cell.FormatID, cell.CellCode)
+		}
+	}
+	if n.Hierarchy != nil {
+		parts = append(parts, n.Hierarchy.MainTopicTitle)
+		collectSubtopicText(n.Hierarchy.Subtopics, &parts)
+	}
+	return strings.Join(normalizeParts(parts), " ")
+}
+
+func collectSubtopicText(nodes []SubtopicNode, parts *[]string) {
+	for _, s := range nodes {
+		*parts = append(*parts, s.SubtopicID, s.Title)
+		collectSubtopicText(s.ChildSubtopics, parts)
+	}
+}
+
+func normalizeParts(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := map[string]struct{}{}
+	for _, p := range in {
+		p = strings.ToLower(strings.TrimSpace(p))
+		if p == "" {
+			continue
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		out = append(out, p)
+	}
+	sort.Strings(out)
+	return out
 }

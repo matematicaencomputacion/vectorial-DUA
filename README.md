@@ -8,7 +8,7 @@ Plataforma educativa vectorial y adaptativa (**DUA** + **Carl Rogers**), con **O
 |------|-----|----------------|
 | **Master** | Mapa de rutas DUA + nodos interactivos | Contrato Stage/botonera + seeds |
 | **IDE (Antigravity)** | Ejecución y experimentación en celdas | Sandbox + acción `open_ide_cell` |
-| **Agente** | Scaffolding rogeriano + RAG | mutación “duda diferente” |
+| **Agente** | Scaffolding rogeriano + RAG; actualiza $V_e$ por interacción | mutación “duda diferente”; deltas vía `RecordBotoneraInteraction` / `RecordSubtopicInteraction` |
 
 ## Nodo interactivo DUA (Stage + botonera)
 
@@ -30,7 +30,7 @@ Layout multipartes inspirado en reproductores interactivos clásicos (Dreamweave
 | `emergency` | Error, hint Rogers, casos de prueba | `debug-emergency.json` |
 | `combined` | Matriz profundidad × formato | `postgis-combined.json` |
 
-- RPCs: `GetInteractiveNode`, `MutateInteractiveNode`, `RecordSubtopicInteraction`
+- RPCs: `GetInteractiveNode`, `MutateInteractiveNode`, `RecordBotoneraInteraction`, `RecordSubtopicInteraction`
 - Flag: `AVLP_INTERACTIVE_NODES` (default `true`)
 - Contrato: `DUANodeBotonera` + `BotoneraInteraction` (preferencias → $V_e$)
 
@@ -70,7 +70,8 @@ vectorial-DUA/
 │   ├── add-rag-knowledge-retriever/
 │   ├── add-interactive-video-node/
 │   ├── add-dua-botonera-schemas/
-│   └── add-hierarchical-subtopic-node/
+│   ├── add-hierarchical-subtopic-node/
+│   └── add-ola2-adaptive-debt/   (deuda Ola 2, propuesta)
 └── scripts/
 ```
 

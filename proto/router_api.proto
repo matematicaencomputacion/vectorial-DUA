@@ -13,6 +13,10 @@ service VectorRouter {
   rpc GetInteractiveNode(NodeIdRequest) returns (InteractiveVideoNode);
   rpc MutateInteractiveNode(MutateInteractiveRequest) returns (MutateInteractiveResponse);
   rpc RecordSubtopicInteraction(SubtopicInteraction) returns (Ack);
+  // Limitation (current phase): this RPC validates only node-level botonera_schema
+  // variants. Legacy node-level flat botonera entries (InteractiveVideoNode.botonera)
+  // are not resolved here and return NotFound.
+  rpc RecordBotoneraInteraction(BotoneraInteraction) returns (Ack);
 }
 
 message NodeResponse {

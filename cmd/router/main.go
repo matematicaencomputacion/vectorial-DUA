@@ -26,10 +26,18 @@ const defaultAddr = ":50051"
 
 type server struct {
 	vectorv1.UnimplementedVectorRouterServer
-	router       *vector.Router
-	reg          *dua.Registry
-	mutator      *dua.Mutator
-	interactions *dua.InteractionStore
+	router        *vector.Router
+	reg           *dua.Registry
+	mutator       *dua.Mutator
+	queryEmbedder rag.Embedder
+	profiles      *dua.ProfileStore
+	interactions  *dua.InteractionStore
+}
+
+const ackRecorded = "recorded"
+
+func neutralAck() *vectorv1.Ack {
+	return &vectorv1.Ack{Ok: true, Message: ackRecorded}
 }
 
 type liveBridge struct {
@@ -59,25 +67,52 @@ func (b liveBridge) GenerateLive(ctx context.Context, req vector.LiveRequest) (v
 
 func (s *server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery) (*vectorv1.RouteResult, error) {
 	studentID := ""
-	frustration := float32(0.5)
+	var dims []float32
+	preferredDimension := ""
 	format := ""
+	frustration := float32(0)
+	frustrationProvided := false
+
 	if st := req.GetStudentState(); st != nil {
 		studentID = st.GetStudentId()
+		dims = append([]float32(nil), st.GetDimensions()...)
 		if sess := st.GetSession(); sess != nil {
-			frustration = sess.GetFrustrationSignal()
 			format = sess.GetPreferredFormat()
-		}
-		dims := st.GetDimensions()
-		if frustration == 0 && len(dims) >= 3 {
-			frustration = dims[2]
+			preferredDimension = sess.GetPreferredDimensionDua()
+			if sess.FrustrationSignal != nil {
+				frustration = sess.GetFrustrationSignal()
+				frustrationProvided = true
+			}
 		}
 	}
 
-	outcome, err := s.router.QueryNearestWithOptions(ctx, studentID, req.GetQueryEmbedding(), req.GetMinSimilarityThreshold(), vector.QueryOptions{
+	// Ola 1 merge rule (no blend): request dimensions win; otherwise profile store.
+	if len(dims) == 0 && s.profiles != nil && studentID != "" {
+		dims = s.profiles.Get(studentID)
+	}
+
+	dimension, resolvedFormat, resolvedFrustration := dua.ResolveRoutingHints(dua.ResolveRoutingHintsInput{
+		Dimensions:          dims,
+		PreferredDimension:  preferredDimension,
+		PreferredFormat:     format,
+		FrustrationSignal:   frustration,
+		FrustrationProvided: frustrationProvided,
+	})
+
+	queryEmbedding := append([]float32(nil), req.GetQueryEmbedding()...)
+	if len(queryEmbedding) == 0 && req.GetQueryText() != "" && s.queryEmbedder != nil {
+		embedded, err := s.queryEmbedder.Embed(ctx, req.GetQueryText())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "embed query_text: %v", err)
+		}
+		queryEmbedding = embedded
+	}
+
+	outcome, err := s.router.QueryNearestWithOptions(ctx, studentID, queryEmbedding, req.GetMinSimilarityThreshold(), vector.QueryOptions{
 		DoubtText:   req.GetQueryText(),
-		Frustration: frustration,
-		Dimension:   "Representacion",
-		Format:      format,
+		Frustration: resolvedFrustration,
+		Dimension:   dimension,
+		Format:      resolvedFormat,
 	})
 	if err != nil {
 		return nil, err
@@ -147,27 +182,69 @@ func (s *server) MutateInteractiveNode(ctx context.Context, req *vectorv1.Mutate
 	}, nil
 }
 
+func (s *server) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.BotoneraInteraction) (*vectorv1.Ack, error) {
+	_ = ctx
+	if s.profiles == nil {
+		return nil, status.Error(codes.FailedPrecondition, "profile store disabled")
+	}
+	if s.reg == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interactive nodes disabled")
+	}
+	if req.GetStudentId() == "" || req.GetNodeId() == "" || req.GetVariantId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "student_id, node_id, and variant_id are required")
+	}
+
+	n, ok := s.reg.Get(req.GetNodeId())
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetNodeId())
+	}
+	if n.BotoneraSchema == nil {
+		return nil, status.Errorf(codes.NotFound, "node %q has no botonera_schema", req.GetNodeId())
+	}
+	if !dua.HasBotoneraVariant(n.BotoneraSchema, req.GetVariantId(), req.GetFormatId()) {
+		return nil, status.Errorf(codes.NotFound, "variant %q not found in botonera schema for node %q", req.GetVariantId(), req.GetNodeId())
+	}
+
+	delta := dua.ResolveBotoneraDelta(n.BotoneraSchema, req.GetVariantId(), req.GetPreferenceDelta())
+	if len(delta) == 0 {
+		return neutralAck(), nil
+	}
+	if _, err := s.profiles.Apply(req.GetStudentId(), delta); err != nil {
+		log.Printf("botonera profile delta skipped student=%s node=%s variant=%s: %v",
+			req.GetStudentId(), req.GetNodeId(), req.GetVariantId(), err)
+	}
+	return neutralAck(), nil
+}
+
 func (s *server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.SubtopicInteraction) (*vectorv1.Ack, error) {
 	_ = ctx
+	if s.profiles == nil {
+		return nil, status.Error(codes.FailedPrecondition, "profile store disabled")
+	}
 	if s.interactions == nil {
 		return nil, status.Error(codes.FailedPrecondition, "subtopic interactions disabled")
 	}
 	if req.GetStudentId() == "" || req.GetParentNodeId() == "" || req.GetSubtopicId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "student_id, parent_node_id, and subtopic_id are required")
 	}
-	if s.reg != nil {
-		n, ok := s.reg.Get(req.GetParentNodeId())
-		if !ok {
-			return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
-		}
-		if n.Hierarchy != nil {
-			if _, found := n.Hierarchy.FindByID(req.GetSubtopicId()); !found {
-				return nil, status.Errorf(codes.NotFound, "subtopic %q not found under %q", req.GetSubtopicId(), req.GetParentNodeId())
-			}
-		}
+	if s.reg == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interactive nodes disabled")
 	}
-	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), req.GetPreferenceDelta())
-	return &vectorv1.Ack{Ok: true, Message: "recorded"}, nil
+
+	n, ok := s.reg.Get(req.GetParentNodeId())
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
+	}
+	if n.Hierarchy == nil {
+		return nil, status.Errorf(codes.NotFound, "node %q has no hierarchy", req.GetParentNodeId())
+	}
+	if _, found := n.Hierarchy.FindByID(req.GetSubtopicId()); !found {
+		return nil, status.Errorf(codes.NotFound, "subtopic %q not found under %q", req.GetSubtopicId(), req.GetParentNodeId())
+	}
+
+	delta := dua.ResolveSubtopicDelta(n.Hierarchy, req.GetSubtopicId(), req.GetPreferenceDelta())
+	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), delta)
+	return neutralAck(), nil
 }
 
 func main() {
@@ -177,7 +254,7 @@ func main() {
 	}
 
 	index := vector.NewIndex()
-	if err := vector.SeedDemoNodes(index); err != nil {
+	if err := vector.SeedDemoNodes(index, rag.DefaultEmbedder()); err != nil {
 		log.Fatalf("seed demo nodes: %v", err)
 	}
 
@@ -217,7 +294,13 @@ func main() {
 		log.Printf("RAG disabled (AVLP_RAG_ENABLED=false)")
 	}
 
-	srvImpl := &server{router: router, interactions: dua.NewInteractionStore()}
+	profiles := dua.NewProfileStore()
+	srvImpl := &server{
+		router:        router,
+		queryEmbedder: rag.DefaultEmbedder(),
+		profiles:      profiles,
+		interactions:  dua.NewInteractionStoreWithProfiles(profiles),
+	}
 
 	if dua.EnabledFromEnv() {
 		reg := dua.NewRegistry()
@@ -238,13 +321,18 @@ func main() {
 				if len(node.Embedding) == 0 {
 					return
 				}
+				fitted, err := vector.FitContentEmbedding(node.Embedding)
+				if err != nil {
+					log.Printf("index interactive node %s: %v", node.NodeID, err)
+					return
+				}
 				if err := index.Upsert(vector.Node{
 					ID:           node.NodeID,
 					DimensionDUA: node.DimensionDUA,
 					Difficulty:   "basico",
-					Format:       "visual",
+					Format:       formatFromNodeID(node.NodeID),
 					ResourceURL:  "interactive://" + node.NodeID,
-					Embedding:    append([]float32(nil), node.Embedding...),
+					Embedding:    fitted,
 				}); err != nil {
 					log.Printf("index interactive node %s: %v", node.NodeID, err)
 				}
@@ -294,4 +382,12 @@ func main() {
 	case <-time.After(5 * time.Second):
 		srv.Stop()
 	}
+}
+
+func formatFromNodeID(nodeID string) string {
+	parts, err := vector.ParseNodeID(nodeID)
+	if err != nil || parts.Format == "" {
+		return "visual"
+	}
+	return parts.Format
 }

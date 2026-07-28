@@ -1,6 +1,7 @@
 package vector
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -26,20 +27,39 @@ type Match struct {
 // Index is a concurrent in-memory k-NN store with ULID uniqueness checks.
 type Index struct {
 	mu    sync.RWMutex
-	nodes map[string]Node // keyed by full node_id
+	dims  int                 // required content embedding length (ContentEmbedDims)
+	nodes map[string]Node     // keyed by full node_id
 	ring  map[string]struct{} // ULID segment uniqueness ring
 	order []string
 }
 
-// NewIndex creates an empty vector index.
+// NewIndex creates an empty vector index locked to ContentEmbedDims.
 func NewIndex() *Index {
+	return NewIndexWithDims(ContentEmbedDims)
+}
+
+// NewIndexWithDims creates an index that rejects embeddings of any other length.
+func NewIndexWithDims(dims int) *Index {
+	if dims <= 0 {
+		dims = ContentEmbedDims
+	}
 	return &Index{
+		dims:  dims,
 		nodes: make(map[string]Node),
 		ring:  make(map[string]struct{}),
 	}
 }
 
-// Upsert registers or replaces a node. Enforces unique ULID segments.
+// Dims returns the required content embedding dimensionality for this index.
+func (idx *Index) Dims() int {
+	if idx == nil || idx.dims <= 0 {
+		return ContentEmbedDims
+	}
+	return idx.dims
+}
+
+// Upsert registers or replaces a node. Enforces unique ULID segments and
+// embedding dimensionality matching the index.
 func (idx *Index) Upsert(node Node) error {
 	if !ValidateNodeID(node.ID) {
 		return fmt.Errorf("invalid node id: %s", node.ID)
@@ -50,6 +70,11 @@ func (idx *Index) Upsert(node Node) error {
 	}
 	if len(node.Embedding) == 0 {
 		return fmt.Errorf("embedding required for node %s", node.ID)
+	}
+	want := idx.Dims()
+	if len(node.Embedding) != want {
+		return fmt.Errorf("embedding dims mismatch for node %s: got %d, index requires %d (content space; not V_e)",
+			node.ID, len(node.Embedding), want)
 	}
 
 	idx.mu.Lock()
@@ -103,7 +128,12 @@ func (idx *Index) Nearest(query []float32) Match {
 }
 
 // RegisterNode creates a hierarchical ULID id and upserts the node.
+// Short embeddings are projected into content space via FitContentEmbedding.
 func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32) (Node, error) {
+	fitted, err := FitContentEmbedding(embedding)
+	if err != nil {
+		return Node{}, err
+	}
 	id, err := NewNodeID(dimensionDUA, difficulty, format)
 	if err != nil {
 		return Node{}, err
@@ -114,7 +144,7 @@ func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL str
 		Difficulty:   difficulty,
 		Format:       format,
 		ResourceURL:  resourceURL,
-		Embedding:    append([]float32(nil), embedding...),
+		Embedding:    fitted,
 	}
 	if err := idx.Upsert(node); err != nil {
 		return Node{}, err
@@ -122,20 +152,34 @@ func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL str
 	return node, nil
 }
 
+// TextEmbedder is the content embedding contract used by seed loaders.
+type TextEmbedder interface {
+	Embed(ctx context.Context, text string) ([]float32, error)
+}
+
 // SeedDemoNodes loads a small static curriculum for demos/tests.
-func SeedDemoNodes(idx *Index) error {
+// Embeddings are generated from textual descriptors to share semantic space
+// with query_text embeddings.
+func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
+	if emb == nil {
+		return fmt.Errorf("seed embedder is required")
+	}
 	seeds := []struct {
 		dim, diff, format, url string
-		emb                    []float32
+		text                   string
 	}{
-		{"Representacion", "basico", "visual", "master://nodes/env-diagram", []float32{0.92, 0.10, 0.05, 0.20, 0.15}},
-		{"Accion", "basico", "practica", "ide://cells/env-exercise", []float32{0.88, 0.25, 0.10, 0.30, 0.40}},
-		{"Compromiso", "basico", "conceptual", "agent://analogies/env-story", []float32{0.70, 0.55, 0.35, 0.25, 0.60}},
-		{"Representacion", "basico", "conceptual", "master://nodes/parameter-card", []float32{0.15, 0.90, 0.10, 0.20, 0.25}},
-		{"Accion", "basico", "practica", "ide://cells/string-quotes", []float32{0.20, 0.15, 0.85, 0.30, 0.20}},
+		{"Representacion", "basico", "visual", "master://nodes/env-diagram", "variables de entorno .env visual diagrama representacion"},
+		{"Accion", "basico", "practica", "ide://cells/env-exercise", "ejercicio practico variables de entorno codigo accion"},
+		{"Compromiso", "basico", "conceptual", "agent://analogies/env-story", "por que importan variables de entorno seguridad motivacion compromiso"},
+		{"Representacion", "basico", "conceptual", "master://nodes/parameter-card", "que es un parametro explicacion conceptual representacion"},
+		{"Accion", "basico", "practica", "ide://cells/string-quotes", "comillas strings practica depuracion accion"},
 	}
 	for _, s := range seeds {
-		if _, err := idx.RegisterNode(s.dim, s.diff, s.format, s.url, s.emb); err != nil {
+		vec, err := emb.Embed(context.Background(), s.text)
+		if err != nil {
+			return err
+		}
+		if _, err := idx.RegisterNode(s.dim, s.diff, s.format, s.url, vec); err != nil {
 			return err
 		}
 		// Ensure chronological uniqueness under high-speed registration.

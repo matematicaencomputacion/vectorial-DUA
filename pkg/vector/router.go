@@ -2,6 +2,7 @@ package vector
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -92,7 +93,11 @@ func (r *Router) QueryNearest(studentID string, query []float32, threshold float
 // QueryNearestWithOptions is the full miss→RAG path.
 func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, query []float32, threshold float32, opt QueryOptions) (RouteOutcome, error) {
 	th := ResolveThreshold(threshold)
-	match := r.Index.Nearest(query)
+	fitted, err := FitContentEmbedding(query)
+	if err != nil {
+		return RouteOutcome{}, fmt.Errorf("query embedding: %w", err)
+	}
+	match := r.Index.Nearest(fitted)
 
 	if match.Found && match.Similarity >= th {
 		return RouteOutcome{
@@ -120,7 +125,7 @@ func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, 
 		EventID:        eventID,
 		TrackingULID:   tracking,
 		StudentID:      studentID,
-		QueryEmbedding: append([]float32(nil), query...),
+		QueryEmbedding: append([]float32(nil), fitted...),
 		BestSimilarity: best,
 		Threshold:      th,
 		Timestamp:      time.Now().UTC(),
@@ -131,7 +136,7 @@ func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, 
 		live, err := r.Live.GenerateLive(ctx, LiveRequest{
 			StudentID:      studentID,
 			DoubtText:      opt.DoubtText,
-			QueryEmbedding: query,
+			QueryEmbedding: fitted,
 			Frustration:    opt.Frustration,
 			Dimension:      opt.Dimension,
 			Format:         opt.Format,

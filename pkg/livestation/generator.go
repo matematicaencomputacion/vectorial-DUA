@@ -93,6 +93,11 @@ func (g *Generator) Generate(ctx context.Context, req Request) (Result, error) {
 			return Result{}, err
 		}
 	}
+	// RegisterNode fits into ContentEmbedDims; refuse oversized vectors early.
+	emb, err = vector.FitContentEmbedding(emb)
+	if err != nil {
+		return Result{}, fmt.Errorf("live station embedding: %w", err)
+	}
 
 	node, err := g.Nodes.RegisterNode(req.Dimension, "adaptativo", req.Format, "live://stations/"+req.TrackingULID, emb)
 	if err != nil {

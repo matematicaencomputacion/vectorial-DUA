@@ -1,11 +1,13 @@
 package vector_test
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
@@ -76,7 +78,7 @@ func TestIndexUniqueULIDRing(t *testing.T) {
 
 func TestRouterStaticMatchAboveThreshold(t *testing.T) {
 	idx := vector.NewIndex()
-	if err := vector.SeedDemoNodes(idx); err != nil {
+	if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
 		t.Fatal(err)
 	}
 	var emitted int32
@@ -85,8 +87,11 @@ func TestRouterStaticMatchAboveThreshold(t *testing.T) {
 		atomic.AddInt32(&emitted, 1)
 	})
 	r := vector.NewRouter(idx, bus)
-
-	out, err := r.QueryNearest("stu-1", []float32{0.92, 0.10, 0.05, 0.20, 0.15}, 0.85)
+	query, err := rag.DefaultEmbedder().Embed(context.Background(), "variables de entorno .env visual diagrama representacion")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := r.QueryNearest("stu-1", query, 0.85)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +111,7 @@ func TestRouterStaticMatchAboveThreshold(t *testing.T) {
 
 func TestRouterLiveStationOnMiss(t *testing.T) {
 	idx := vector.NewIndex()
-	if err := vector.SeedDemoNodes(idx); err != nil {
+	if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
 		t.Fatal(err)
 	}
 	var got vector.NodeNotFoundEvent
@@ -118,8 +123,11 @@ func TestRouterLiveStationOnMiss(t *testing.T) {
 		mu.Unlock()
 	})
 	r := vector.NewRouter(idx, bus)
-
-	out, err := r.QueryNearest("stu-2", []float32{0.0, 0.0, 0.0, 0.0, 1.0}, 0.85)
+	query, err := rag.DefaultEmbedder().Embed(context.Background(), "bloqueo inedito fuera de ruta estatica postgis")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := r.QueryNearest("stu-2", query, 0.85)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,11 +149,14 @@ func TestRouterLiveStationOnMiss(t *testing.T) {
 
 func TestRouterInProcessLatencyP99(t *testing.T) {
 	idx := vector.NewIndex()
-	if err := vector.SeedDemoNodes(idx); err != nil {
+	if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
 		t.Fatal(err)
 	}
 	r := vector.NewRouter(idx, vector.NewEventBus())
-	query := []float32{0.92, 0.10, 0.05, 0.20, 0.15}
+	query, err := rag.DefaultEmbedder().Embed(context.Background(), "variables de entorno .env visual diagrama representacion")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	const n = 2000
 	samples := make([]time.Duration, n)
