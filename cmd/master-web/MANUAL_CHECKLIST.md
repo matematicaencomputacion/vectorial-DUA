@@ -16,8 +16,10 @@ go run ./cmd/master-web
 - [ ] Toque de opción de profundidad actualiza el Stage (título / media_url) y el panel de desarrollo refleja cambio en $V_e$
 - [ ] Ejemplo «async/await» → botonera cognitiva; «PostGIS» → matriz combined; «automóvil» → acordeón (abrir Motor sin pasar por Asientos)
 - [ ] «+ Tengo una duda diferente» → aparece botón LIVE en la botonera
-- [ ] Ejemplo «duda novel (live)» → pantalla de espera con **mensaje rogeriano visible** (no spinner mudo) y polling ~2s hasta ready/failed; ready muestra `live_content` en Markdown
-- [ ] Panel de desarrollo plegado por defecto; al abrir muestra `student_id` de sesión (sin localStorage) y similitud del último match
+- [ ] Ejemplo «fuera de tema (honesto)» → estación sin fuentes espurias; Stage con «No encontré material verificado…»
+- [ ] Nodo estático / estación live: **no** muestra «+ Tengo una duda diferente»; sí el hint «Para una duda nueva…»
+- [ ] Error de API (p. ej. mutación inválida) aparece en la franja de estado con `aria-live="assertive"`
+- [ ] Label «Probá con:» + chips «Ejemplo: …»; al tocar un chip, el status indica que hay que pulsar «Buscar estación»
 
 ## Teclado
 

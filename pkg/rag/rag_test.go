@@ -51,6 +51,39 @@ func TestIngestAndRetrieveEnvDoc(t *testing.T) {
 	}
 }
 
+func TestRetrieveMinSimilarityDropsOffTopic(t *testing.T) {
+	store := rag.NewStore()
+	emb := rag.NewHashEmbedder(64)
+	if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: kbRoot(t), Embedder: emb}); err != nil {
+		t.Fatal(err)
+	}
+
+	ret := rag.NewRetriever(store, emb, 5)
+	ret.MinSimilarity = rag.DefaultMinSimilarity
+
+	off, err := ret.RetrieveText(context.Background(), "que es un bit")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(off) != 0 {
+		t.Fatalf("off-topic should yield zero hits above floor %.2f, got %d: %+v",
+			rag.DefaultMinSimilarity, len(off), rag.Sources(off))
+	}
+
+	on, err := ret.RetrieveText(context.Background(), "variables de entorno archivo .env secretos dotenv Henry")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(on) == 0 {
+		t.Fatal("on-topic .env query must keep hits above the floor")
+	}
+	for _, h := range on {
+		if h.Similarity < rag.DefaultMinSimilarity {
+			t.Fatalf("hit below floor: sim=%.4f source=%s", h.Similarity, h.Chunk.Source)
+		}
+	}
+}
+
 func TestHashEmbedderDeterministic(t *testing.T) {
 	emb := rag.NewHashEmbedder(32)
 	a, err := emb.Embed(context.Background(), "postgis ST_DWithin")

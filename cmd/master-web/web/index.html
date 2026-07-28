@@ -163,8 +163,15 @@
     .hints {
       display: flex;
       flex-wrap: wrap;
+      align-items: center;
       gap: 0.4rem;
       margin: 0 0 1rem;
+    }
+    .hints .hints-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      margin-right: 0.15rem;
     }
     .hints button {
       font-size: 0.82rem;
@@ -482,12 +489,14 @@
     </form>
 
     <div class="hints" aria-label="Ejemplos de duda">
-      <button type="button" data-hint="no entiendo para qué sirve el archivo .env, ¿me lo mostrás con un diagrama?">.env / diagrama</button>
-      <button type="button" data-hint="estoy perdido: ¿qué diferencia hay entre un parámetro y una variable normal?">variables y scope</button>
-      <button type="button" data-hint="async await analogía animada">async/await</button>
-      <button type="button" data-hint="PostGIS ST_DWithin profundidad y formatos">PostGIS matriz</button>
-      <button type="button" data-hint="¿Qué es un Automóvil? caja central y motor">automóvil</button>
-      <button type="button" data-hint="Estoy bloqueado con un tema nuevo de PostGIS ST_DWithin que no está en la ruta estática">duda novel (live)</button>
+      <span class="hints-label" id="hints-label">Probá con:</span>
+      <button type="button" data-hint="no entiendo para qué sirve el archivo .env, ¿me lo mostrás con un diagrama?" aria-describedby="hints-label">Ejemplo: .env / diagrama</button>
+      <button type="button" data-hint="estoy perdido: ¿qué diferencia hay entre un parámetro y una variable normal?" aria-describedby="hints-label">Ejemplo: variables y scope</button>
+      <button type="button" data-hint="async await analogía animada" aria-describedby="hints-label">Ejemplo: async/await</button>
+      <button type="button" data-hint="PostGIS ST_DWithin profundidad y formatos" aria-describedby="hints-label">Ejemplo: PostGIS matriz</button>
+      <button type="button" data-hint="¿Qué es un Automóvil? caja central y motor" aria-describedby="hints-label">Ejemplo: automóvil</button>
+      <button type="button" data-hint="Estoy bloqueado con un tema nuevo de PostGIS ST_DWithin que no está en la ruta estática" aria-describedby="hints-label">Ejemplo: duda novel (live)</button>
+      <button type="button" data-hint="que es un bit" aria-describedby="hints-label">Ejemplo: fuera de tema (honesto)</button>
     </div>
 
     <div class="workspace" aria-label="Nodo interactivo">
@@ -513,6 +522,9 @@
           <textarea id="ask-doubt" placeholder="Otra duda sobre este nodo…"></textarea>
           <button type="button" id="btn-mutate" class="secondary">Generar botón en vivo</button>
         </div>
+        <p id="ask-hint" class="ask-hint" hidden style="margin:0;color:var(--ink-soft);font-size:0.92rem;line-height:1.4;">
+          Para una duda nueva sobre otro tema, buscá arriba.
+        </p>
       </aside>
     </div>
 
@@ -533,6 +545,7 @@
   let ve = [0.5, 0.5, 0.5, 0.5, 0.5];
   let lastSimilarity = null;
   let currentNode = null;
+  let interactiveSession = false; // true only after successful GetInteractiveNode
   let pollTimer = null;
   let activeTabId = null;
 
@@ -546,6 +559,7 @@
     railTopic: document.getElementById("rail-topic"),
     railBody: document.getElementById("rail-body"),
     askBox: document.getElementById("ask-box"),
+    askHint: document.getElementById("ask-hint"),
     askDoubt: document.getElementById("ask-doubt"),
     btnMutate: document.getElementById("btn-mutate"),
     status: document.getElementById("status"),
@@ -555,6 +569,28 @@
   function setStatus(msg, tone) {
     el.status.textContent = msg || "";
     el.status.dataset.tone = tone || "";
+    const isError = tone === "error";
+    el.status.setAttribute("aria-live", isError ? "assertive" : "polite");
+    el.status.setAttribute("role", isError ? "alert" : "status");
+  }
+
+  function reportError(err, fallback) {
+    var msg = fallback || "Algo no salió bien; probá de nuevo o reformulá la duda.";
+    if (err && err.data && err.data.student_message) {
+      msg = err.data.student_message;
+    } else if (err && err.message && String(err.message).trim()) {
+      msg = err.message;
+    }
+    setStatus(msg, "error");
+  }
+
+  function setAskMode(interactive) {
+    interactiveSession = !!interactive;
+    el.askBox.hidden = !interactiveSession;
+    el.askHint.hidden = interactiveSession;
+    if (!interactiveSession && el.askDoubt) {
+      el.askDoubt.value = "";
+    }
   }
 
   function clamp01(x) {
@@ -636,7 +672,13 @@
   }
 
   async function api(path, opts) {
-    const res = await fetch(path, opts);
+    var res;
+    try {
+      res = await fetch(path, opts);
+    } catch (netErr) {
+      reportError(netErr, "No pude contactar al servidor. Revisá que el router y master-web estén en marcha.");
+      throw netErr;
+    }
     const text = await res.text();
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (_) { data = { message: text }; }
@@ -644,6 +686,7 @@
       const err = new Error((data && (data.student_message || data.message)) || res.statusText);
       err.status = res.status;
       err.data = data;
+      reportError(err);
       throw err;
     }
     return data;
@@ -666,8 +709,8 @@
       "<p>Seguimos consultando el estado; este mensaje se actualiza solo.</p>" +
       "</div>";
     el.railTopic.textContent = "Estación en vivo";
-    el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Cuando esté lista, el contenido aparece en el Stage.</p>";
-    el.askBox.hidden = true;
+    el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Cuando esté lista, el contenido aparece en el Stage. Para una duda nueva sobre otro tema, buscá arriba.</p>";
+    setAskMode(false);
   }
 
   function showStageContent(title, meta, contentHtml) {
@@ -725,7 +768,7 @@
       applyDelta(preferenceDelta);
       setStatus("Preferencia registrada en el perfil.", "ok");
     } catch (e) {
-      setStatus("No pude registrar la botonera: " + e.message, "error");
+      // reportError already ran inside api()
     }
   }
 
@@ -748,7 +791,7 @@
       applyDelta(orbitDelta);
       setStatus("Subtema registrado.", "ok");
     } catch (e) {
-      setStatus("No pude registrar el subtema: " + e.message, "error");
+      // reportError already ran inside api()
     }
   }
 
@@ -1004,8 +1047,7 @@
       renderLegacyButtons(node.botonera, el.railBody);
     }
 
-    const hasAsk = (node.botonera || []).some(actionIsAsk) || true;
-    el.askBox.hidden = !hasAsk;
+    setAskMode(true);
   }
 
   async function loadInteractiveNode(nodeId) {
@@ -1022,6 +1064,18 @@
     setStatus("Nodo interactivo cargado.", "ok");
   }
 
+  function showNonInteractiveRail(kind) {
+    currentNode = null;
+    setAskMode(false);
+    if (kind === "live") {
+      el.railTopic.textContent = "Estación en vivo";
+      el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Contenido listo en el Stage. Para una duda nueva sobre otro tema, buscá arriba.</p>";
+    } else {
+      el.railTopic.textContent = "Nodo estático";
+      el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Sin payload interactivo. Mostramos el recurso ruteado.</p>";
+    }
+  }
+
   async function handleMatched(matched) {
     lastSimilarity = matched.similarity_score;
     renderDev();
@@ -1029,10 +1083,7 @@
       await loadInteractiveNode(matched.node_id);
       return;
     }
-    currentNode = null;
-    el.askBox.hidden = true;
-    el.railTopic.textContent = "Nodo estático";
-    el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Sin payload interactivo. Mostramos el recurso ruteado.</p>";
+    showNonInteractiveRail(matched.is_live_generated ? "live" : "static");
     if (matched.live_content) {
       setStageFromMedia({
         title: "Estación en vivo",
@@ -1059,37 +1110,50 @@
         if (st.status === "ready") {
           stopPoll();
           lastSimilarity = null;
-          if (st.node_id) {
+          if (st.live_content) {
+            showNonInteractiveRail("live");
+            setStageFromMedia({
+              title: "Estación lista",
+              meta: (st.retrieved_sources || []).join(", ") || (st.node_id || ""),
+              markdown: st.live_content,
+            });
+            // If the live node also has an interactive seed (rare), upgrade the rail.
+            if (st.node_id) {
+              try {
+                const node = await fetch("/api/nodes/" + encodeURIComponent(st.node_id)).then(function (r) {
+                  return r.ok ? r.json() : null;
+                });
+                if (node && node.node_id) {
+                  currentNode = node;
+                  renderRail(node);
+                }
+              } catch (_) { /* keep non-interactive rail */ }
+            }
+          } else if (st.node_id) {
             try {
               await loadInteractiveNode(st.node_id);
-              if (st.live_content) {
-                setStageFromMedia({
-                  title: currentNode.titulo || "Estación lista",
-                  meta: "listo · " + (st.retrieved_sources || []).join(", "),
-                  markdown: st.live_content,
-                });
-              }
             } catch (_) {
+              showNonInteractiveRail("live");
               setStageFromMedia({
                 title: "Estación lista",
-                meta: st.node_id || "",
-                markdown: st.live_content || msg,
+                meta: st.node_id,
+                markdown: msg,
               });
             }
           } else {
+            showNonInteractiveRail("live");
             setStageFromMedia({
               title: "Estación lista",
-              meta: (st.retrieved_sources || []).join(", "),
-              markdown: st.live_content || msg,
+              meta: "",
+              markdown: msg,
             });
-            el.railTopic.textContent = "Estación en vivo";
-            el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Contenido listo en el Stage.</p>";
           }
           setStatus("La estación está lista.", "ok");
           return;
         }
         if (st.status === "failed") {
           stopPoll();
+          setAskMode(false);
           showWaiting(msg, trackingUlid);
           setStatus(msg, "error");
           return;
@@ -1098,8 +1162,9 @@
         setStatus(msg, "");
       } catch (e) {
         stopPoll();
+        setAskMode(false);
         showWaiting((e.data && e.data.student_message) || e.message, trackingUlid);
-        setStatus(e.message, "error");
+        // reportError already ran inside api()
       }
     };
     await tick();
@@ -1127,6 +1192,7 @@
         await handleMatched(route.matched);
       } else if (route.pending) {
         currentNode = null;
+        setAskMode(false);
         lastSimilarity = null;
         renderDev();
         showWaiting(route.pending.message, route.pending.tracking_ulid);
@@ -1136,12 +1202,19 @@
         setStatus("Respuesta de ruteo inesperada.", "error");
       }
     } catch (e) {
-      setStatus("Error de consulta: " + e.message, "error");
+      // reportError already ran inside api() for HTTP failures
+      if (!e || !e.status) {
+        reportError(e, "Error de consulta. Probá de nuevo en un momento.");
+      }
     }
   });
 
   el.btnMutate.addEventListener("click", async function () {
-    if (!currentNode) return;
+    if (!interactiveSession || !currentNode || !currentNode.node_id) {
+      reportError(null, "Para una duda nueva sobre otro tema, buscá arriba.");
+      setAskMode(false);
+      return;
+    }
     const doubt = el.askDoubt.value.trim();
     if (!doubt) {
       setStatus("Escribí la duda diferente antes de generar el botón.", "error");
@@ -1174,7 +1247,7 @@
       setStatus("Botón en vivo agregado a la botonera.", "ok");
       renderDev();
     } catch (e) {
-      setStatus("Mutación falló: " + e.message, "error");
+      // reportError already ran inside api()
     } finally {
       el.btnMutate.disabled = false;
     }
@@ -1184,9 +1257,11 @@
     btn.addEventListener("click", function () {
       el.doubt.value = btn.getAttribute("data-hint");
       el.doubt.focus();
+      setStatus("Ejemplo cargado en «Tu duda». Pulsá «Buscar estación» para ejecutar.", "ok");
     });
   });
 
+  setAskMode(false);
   renderDev();
 })();
   </script>
