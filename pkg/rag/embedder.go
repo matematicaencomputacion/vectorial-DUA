@@ -89,17 +89,24 @@ func normalize(v []float32) {
 	}
 }
 
-// DefaultEmbedder returns HTTPEmbedder when AVLP_EMBEDDING_URL is set; otherwise
-// the offline HashEmbedder at ContentEmbedDims. There is no silent fallback from
-// HTTP to hash — unset the URL to run offline.
-func DefaultEmbedder() Embedder {
+// DefaultEmbedderE resolves the active embedder from the environment.
+// When AVLP_EMBEDDING_URL is set → HTTPEmbedder; otherwise → HashEmbedder
+// (ContentEmbedDims). Misconfigured URL/dims return an error (no panic, no
+// silent fallback to hash). Prefer this in library and main code.
+func DefaultEmbedderE() (Embedder, error) {
 	httpEmb, err := NewHTTPEmbedderFromEnv()
 	if err != nil {
-		panic(fmt.Sprintf("AVLP_EMBEDDING_URL misconfigured: %v", err))
+		return nil, fmt.Errorf("AVLP_EMBEDDING_URL misconfigured: %w", err)
 	}
 	if httpEmb != nil {
-		return httpEmb
+		return httpEmb, nil
 	}
+	return NewHashEmbedder(DefaultEmbedDims), nil
+}
+
+// DefaultEmbedder returns the offline HashEmbedder at ContentEmbedDims.
+// For env-aware resolution (HTTP when URL is set), use DefaultEmbedderE.
+func DefaultEmbedder() Embedder {
 	return NewHashEmbedder(DefaultEmbedDims)
 }
 

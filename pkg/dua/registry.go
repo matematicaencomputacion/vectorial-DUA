@@ -86,7 +86,10 @@ func (r *Registry) LoadDir(dir string) (int, error) {
 		return 0, err
 	}
 	count := 0
-	emb := rag.DefaultEmbedder()
+	emb, err := rag.DefaultEmbedderE()
+	if err != nil {
+		return 0, fmt.Errorf("embedder: %w", err)
+	}
 	for _, e := range entries {
 		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".json") {
 			continue

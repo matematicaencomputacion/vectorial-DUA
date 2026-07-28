@@ -253,7 +253,10 @@ func main() {
 		addr = v
 	}
 
-	emb := rag.DefaultEmbedder()
+	emb, err := rag.DefaultEmbedderE()
+	if err != nil {
+		log.Fatalf("embedder: %v", err)
+	}
 	ctx := context.Background()
 	if err := rag.EnsureEmbedderDims(ctx, emb); err != nil {
 		log.Fatalf("embedding backend: %v", err)

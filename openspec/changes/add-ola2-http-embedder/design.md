@@ -21,12 +21,16 @@ Normalización de URL: si no termina en `/embeddings`, se concatena (p. ej. `htt
 ## Resolución de embedder
 
 ```text
-DefaultEmbedder()
+DefaultEmbedderE() (Embedder, error)
   ├─ AVLP_EMBEDDING_URL set → HTTPEmbedder
+  ├─ URL misconfigured → error (no panic)
   └─ else → HashEmbedder(ContentEmbedDims=64)
+
+DefaultEmbedder() → siempre HashEmbedder offline (convenience / tests)
 ```
 
 Sin fallback automático HTTP→hash: el operador elige explícitamente desactivando la URL.
+`main` / harness fallan con `Fatalf` si `DefaultEmbedderE` o `ResolveEmbedder("env")` fallan.
 
 ## Dimensionalidad
 

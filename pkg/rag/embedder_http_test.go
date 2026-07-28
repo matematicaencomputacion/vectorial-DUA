@@ -184,7 +184,7 @@ func TestDefaultEmbedderHashOffline(t *testing.T) {
 	}
 }
 
-func TestDefaultEmbedderHTTPFromEnv(t *testing.T) {
+func TestDefaultEmbedderEHTTPFromEnv(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(openAIResponse(5))
@@ -194,7 +194,10 @@ func TestDefaultEmbedderHTTPFromEnv(t *testing.T) {
 	t.Setenv("AVLP_EMBEDDING_URL", srv.URL)
 	t.Setenv("AVLP_EMBEDDING_MODEL", "env-model")
 
-	emb := rag.DefaultEmbedder()
+	emb, err := rag.DefaultEmbedderE()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, ok := emb.(*rag.HTTPEmbedder); !ok {
 		t.Fatalf("expected HTTPEmbedder, got %T", emb)
 	}
@@ -203,6 +206,14 @@ func TestDefaultEmbedderHTTPFromEnv(t *testing.T) {
 	}
 	if emb.Dims() != 5 {
 		t.Fatalf("dims=%d want 5", emb.Dims())
+	}
+}
+
+func TestDefaultEmbedderEMisconfiguredDims(t *testing.T) {
+	t.Setenv("AVLP_EMBEDDING_URL", "http://example.com/v1")
+	t.Setenv("AVLP_EMBEDDING_DIMS", "not-a-number")
+	if _, err := rag.DefaultEmbedderE(); err == nil {
+		t.Fatal("expected error for invalid AVLP_EMBEDDING_DIMS")
 	}
 }
 

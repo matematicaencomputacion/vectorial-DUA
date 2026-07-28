@@ -25,6 +25,7 @@ const (
 type Case struct {
 	CaseID                 string    `json:"case_id"`
 	Description            string    `json:"description"`
+	Comment                string    `json:"comment,omitempty"`
 	StudentID              string    `json:"student_id"`
 	QueryEmbedding         []float32 `json:"query_embedding"`
 	QueryText              string    `json:"query_text,omitempty"`
@@ -169,8 +170,29 @@ func Score(c Case, out vector.RouteOutcome) CaseResult {
 
 // Runner executes golden cases against an in-process router.
 type Runner struct {
-	Router *vector.Router
-	Tel    *telemetry.Collector
+	Router   *vector.Router
+	Tel      *telemetry.Collector
+	Embedder rag.Embedder // used to embed query_text; nil → hash offline
+}
+
+// ResolveEmbedder returns an embedder for eval mode: "hash" (default, CI-safe)
+// or "env" (AVLP_EMBEDDING_URL HTTP / DefaultEmbedderE).
+func ResolveEmbedder(mode string) (rag.Embedder, error) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "", "hash":
+		return rag.NewHashEmbedder(rag.DefaultEmbedDims), nil
+	case "env":
+		emb, err := rag.DefaultEmbedderE()
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := emb.(*rag.HTTPEmbedder); !ok {
+			return nil, fmt.Errorf("embedder=env requires AVLP_EMBEDDING_URL (got offline hash)")
+		}
+		return emb, nil
+	default:
+		return nil, fmt.Errorf("unknown embedder mode %q (want hash|env)", mode)
+	}
 }
 
 // Run executes all cases and returns a report.
@@ -183,12 +205,17 @@ func (r *Runner) Run(cases []Case) Report {
 		TotalCases:      len(cases),
 	}
 
+	emb := r.Embedder
+	if emb == nil {
+		emb = rag.NewHashEmbedder(rag.DefaultEmbedDims)
+	}
+
 	for _, c := range cases {
 		t0 := time.Now()
 		query := append([]float32(nil), c.QueryEmbedding...)
 		if len(query) == 0 && c.QueryText != "" {
 			var err error
-			query, err = rag.DefaultEmbedder().Embed(context.Background(), c.QueryText)
+			query, err = emb.Embed(context.Background(), c.QueryText)
 			if err != nil {
 				result := CaseResult{CaseID: c.CaseID, Passed: false, Message: fmt.Sprintf("embed query_text: %v", err)}
 				report.Results = append(report.Results, result)

@@ -39,12 +39,15 @@ func (b liveBridge) GenerateLive(ctx context.Context, req vector.LiveRequest) (v
 }
 
 func TestGoldenRoutingEvalsPass(t *testing.T) {
-	idx := vector.NewIndex()
-	if err := vector.SeedDemoNodes(idx, rag.DefaultEmbedder()); err != nil {
+	emb, err := evals.ResolveEmbedder("hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	idx := vector.NewIndexWithDims(emb.Dims())
+	if err := vector.SeedDemoNodes(idx, emb); err != nil {
 		t.Fatal(err)
 	}
 	store := rag.NewStore()
-	emb := rag.DefaultEmbedder()
 	if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: repoPath(t, "data", "knowledge_base"), Embedder: emb}); err != nil {
 		t.Fatal(err)
 	}
@@ -55,24 +58,41 @@ func TestGoldenRoutingEvalsPass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report := (&evals.Runner{Router: router, Tel: telemetry.NewCollector()}).Run(cases)
+	report := (&evals.Runner{Router: router, Tel: telemetry.NewCollector(), Embedder: emb}).Run(cases)
 	if report.FailedCases != 0 {
 		for _, r := range report.Results {
 			if !r.Passed {
-				t.Logf("FAIL %s: %s score=%.3f actual=%s", r.CaseID, r.Message, r.AggregateScore, r.ActualOutcome)
+				t.Logf("FAIL %s: %s score=%.3f actual=%s sim=%.4f", r.CaseID, r.Message, r.AggregateScore, r.ActualOutcome, r.SimilarityScore)
 			}
 		}
 		t.Fatalf("expected all golden cases to pass, failed=%d", report.FailedCases)
 	}
 }
 
+func TestResolveEmbedderModes(t *testing.T) {
+	h, err := evals.ResolveEmbedder("hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := h.(*rag.HashEmbedder); !ok {
+		t.Fatalf("hash mode: got %T", h)
+	}
+	if _, err := evals.ResolveEmbedder("bogus"); err == nil {
+		t.Fatal("expected error for unknown mode")
+	}
+	t.Setenv("AVLP_EMBEDDING_URL", "")
+	if _, err := evals.ResolveEmbedder("env"); err == nil {
+		t.Fatal("env mode without URL should error")
+	}
+}
+
 func TestRAGFaithfulnessGolden(t *testing.T) {
 	store := rag.NewStore()
-	emb := rag.DefaultEmbedder()
+	emb := rag.NewHashEmbedder(rag.DefaultEmbedDims)
 	if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: repoPath(t, "data", "knowledge_base"), Embedder: emb}); err != nil {
 		t.Fatal(err)
 	}
-	idx := vector.NewIndex()
+	idx := vector.NewIndexWithDims(emb.Dims())
 	gen := &livestation.Generator{Retriever: rag.NewRetriever(store, emb, 3), Nodes: idx}
 
 	raw, err := os.ReadFile(repoPath(t, "harness", "evals", "cases", "rag_golden.json"))
@@ -86,10 +106,14 @@ func TestRAGFaithfulnessGolden(t *testing.T) {
 
 	failed := 0
 	for _, c := range cases {
+		q, err := emb.Embed(context.Background(), c.DoubtText)
+		if err != nil {
+			t.Fatalf("%s: embed: %v", c.CaseID, err)
+		}
 		res, err := gen.Generate(context.Background(), livestation.Request{
 			StudentID: "rag-eval", DoubtText: c.DoubtText, Frustration: 0.7,
 			Dimension: "Representacion", Format: "conceptual",
-			QueryEmbedding: []float32{0.01, 0.02, 0.03, 0.04, 0.99},
+			QueryEmbedding: q,
 		})
 		if err != nil {
 			t.Fatalf("%s: %v", c.CaseID, err)

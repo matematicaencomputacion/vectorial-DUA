@@ -48,6 +48,19 @@
     "expected_node_id_prefix": "dua::Compromiso::basico::conceptual"
   },
   {
+    "case_id": "env-compromiso-natural-phrasing",
+    "description": "Fraseo natural sobre .env → live con HashEmbedder (limitación léxica documentada)",
+    "comment": "Con HashEmbedder la similitud cae a ~0.139 y el nearest es un nodo equivocado bajo umbral → expected_outcome live. Con embedder semántico real (HTTP / embedder=env) este caso debería pasar a static (Compromiso). Evidencia del revisor Ola 1.",
+    "student_id": "stu-eng-natural-1",
+    "query_embedding": [],
+    "query_text": "¿por qué debería importarme configurar el .env?",
+    "min_similarity_threshold": 0.85,
+    "expected_dimension_dua": "",
+    "expected_format": "",
+    "expected_outcome": "live",
+    "expected_node_id_prefix": ""
+  },
+  {
     "case_id": "novel-block-live",
     "description": "Bloqueo inédito lejos del manifold → estación en vivo vía RAG",
     "student_id": "stu-live-1",
