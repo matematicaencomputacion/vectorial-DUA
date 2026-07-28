@@ -105,7 +105,7 @@ func (r *Registry) LoadDir(dir string) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("%s: embed descriptor: %w", path, err)
 		}
-		node.Embedding, err = vector.FitContentEmbedding(vec)
+		node.Embedding, err = vector.FitIndexEmbedding(vec, emb.Dims())
 		if err != nil {
 			return count, fmt.Errorf("%s: fit embedding: %w", path, err)
 		}

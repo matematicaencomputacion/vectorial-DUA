@@ -67,13 +67,15 @@ func (m *Mutator) Mutate(ctx context.Context, req MutateRequest) (MutateResult, 
 			return MutateResult{}, err
 		}
 	}
-	// VectorDelta lives in content embedding space (ContentEmbedDims), not V_e.
-	// FitContentEmbedding zero-pads legacy short vectors; refuses silent truncate.
+	wantDims := vector.ContentEmbedDims
+	if m.Retriever != nil && m.Retriever.Embedder != nil && m.Retriever.Embedder.Dims() > 0 {
+		wantDims = m.Retriever.Embedder.Dims()
+	}
 	if len(delta) == 0 {
-		delta = make([]float32, vector.ContentEmbedDims)
+		delta = make([]float32, wantDims)
 		delta[0] = 1
 	}
-	delta, err = vector.FitContentEmbedding(delta)
+	delta, err = vector.FitIndexEmbedding(delta, wantDims)
 	if err != nil {
 		return MutateResult{}, fmt.Errorf("vector_delta content projection: %w", err)
 	}
