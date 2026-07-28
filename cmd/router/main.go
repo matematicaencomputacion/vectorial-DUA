@@ -20,6 +20,7 @@ import (
 	"github.com/vectorial-dua/avlp/pkg/dua"
 	"github.com/vectorial-dua/avlp/pkg/livestation"
 	"github.com/vectorial-dua/avlp/pkg/rag"
+	"github.com/vectorial-dua/avlp/pkg/rogerian"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
@@ -145,10 +146,40 @@ func (s *server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 			Pending: &vectorv1.LiveStationPending{
 				TrackingUlid: outcome.TrackingULID,
 				Status:       outcome.LiveStatus,
-				Message:      outcome.LiveMessage,
+				Message:      rogerian.LiveStationStudentMessage(outcome.LiveStatus, resolvedFrustration),
 			},
 		},
 	}, nil
+}
+
+func (s *server) GetLiveStation(ctx context.Context, req *vectorv1.LiveStationQuery) (*vectorv1.LiveStationStatus, error) {
+	if s.router == nil || s.router.Ledger == nil {
+		return nil, status.Error(codes.FailedPrecondition, "station ledger unavailable")
+	}
+	if req.GetTrackingUlid() == "" || req.GetStudentId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "tracking_ulid and student_id are required")
+	}
+
+	rec, err := s.router.LookupStation(ctx, req.GetTrackingUlid(), req.GetStudentId())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "lookup station: %v", err)
+	}
+	// Missing ULID and wrong student_id both map to NotFound (no existence leak).
+	if rec == nil {
+		return nil, status.Error(codes.NotFound, rogerian.LiveStationStudentMessage("expired", 0.5))
+	}
+
+	out := &vectorv1.LiveStationStatus{
+		TrackingUlid:   rec.TrackingULID,
+		Status:         rec.Status,
+		StudentMessage: rogerian.LiveStationStudentMessage(rec.Status, rec.Request.Frustration),
+	}
+	if rec.Status == vector.StationReady && rec.Result != nil {
+		out.NodeId = rec.Result.Node.ID
+		out.LiveContent = rec.Result.Content
+		out.RetrievedSources = append([]string(nil), rec.Result.Sources...)
+	}
+	return out, nil
 }
 
 func (s *server) GetInteractiveNode(ctx context.Context, req *vectorv1.NodeIdRequest) (*vectorv1.InteractiveVideoNode, error) {

@@ -54,6 +54,31 @@ Duda → Router k-NN
 
 En un nodo interactivo, **“+ Tengo una duda diferente”** llama a `MutateInteractiveNode` y appende un botón `is_live_generated=true`.
 
+## Ciclo de vida de estaciones pendientes
+
+Cuando el miss no puede materializar la estación al instante (RAG off/fallo), `QueryNearestNode` devuelve `LiveStationPending` con `tracking_ulid` y un **mensaje rogeriano en español** (no diagnóstico técnico). El router registra la solicitud en `StationLedger` (`in_progress` | `ready` | `failed`, TTL `AVLP_STATION_TTL`, default 24h).
+
+El camino de retorno es `GetLiveStation(tracking_ulid, student_id)`:
+
+```text
+QueryNearestNode → pending(tracking_ulid, message)
+        │
+        ▼
+GetLiveStation (poll) ──► in_progress (sigue el mensaje rogeriano)
+        │                 ready → node_id + live_content + sources
+        │                 failed → student_message (sin causa interna)
+        └─ ULID ausente o student_id incorrecto → NotFound (mismo código; sin filtrar existencia)
+```
+
+Lazy retry: si el generator ya está disponible, el poll puede disparar un único `GenerateLive`. Un flag `retrying` bajo lock evita generaciones duplicadas ante polls concurrentes.
+
+Ejemplo de flujo completo:
+
+```bash
+go run ./cmd/router
+go run ./cmd/router-client -mode poll -student demo-student
+```
+
 ## Embeddings
 
 Por defecto el router y el harness usan `HashEmbedder` offline (64 dims, léxico). Con URL remota se activa un cliente HTTP OpenAI-compatible (`POST …/embeddings`) sin fallback silencioso a hash.
@@ -114,7 +139,8 @@ vectorial-DUA/
 │   ├── add-interactive-video-node/
 │   ├── add-dua-botonera-schemas/
 │   ├── add-hierarchical-subtopic-node/
-│   └── add-ola2-adaptive-debt/   (deuda Ola 2, propuesta)
+│   ├── add-ola2-adaptive-debt/   (deuda Ola 2, saldada)
+│   └── add-ola3-station-ledger/  (camino de retorno estaciones pendientes)
 └── scripts/
 ```
 

@@ -152,6 +152,24 @@ func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, 
 	}
 
 	if r.Enabled && r.Live != nil {
+		// Acquire Retrying before GenerateLive so concurrent LookupStation polls
+		// do not start a second generation for the same ULID.
+		if r.Ledger != nil {
+			if _, should, _ := r.Ledger.TryBeginRetry(tracking); !should {
+				status := StationInProgress
+				if rec := r.Ledger.Get(tracking); rec != nil {
+					status = rec.Status
+				}
+				return RouteOutcome{
+					Matched:           false,
+					Similarity:        best,
+					TrackingULID:      tracking,
+					LiveStatus:        status,
+					LiveMessage:       pendingStudentMessage(status),
+					NodeNotFoundEvent: &evt,
+				}, nil
+			}
+		}
 		live, err := r.Live.GenerateLive(ctx, liveReq)
 		if err == nil {
 			if r.Ledger != nil {
@@ -186,7 +204,16 @@ func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, 
 		Similarity:        best,
 		TrackingULID:      tracking,
 		LiveStatus:        status,
-		LiveMessage:       "No static DUA node met the similarity threshold; live station generation requested",
+		LiveMessage:       pendingStudentMessage(status),
 		NodeNotFoundEvent: &evt,
 	}, nil
+}
+
+func pendingStudentMessage(status string) string {
+	switch status {
+	case StationFailed:
+		return "No encontré material verificado todavía; probemos reformular la duda juntos."
+	default:
+		return "Estamos preparando una estación para tu duda; en un momento va a estar lista. Tu pregunta vale la pena."
+	}
 }

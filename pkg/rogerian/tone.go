@@ -38,3 +38,24 @@ func HintForFrustration(level float32) ScaffoldHint {
 		}
 	}
 }
+
+// LiveStationStudentMessage returns Spanish, person-centered copy for pending stations.
+// status: in_progress | failed | expired | ready (ready uses HintForFrustration).
+func LiveStationStudentMessage(status string, frustration float32) string {
+	switch status {
+	case "ready":
+		return HintForFrustration(frustration).Message
+	case "in_progress":
+		if frustration >= 0.75 {
+			return "Estamos preparando una estación para tu duda; en un momento va a estar lista. Tu pregunta vale la pena — no estás solo en esto."
+		}
+		return "Estamos preparando una estación para tu duda; en un momento va a estar lista. Tu pregunta vale la pena."
+	case "expired":
+		return "Esa estación ya no está disponible. No encontré material verificado a tiempo; probemos reformular la duda juntos."
+	default: // failed and unknown
+		if frustration >= 0.75 {
+			return "No encontré material verificado todavía; no es un fallo tuyo. Probemos reformular la duda juntos."
+		}
+		return "No encontré material verificado todavía; probemos reformular la duda juntos."
+	}
+}

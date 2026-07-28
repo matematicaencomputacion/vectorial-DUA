@@ -26,6 +26,7 @@ type StationRecord struct {
 	Request      LiveRequest // retained for lazy retry
 	Result       *LiveResult // set when ready
 	FailCause    string      // internal only; never expose raw to students
+	Retrying     bool        // flight guard: GenerateLive in progress
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -125,6 +126,7 @@ func (l *StationLedger) MarkReady(trackingULID string, result LiveResult) {
 	rec.Status = StationReady
 	rec.Result = &res
 	rec.FailCause = ""
+	rec.Retrying = false
 	rec.UpdatedAt = now
 }
 
@@ -144,7 +146,41 @@ func (l *StationLedger) MarkFailed(trackingULID, cause string) {
 	rec.Status = StationFailed
 	rec.FailCause = cause
 	rec.Result = nil
+	rec.Retrying = false
 	rec.UpdatedAt = now
+}
+
+// TryBeginRetry acquires the in-flight retry flag under lock.
+// Returns (request, true) if this caller should GenerateLive; (nil/clone, false) otherwise.
+// When another poll already holds the flag, ok=false and the clone reports in_progress.
+func (l *StationLedger) TryBeginRetry(trackingULID string) (req LiveRequest, shouldGenerate bool, snapshot *StationRecord) {
+	if l == nil || trackingULID == "" {
+		return LiveRequest{}, false, nil
+	}
+	now := l.now()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.purgeLocked(now)
+	rec, ok := l.byID[trackingULID]
+	if !ok {
+		return LiveRequest{}, false, nil
+	}
+	if rec.Status == StationReady {
+		return LiveRequest{}, false, rec.Clone()
+	}
+	if rec.Retrying {
+		out := rec.Clone()
+		out.Status = StationInProgress
+		return LiveRequest{}, false, out
+	}
+	if rec.Status != StationFailed && rec.Status != StationInProgress {
+		return LiveRequest{}, false, rec.Clone()
+	}
+	rec.Retrying = true
+	rec.UpdatedAt = now
+	req = rec.Request
+	req.QueryEmbedding = append([]float32(nil), rec.Request.QueryEmbedding...)
+	return req, true, rec.Clone()
 }
 
 // Get returns a clone of the record or nil if missing/expired.
@@ -188,6 +224,7 @@ func (l *StationLedger) purgeLocked(now time.Time) {
 
 // LookupStation returns the station record, optionally retrying generation when
 // status is failed or still in_progress and a LiveGenerator is available.
+// Concurrent polls share a single GenerateLive via StationRecord.Retrying.
 func (r *Router) LookupStation(ctx context.Context, trackingULID, studentID string) (*StationRecord, error) {
 	if r == nil || r.Ledger == nil {
 		return nil, fmt.Errorf("station ledger unavailable")
@@ -197,7 +234,6 @@ func (r *Router) LookupStation(ctx context.Context, trackingULID, studentID stri
 		return nil, nil
 	}
 	if studentID != "" && rec.StudentID != "" && studentID != rec.StudentID {
-		// Hide existence from wrong student (PR 5.2 will map to NotFound).
 		return nil, nil
 	}
 	if rec.Status == StationReady {
@@ -210,7 +246,12 @@ func (r *Router) LookupStation(ctx context.Context, trackingULID, studentID stri
 		return rec, nil
 	}
 
-	live, err := r.Live.GenerateLive(ctx, rec.Request)
+	req, shouldGenerate, snap := r.Ledger.TryBeginRetry(trackingULID)
+	if !shouldGenerate {
+		return snap, nil
+	}
+
+	live, err := r.Live.GenerateLive(ctx, req)
 	if err != nil {
 		r.Ledger.MarkFailed(trackingULID, err.Error())
 		return r.Ledger.Get(trackingULID), nil

@@ -158,23 +158,27 @@ func TestStationLedgerLookupHidesWrongStudent(t *testing.T) {
 	}
 }
 
-func TestStationLedgerConcurrentLookupRace(t *testing.T) {
+func TestStationLedgerConcurrentLookupSingleGenerate(t *testing.T) {
 	idx := vector.NewIndex()
 	r := vector.NewRouter(idx, vector.NewEventBus())
-	r.Enabled = true
-	live := &stubLive{fail: true}
-	r.Live = live
-
+	r.Enabled = false
 	out, err := r.QueryNearestWithOptions(context.Background(), "stu-race", novelQuery(idx.Dims()), 0.85, vector.QueryOptions{
 		DoubtText: "race",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	live.setFail(false)
+	if out.Matched {
+		t.Fatal("expected pending")
+	}
+
+	live := &registeringLive{idx: idx, delay: 80 * time.Millisecond}
+	r.Enabled = true
+	r.Live = live
+	before := idx.Len()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 8; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -182,8 +186,41 @@ func TestStationLedgerConcurrentLookupRace(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+
+	if live.calls.Load() != 1 {
+		t.Fatalf("expected exactly 1 GenerateLive, got %d", live.calls.Load())
+	}
+	if idx.Len() != before+1 {
+		t.Fatalf("expected one new node, before=%d after=%d", before, idx.Len())
+	}
 	rec := r.Ledger.Get(out.TrackingULID)
 	if rec == nil || rec.Status != vector.StationReady {
-		t.Fatalf("expected ready after concurrent retries, got %+v", rec)
+		t.Fatalf("expected ready, got %+v", rec)
 	}
+}
+
+type registeringLive struct {
+	idx   *vector.Index
+	delay time.Duration
+	calls atomic.Int32
+}
+
+func (s *registeringLive) GenerateLive(ctx context.Context, req vector.LiveRequest) (vector.LiveResult, error) {
+	_ = ctx
+	s.calls.Add(1)
+	if s.delay > 0 {
+		time.Sleep(s.delay)
+	}
+	emb := make([]float32, s.idx.Dims())
+	emb[0] = 1
+	node, err := s.idx.RegisterNode("Representacion", "adaptativo", "conceptual", "live://race", emb)
+	if err != nil {
+		return vector.LiveResult{}, err
+	}
+	return vector.LiveResult{
+		Node:         node,
+		Content:      "único",
+		Sources:      []string{"kb/one.md"},
+		TrackingULID: req.TrackingULID,
+	}, nil
 }

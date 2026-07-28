@@ -24,6 +24,7 @@ const (
 	VectorRouter_MutateInteractiveNode_FullMethodName     = "/avlp.vector.v1.VectorRouter/MutateInteractiveNode"
 	VectorRouter_RecordSubtopicInteraction_FullMethodName = "/avlp.vector.v1.VectorRouter/RecordSubtopicInteraction"
 	VectorRouter_RecordBotoneraInteraction_FullMethodName = "/avlp.vector.v1.VectorRouter/RecordBotoneraInteraction"
+	VectorRouter_GetLiveStation_FullMethodName            = "/avlp.vector.v1.VectorRouter/GetLiveStation"
 )
 
 // VectorRouterClient is the client API for VectorRouter service.
@@ -36,10 +37,12 @@ type VectorRouterClient interface {
 	GetInteractiveNode(ctx context.Context, in *NodeIdRequest, opts ...grpc.CallOption) (*InteractiveVideoNode, error)
 	MutateInteractiveNode(ctx context.Context, in *MutateInteractiveRequest, opts ...grpc.CallOption) (*MutateInteractiveResponse, error)
 	RecordSubtopicInteraction(ctx context.Context, in *SubtopicInteraction, opts ...grpc.CallOption) (*Ack, error)
-	// Limitation (current phase): this RPC validates only node-level botonera_schema
-	// variants. Legacy node-level flat botonera entries (InteractiveVideoNode.botonera)
-	// are not resolved here and return NotFound.
+	// Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
+	// Legacy vector_delta is content-embedding space and is NEVER applied to V_e;
+	// without a client preference_delta the RPC returns Ack without Apply.
 	RecordBotoneraInteraction(ctx context.Context, in *BotoneraInteraction, opts ...grpc.CallOption) (*Ack, error)
+	// Poll a pending live station by tracking_ulid (student_id required for ownership check).
+	GetLiveStation(ctx context.Context, in *LiveStationQuery, opts ...grpc.CallOption) (*LiveStationStatus, error)
 }
 
 type vectorRouterClient struct {
@@ -100,6 +103,16 @@ func (c *vectorRouterClient) RecordBotoneraInteraction(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *vectorRouterClient) GetLiveStation(ctx context.Context, in *LiveStationQuery, opts ...grpc.CallOption) (*LiveStationStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LiveStationStatus)
+	err := c.cc.Invoke(ctx, VectorRouter_GetLiveStation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VectorRouterServer is the server API for VectorRouter service.
 // All implementations must embed UnimplementedVectorRouterServer
 // for forward compatibility.
@@ -110,10 +123,12 @@ type VectorRouterServer interface {
 	GetInteractiveNode(context.Context, *NodeIdRequest) (*InteractiveVideoNode, error)
 	MutateInteractiveNode(context.Context, *MutateInteractiveRequest) (*MutateInteractiveResponse, error)
 	RecordSubtopicInteraction(context.Context, *SubtopicInteraction) (*Ack, error)
-	// Limitation (current phase): this RPC validates only node-level botonera_schema
-	// variants. Legacy node-level flat botonera entries (InteractiveVideoNode.botonera)
-	// are not resolved here and return NotFound.
+	// Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
+	// Legacy vector_delta is content-embedding space and is NEVER applied to V_e;
+	// without a client preference_delta the RPC returns Ack without Apply.
 	RecordBotoneraInteraction(context.Context, *BotoneraInteraction) (*Ack, error)
+	// Poll a pending live station by tracking_ulid (student_id required for ownership check).
+	GetLiveStation(context.Context, *LiveStationQuery) (*LiveStationStatus, error)
 	mustEmbedUnimplementedVectorRouterServer()
 }
 
@@ -138,6 +153,9 @@ func (UnimplementedVectorRouterServer) RecordSubtopicInteraction(context.Context
 }
 func (UnimplementedVectorRouterServer) RecordBotoneraInteraction(context.Context, *BotoneraInteraction) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecordBotoneraInteraction not implemented")
+}
+func (UnimplementedVectorRouterServer) GetLiveStation(context.Context, *LiveStationQuery) (*LiveStationStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLiveStation not implemented")
 }
 func (UnimplementedVectorRouterServer) mustEmbedUnimplementedVectorRouterServer() {}
 func (UnimplementedVectorRouterServer) testEmbeddedByValue()                      {}
@@ -250,6 +268,24 @@ func _VectorRouter_RecordBotoneraInteraction_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VectorRouter_GetLiveStation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LiveStationQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VectorRouterServer).GetLiveStation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VectorRouter_GetLiveStation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VectorRouterServer).GetLiveStation(ctx, req.(*LiveStationQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VectorRouter_ServiceDesc is the grpc.ServiceDesc for VectorRouter service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -276,6 +312,10 @@ var VectorRouter_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RecordBotoneraInteraction",
 			Handler:    _VectorRouter_RecordBotoneraInteraction_Handler,
+		},
+		{
+			MethodName: "GetLiveStation",
+			Handler:    _VectorRouter_GetLiveStation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
