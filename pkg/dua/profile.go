@@ -11,6 +11,13 @@ const (
 	VeDims = 5
 )
 
+// ProfileRepository is the consumer-facing contract for learner V_e.
+// Get/Apply are the minimum surface used by InteractionStore and router handlers.
+type ProfileRepository interface {
+	Get(studentID string) []float32
+	Apply(studentID string, delta []float32) ([]float32, error)
+}
+
 // DefaultVe returns the neutral learner profile baseline.
 func DefaultVe() []float32 {
 	return []float32{0.5, 0.5, 0.4, 0.5, 0.5}
@@ -48,6 +55,7 @@ func clamp01(v float32) float32 {
 }
 
 // ProfileStore keeps V_e in memory per student.
+// It implements ProfileRepository.
 type ProfileStore struct {
 	mu   sync.RWMutex
 	byID map[string][]float32
@@ -95,3 +103,38 @@ func (s *ProfileStore) Apply(studentID string, delta []float32) ([]float32, erro
 	s.byID[studentID] = append([]float32(nil), next...)
 	return append([]float32(nil), next...), nil
 }
+
+// Snapshot returns a deep copy of all stored profiles.
+// Used by FileProfileStore for persistence; not part of ProfileRepository
+// so consumers stay on the Get/Apply minimum contract.
+func (s *ProfileStore) Snapshot() map[string][]float32 {
+	if s == nil {
+		return map[string][]float32{}
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make(map[string][]float32, len(s.byID))
+	for id, ve := range s.byID {
+		out[id] = append([]float32(nil), ve...)
+	}
+	return out
+}
+
+// ReplaceAll replaces in-memory profiles with the provided map (defensive copies).
+// Invalid entries (wrong dims) are skipped. Used when loading a snapshot.
+func (s *ProfileStore) ReplaceAll(profiles map[string][]float32) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.byID = make(map[string][]float32, len(profiles))
+	for id, ve := range profiles {
+		if len(ve) != VeDims {
+			continue
+		}
+		s.byID[id] = append([]float32(nil), ve...)
+	}
+}
+
+var _ ProfileRepository = (*ProfileStore)(nil)

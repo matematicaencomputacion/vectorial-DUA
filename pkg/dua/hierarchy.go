@@ -177,7 +177,7 @@ func cloneSubtopics(in []SubtopicNode) []SubtopicNode {
 type InteractionStore struct {
 	mu       sync.RWMutex
 	seen     map[string]map[string]struct{} // key: student|parent → set of subtopic ids
-	profiles *ProfileStore                  // optional; nil => tracking only
+	profiles ProfileRepository              // optional; nil => tracking only
 }
 
 // NewInteractionStore creates an empty store.
@@ -187,7 +187,7 @@ func NewInteractionStore() *InteractionStore {
 
 // NewInteractionStoreWithProfiles creates a store with optional profile updates.
 // Passing nil keeps tracking-only behavior.
-func NewInteractionStoreWithProfiles(profiles *ProfileStore) *InteractionStore {
+func NewInteractionStoreWithProfiles(profiles ProfileRepository) *InteractionStore {
 	return &InteractionStore{
 		seen:     make(map[string]map[string]struct{}),
 		profiles: profiles,

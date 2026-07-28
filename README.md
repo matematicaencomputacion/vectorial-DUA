@@ -86,6 +86,16 @@ go run ./cmd/harness -suite evals -embedder env
 
 Deuda (g): `simmatrix` existe; falta automatizar la elección del umbral. El índice de ruteo se construye con las dims del embedder activo (`NewIndexWithDims`). Evals CI usan hash.
 
+## Perfiles del estudiante ($V_e$)
+
+Por defecto el router guarda $V_e$ en memoria. Para persistir entre reinicios:
+
+| Variable | Rol |
+|----------|-----|
+| `AVLP_PROFILE_STORE_PATH` | Ruta al snapshot JSON (p. ej. `data/profiles.json`); vacía → in-memory |
+
+El snapshot es versionado (`version`, `ve_dims`, `profiles`). Escritura atómica con flush debounced (~1s); `Close()` al shutdown hace flush final. Misismatch de `ve_dims` o JSON corrupto se descartan con log (arranque vacío, sin crash).
+
 ## Árbol del repositorio
 
 ```text
