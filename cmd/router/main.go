@@ -29,7 +29,14 @@ type server struct {
 	router       *vector.Router
 	reg          *dua.Registry
 	mutator      *dua.Mutator
+	profiles     *dua.ProfileStore
 	interactions *dua.InteractionStore
+}
+
+const ackRecorded = "recorded"
+
+func neutralAck() *vectorv1.Ack {
+	return &vectorv1.Ack{Ok: true, Message: ackRecorded}
 }
 
 type liveBridge struct {
@@ -147,27 +154,69 @@ func (s *server) MutateInteractiveNode(ctx context.Context, req *vectorv1.Mutate
 	}, nil
 }
 
+func (s *server) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.BotoneraInteraction) (*vectorv1.Ack, error) {
+	_ = ctx
+	if s.profiles == nil {
+		return nil, status.Error(codes.FailedPrecondition, "profile store disabled")
+	}
+	if s.reg == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interactive nodes disabled")
+	}
+	if req.GetStudentId() == "" || req.GetNodeId() == "" || req.GetVariantId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "student_id, node_id, and variant_id are required")
+	}
+
+	n, ok := s.reg.Get(req.GetNodeId())
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetNodeId())
+	}
+	if n.BotoneraSchema == nil {
+		return nil, status.Errorf(codes.NotFound, "node %q has no botonera_schema", req.GetNodeId())
+	}
+	if !dua.HasBotoneraVariant(n.BotoneraSchema, req.GetVariantId(), req.GetFormatId()) {
+		return nil, status.Errorf(codes.NotFound, "variant %q not found in botonera schema for node %q", req.GetVariantId(), req.GetNodeId())
+	}
+
+	delta := dua.ResolveBotoneraDelta(n.BotoneraSchema, req.GetVariantId(), req.GetPreferenceDelta())
+	if len(delta) == 0 {
+		return neutralAck(), nil
+	}
+	if _, err := s.profiles.Apply(req.GetStudentId(), delta); err != nil {
+		log.Printf("botonera profile delta skipped student=%s node=%s variant=%s: %v",
+			req.GetStudentId(), req.GetNodeId(), req.GetVariantId(), err)
+	}
+	return neutralAck(), nil
+}
+
 func (s *server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.SubtopicInteraction) (*vectorv1.Ack, error) {
 	_ = ctx
+	if s.profiles == nil {
+		return nil, status.Error(codes.FailedPrecondition, "profile store disabled")
+	}
 	if s.interactions == nil {
 		return nil, status.Error(codes.FailedPrecondition, "subtopic interactions disabled")
 	}
 	if req.GetStudentId() == "" || req.GetParentNodeId() == "" || req.GetSubtopicId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "student_id, parent_node_id, and subtopic_id are required")
 	}
-	if s.reg != nil {
-		n, ok := s.reg.Get(req.GetParentNodeId())
-		if !ok {
-			return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
-		}
-		if n.Hierarchy != nil {
-			if _, found := n.Hierarchy.FindByID(req.GetSubtopicId()); !found {
-				return nil, status.Errorf(codes.NotFound, "subtopic %q not found under %q", req.GetSubtopicId(), req.GetParentNodeId())
-			}
-		}
+	if s.reg == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interactive nodes disabled")
 	}
-	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), req.GetPreferenceDelta())
-	return &vectorv1.Ack{Ok: true, Message: "recorded"}, nil
+
+	n, ok := s.reg.Get(req.GetParentNodeId())
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
+	}
+	if n.Hierarchy == nil {
+		return nil, status.Errorf(codes.NotFound, "node %q has no hierarchy", req.GetParentNodeId())
+	}
+	if _, found := n.Hierarchy.FindByID(req.GetSubtopicId()); !found {
+		return nil, status.Errorf(codes.NotFound, "subtopic %q not found under %q", req.GetSubtopicId(), req.GetParentNodeId())
+	}
+
+	delta := dua.ResolveSubtopicDelta(n.Hierarchy, req.GetSubtopicId(), req.GetPreferenceDelta())
+	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), delta)
+	return neutralAck(), nil
 }
 
 func main() {
@@ -217,7 +266,12 @@ func main() {
 		log.Printf("RAG disabled (AVLP_RAG_ENABLED=false)")
 	}
 
-	srvImpl := &server{router: router, interactions: dua.NewInteractionStore()}
+	profiles := dua.NewProfileStore()
+	srvImpl := &server{
+		router:       router,
+		profiles:     profiles,
+		interactions: dua.NewInteractionStoreWithProfiles(profiles),
+	}
 
 	if dua.EnabledFromEnv() {
 		reg := dua.NewRegistry()

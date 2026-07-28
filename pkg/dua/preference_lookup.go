@@ -45,6 +45,47 @@ func ResolveBotoneraDelta(schema *DUANodeBotonera, variantID string, clientDelta
 //  1. clientDelta (if provided)
 //  2. subtopic orbit_delta
 //  3. empty
+// HasBotoneraVariant reports whether variantID (and formatID for combined) exists
+// in the node's botonera schema.
+func HasBotoneraVariant(schema *DUANodeBotonera, variantID, formatID string) bool {
+	if schema == nil || variantID == "" {
+		return false
+	}
+	switch schema.Kind {
+	case SchemaDepth:
+		for _, opt := range schema.DepthOptions {
+			if opt.VariantID == variantID {
+				return true
+			}
+		}
+	case SchemaCognitive:
+		for _, opt := range schema.CognitiveOptions {
+			if opt.VariantID == variantID {
+				return true
+			}
+		}
+	case SchemaEmergency:
+		for _, opt := range schema.EmergencyOptions {
+			if opt.VariantID == variantID {
+				return true
+			}
+		}
+	case SchemaCombined:
+		if formatID == "" {
+			return false
+		}
+		_, ok := schema.ResolveCombined(variantID, formatID)
+		return ok
+	case SchemaFlat:
+		for _, btn := range schema.FlatButtons {
+			if btn.IDBtn == variantID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func ResolveSubtopicDelta(tree *DUAHierarchicalTree, subtopicID string, clientDelta []float32) []float32 {
 	if len(clientDelta) > 0 {
 		return append([]float32(nil), clientDelta...)

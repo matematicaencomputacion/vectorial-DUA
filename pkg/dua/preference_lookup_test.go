@@ -41,6 +41,40 @@ func TestResolveBotoneraDeltaPrefersClientDelta(t *testing.T) {
 	}
 }
 
+func TestHasBotoneraVariantEmergencySeed(t *testing.T) {
+	reg := dua.NewRegistry()
+	if _, err := reg.LoadDir(seedDir(t)); err != nil {
+		t.Fatal(err)
+	}
+	node, ok := reg.Get("dua::Accion::basico::practica::01ARZ3NDEKTSV4RRFFQ69G5FB1")
+	if !ok || node.BotoneraSchema == nil {
+		t.Fatal("emergency seed missing")
+	}
+	if !dua.HasBotoneraVariant(node.BotoneraSchema, "hint", "") {
+		t.Fatal("expected hint variant")
+	}
+	if dua.HasBotoneraVariant(node.BotoneraSchema, "missing", "") {
+		t.Fatal("unexpected variant")
+	}
+}
+
+func TestHasBotoneraVariantCombinedSeed(t *testing.T) {
+	reg := dua.NewRegistry()
+	if _, err := reg.LoadDir(seedDir(t)); err != nil {
+		t.Fatal(err)
+	}
+	node, ok := reg.Get("dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FB2")
+	if !ok || node.BotoneraSchema == nil {
+		t.Fatal("combined seed missing")
+	}
+	if !dua.HasBotoneraVariant(node.BotoneraSchema, "express", "video") {
+		t.Fatal("expected express×video cell")
+	}
+	if dua.HasBotoneraVariant(node.BotoneraSchema, "express", "") {
+		t.Fatal("combined requires format_id")
+	}
+}
+
 func TestResolveSubtopicDeltaFromTreeOrbitDelta(t *testing.T) {
 	reg := dua.NewRegistry()
 	if _, err := reg.LoadDir(seedDir(t)); err != nil {

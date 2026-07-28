@@ -13,6 +13,7 @@ service VectorRouter {
   rpc GetInteractiveNode(NodeIdRequest) returns (InteractiveVideoNode);
   rpc MutateInteractiveNode(MutateInteractiveRequest) returns (MutateInteractiveResponse);
   rpc RecordSubtopicInteraction(SubtopicInteraction) returns (Ack);
+  rpc RecordBotoneraInteraction(BotoneraInteraction) returns (Ack);
 }
 
 message NodeResponse {
