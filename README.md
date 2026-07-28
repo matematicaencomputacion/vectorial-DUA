@@ -140,7 +140,7 @@ vectorial-DUA/
 │   ├── add-dua-botonera-schemas/
 │   ├── add-hierarchical-subtopic-node/
 │   ├── add-ola2-adaptive-debt/   (deuda Ola 2, saldada)
-│   └── add-ola3-station-ledger/  (camino de retorno estaciones pendientes)
+│   └── add-ola3-station-ledger/  (Ola 3.a / C2 cerrada — tag v0.3.0-ola3a)
 └── scripts/
 ```
 

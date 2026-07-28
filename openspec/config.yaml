@@ -8,7 +8,8 @@ context: |
   Control plane: harness/{evals,sandbox,load,telemetry} + cmd/harness
   RAG: pkg/rag + pkg/livestation; knowledge_base at data/knowledge_base; HashEmbedder default
   Interactive nodes: Stage+botonera InteractiveVideoNode (pkg/dua); MutateInteractiveNode via RAG
-  Miss path: NodeNotFound → RAG retrieve → rogerian prompt → live ULID node (AVLP_RAG_ENABLED)
+  Miss path: NodeNotFound → RAG retrieve → rogerian prompt → live ULID node (AVLP_RAG_ENABLED);
+    pending stations tracked in StationLedger with GetLiveStation poll path (Ola 3.a / C2)
   Performance: p99 routing/retrieve latency < 15ms; cosine ops > 100,000/sec; load error_rate < 1%
   Node ID format: dua::<dimension>::<dificultad>::<formato>::<ulid>
   Default similarity threshold: 0.85 (cosine)
