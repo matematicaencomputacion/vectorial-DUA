@@ -15,9 +15,9 @@ const (
 type Format string
 
 const (
-	Visual      Format = "visual"
-	Conceptual  Format = "conceptual"
-	Practica    Format = "practica"
+	Visual     Format = "visual"
+	Conceptual Format = "conceptual"
+	Practica   Format = "practica"
 )
 
 // ValidDimension reports whether d is a known DUA axis.

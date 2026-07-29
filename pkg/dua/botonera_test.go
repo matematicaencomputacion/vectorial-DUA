@@ -54,8 +54,8 @@ func TestHintRequiresText(t *testing.T) {
 	b := &dua.DUANodeBotonera{
 		Kind: dua.SchemaEmergency,
 		EmergencyOptions: []dua.EmergencyVariant{{
-			VariantID: "hint",
-			Label:     "Hint",
+			VariantID:  "hint",
+			Label:      "Hint",
 			FormatType: dua.MediaTextHint,
 		}},
 	}

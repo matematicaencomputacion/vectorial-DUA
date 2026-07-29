@@ -9,10 +9,10 @@ import (
 
 // Chunk is a retrievable fragment of the knowledge base.
 type Chunk struct {
-	ID       string
-	Source   string
-	Title    string
-	Text     string
+	ID        string
+	Source    string
+	Title     string
+	Text      string
 	Embedding []float32
 }
 

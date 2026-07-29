@@ -48,13 +48,13 @@ const (
 
 // Result captures sandboxed execution outcome.
 type Result struct {
-	Runtime    string        `json:"runtime"`
-	ExitCode   int           `json:"exit_code"`
-	Duration   time.Duration `json:"duration"`
-	Stdout     string        `json:"stdout"`
-	Stderr     string        `json:"stderr"`
-	Violation  string        `json:"violation,omitempty"`
-	WorkDir    string        `json:"work_dir,omitempty"`
+	Runtime   string        `json:"runtime"`
+	ExitCode  int           `json:"exit_code"`
+	Duration  time.Duration `json:"duration"`
+	Stdout    string        `json:"stdout"`
+	Stderr    string        `json:"stderr"`
+	Violation string        `json:"violation,omitempty"`
+	WorkDir   string        `json:"work_dir,omitempty"`
 }
 
 // Executor runs student code under policy.

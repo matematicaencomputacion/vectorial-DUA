@@ -8,9 +8,9 @@ import (
 
 // RAGCase evaluates faithfulness / context relevance of a live station.
 type RAGCase struct {
-	CaseID              string  `json:"case_id"`
-	Description         string  `json:"description"`
-	DoubtText           string  `json:"doubt_text"`
+	CaseID               string `json:"case_id"`
+	Description          string `json:"description"`
+	DoubtText            string `json:"doubt_text"`
 	ExpectedSourceSubstr string `json:"expected_source_substr"`
 }
 

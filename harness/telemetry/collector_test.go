@@ -13,9 +13,9 @@ func TestSnapshotExport(t *testing.T) {
 	c.Inc("routing_match_total", 2)
 	c.ObserveRouting(2 * time.Millisecond)
 	c.TraceLLM(telemetry.LLMSpan{
-		Model:    "stub",
-		Purpose:  "eval_judge",
-		Success:  true,
+		Model:     "stub",
+		Purpose:   "eval_judge",
+		Success:   true,
 		LatencyMS: 5,
 	})
 	snap := c.Snapshot()
