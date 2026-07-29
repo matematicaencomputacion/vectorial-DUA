@@ -26,19 +26,6 @@ func repoPath(t *testing.T, parts ...string) string {
 	return filepath.Clean(filepath.Join(append([]string{base}, parts...)...))
 }
 
-type liveBridge struct{ g *livestation.Generator }
-
-func (b liveBridge) GenerateLive(ctx context.Context, req vector.LiveRequest) (vector.LiveResult, error) {
-	res, err := b.g.Generate(ctx, livestation.Request{
-		StudentID: req.StudentID, DoubtText: req.DoubtText, QueryEmbedding: req.QueryEmbedding,
-		Frustration: req.Frustration, Dimension: req.Dimension, Format: req.Format, TrackingULID: req.TrackingULID,
-	})
-	if err != nil {
-		return vector.LiveResult{}, err
-	}
-	return vector.LiveResult{Node: res.Node, Content: res.Content, Sources: res.Sources, TrackingULID: res.TrackingULID}, nil
-}
-
 func TestGoldenRoutingEvalsPass(t *testing.T) {
 	// Los goldens fijan el umbral default; heredar AVLP_* del shell del operador
 	// cambiaría el resultado y ocultaría regresiones de ruteo.
@@ -57,7 +44,7 @@ func TestGoldenRoutingEvalsPass(t *testing.T) {
 		t.Fatal(err)
 	}
 	router := vector.NewRouter(idx, vector.NewEventBus())
-	router.Live = liveBridge{g: &livestation.Generator{Retriever: rag.NewRetriever(store, emb, 3), Nodes: idx}}
+	router.Live = &livestation.Generator{Retriever: rag.NewRetriever(store, emb, 3), Nodes: idx}
 
 	cases, err := evals.LoadCases(repoPath(t, "harness", "evals", "cases", "routing_golden.json"))
 	if err != nil {

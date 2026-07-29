@@ -43,6 +43,32 @@ type Request struct {
 	TrackingULID   string
 }
 
+var _ vector.LiveGenerator = (*Generator)(nil)
+
+// GenerateLive adapts the generator directly to vector.Router's miss-path
+// contract. Generate remains the richer API for callers that need prompt and
+// retrieval details.
+func (g *Generator) GenerateLive(ctx context.Context, req vector.LiveRequest) (vector.LiveResult, error) {
+	res, err := g.Generate(ctx, Request{
+		StudentID:      req.StudentID,
+		DoubtText:      req.DoubtText,
+		QueryEmbedding: req.QueryEmbedding,
+		Frustration:    req.Frustration,
+		Dimension:      req.Dimension,
+		Format:         req.Format,
+		TrackingULID:   req.TrackingULID,
+	})
+	if err != nil {
+		return vector.LiveResult{}, err
+	}
+	return vector.LiveResult{
+		Node:         res.Node,
+		Content:      res.Content,
+		Sources:      res.Sources,
+		TrackingULID: res.TrackingULID,
+	}, nil
+}
+
 // Generate retrieves context, synthesizes a station, and registers a live node.
 func (g *Generator) Generate(ctx context.Context, req Request) (Result, error) {
 	if g.Retriever == nil || g.Nodes == nil {

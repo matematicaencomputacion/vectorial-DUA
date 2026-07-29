@@ -24,31 +24,6 @@ import (
 
 const defaultAddr = ":50051"
 
-type liveBridge struct {
-	gen *livestation.Generator
-}
-
-func (b liveBridge) GenerateLive(ctx context.Context, req vector.LiveRequest) (vector.LiveResult, error) {
-	res, err := b.gen.Generate(ctx, livestation.Request{
-		StudentID:      req.StudentID,
-		DoubtText:      req.DoubtText,
-		QueryEmbedding: req.QueryEmbedding,
-		Frustration:    req.Frustration,
-		Dimension:      req.Dimension,
-		Format:         req.Format,
-		TrackingULID:   req.TrackingULID,
-	})
-	if err != nil {
-		return vector.LiveResult{}, err
-	}
-	return vector.LiveResult{
-		Node:         res.Node,
-		Content:      res.Content,
-		Sources:      res.Sources,
-		TrackingULID: res.TrackingULID,
-	}, nil
-}
-
 func main() {
 	addr := defaultAddr
 	if v := os.Getenv("AVLP_ROUTER_ADDR"); v != "" {
@@ -98,7 +73,7 @@ func main() {
 				Retriever: rag.NewRetriever(store, emb, 3),
 				Nodes:     index,
 			}
-			router.Live = liveBridge{gen: gen}
+			router.Live = gen
 		}
 	} else {
 		log.Printf("RAG disabled (AVLP_RAG_ENABLED=false)")
