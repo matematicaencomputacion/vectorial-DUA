@@ -158,25 +158,43 @@ Esta salida alimenta la priorización conjunta revisor + Dario: qué entra a 4.c
 
 ---
 
-## Buckets de priorización para Ola 4
+## Decisión de priorización (revisor + Dario)
 
-### Soon (antes o en paralelo temprano de features 4.c / 4.d)
+La auditoría queda cerrada con dos PRs de refactorización **antes** de los bloques
+funcionales 4.c / 4.d:
 
-- **C1** descomposición mínima: CSS + `progress.js` + `session.js`.
-- **H1** parity fixtures (JSON golden compartido + test Go + assert Playwright).
-- **H2** extracción de handlers compartidos (desbloquea auth/RPC nuevos sin triplicar).
-- Ítems de producto ya en `add-ola4-live-node-policy`: TTL live index, promoción, observabilidad del margen (bloque 4.c).
+### PR 8.3 — preparación backend
 
-### Later
+- **H2:** extraer `internal/routerserver` con el `Server` y los 7 handlers;
+  `cmd/router/main.go` queda como composition root. Gateway y tests usan la
+  implementación real y eliminan `inProcessRouter`.
+- **M1:** unificar `LiveGenerator` para borrar los tres bridges.
+- **M2:** mover `InteractionStore` a `pkg/dua/interaction_store.go` sin cambiar
+  comportamiento.
 
-- **H3** encapsular generation tokens al completar el split JS.
-- **M1** unificar adapter `LiveGenerator`.
-- **M2** mover `InteractionStore` de archivo.
-- **M3** partir `playwright-check.mjs`.
-- **M5** split wire/bootstrap del router.
-- Auth real (**M4**) cuando el alcance deje de ser prototipo single-trust (registrado fuera de esta ola).
+### PR 8.4 — descomposición frontend (después de aprobar 8.3)
 
-### Discard-with-justification (candidatos a no hacer)
+- **H1 + L2 primero:** enriquecer `SubtopicProgress` con estados por cada nodo.
+  Go queda como única fuente de verdad; JS conserva solo el set optimista.
+- **C1 + H3 + L1:** dividir el monolito en shell HTML, CSS y módulos JS vanilla;
+  encapsular la generación/cancelación en `session.js`.
+- Restricciones verificables: HTML bajo ~300 líneas, ningún JS nuevo sobre ~400,
+  todos los modos Playwright y capturas antes/después.
+
+### Pospuestos
+
+- **M3:** partir `playwright-check.mjs`, después de 4.c / 4.d.
+- **M5:** split adicional de bootstrap/wiring, opcional después de H2.
+- **M4:** autenticación/autorización multi-usuario sigue documentada como
+  prerequisito, fuera de esta ola.
+
+### Después de los refactors
+
+- **4.c:** TTL de nodos live + `PromoteLiveStation`
+  (`add-ola4-live-node-policy`).
+- **4.d:** `calibrate --apply`, tolerancia a typos y piso RAG/chunks.
+
+### Descartados con justificación
 
 | Candidato | Justificación |
 |-----------|---------------|
@@ -185,12 +203,6 @@ Esta salida alimenta la priorización conjunta revisor + Dario: qué entra a 4.c
 | Eliminar el agregado optimista del cliente | Empeora UX; mejor parity o API más rica. |
 | Reorganizar `pkg/{vector,dua,rag}` por tamaño | No hay violación 1k (L3). |
 | WASM/codegen Go→JS del progreso | Overkill frente a fixtures JSON. |
-
-### Ya planificado en otros bloques (no reinventar aquí)
-
-- **4.c** — TTL de nodos live + `PromoteLiveStation` (`add-ola4-live-node-policy`).
-- **4.d** — `calibrate --apply`, normalización de query (typos), piso RAG / simmatrix a chunks.
-- **Más adelante** — auth multi-usuario, SQLite perfiles, síntesis LLM A5, captions/transcript A4.
 
 ---
 
