@@ -2,7 +2,7 @@
 
 ## PR 7.1
 
-- [ ] Implementar y testear `ProgressForTree`.
+- [x] Implementar y testear `ProgressForTree`.
 - [ ] Agregar mensajes y RPC al proto; regenerar stubs Go.
 - [ ] Implementar handler con validaciones y tests.
 - [ ] Exponer endpoint HTTP y testear gateway.
