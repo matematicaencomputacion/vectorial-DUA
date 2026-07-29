@@ -3,6 +3,8 @@ package vector
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,6 +18,7 @@ type Node struct {
 	ResourceURL     string
 	Embedding       []float32
 	IsLiveGenerated bool // RAG-generated station, not reviewed curriculum
+	CreatedAt       time.Time
 }
 
 // LivePreferenceMargin is how much better a live-generated station must score
@@ -29,6 +32,8 @@ type Node struct {
 // default without making live stations unreachable.
 const LivePreferenceMargin = 0.05
 
+const defaultLiveNodeTTL = 24 * time.Hour
+
 // Match is the nearest-neighbor result for a query embedding.
 type Match struct {
 	Node       Node
@@ -38,11 +43,13 @@ type Match struct {
 
 // Index is a concurrent in-memory k-NN store with ULID uniqueness checks.
 type Index struct {
-	mu    sync.RWMutex
+	mu    sync.Mutex
 	dims  int                 // required content embedding length (ContentEmbedDims)
 	nodes map[string]Node     // keyed by full node_id
 	ring  map[string]struct{} // ULID segment uniqueness ring
 	order []string
+	ttl   time.Duration
+	now   func() time.Time
 }
 
 // NewIndex creates an empty vector index locked to ContentEmbedDims.
@@ -59,7 +66,22 @@ func NewIndexWithDims(dims int) *Index {
 		dims:  dims,
 		nodes: make(map[string]Node),
 		ring:  make(map[string]struct{}),
+		ttl:   LiveNodeTTLFromEnv(),
+		now:   func() time.Time { return time.Now().UTC() },
 	}
+}
+
+// LiveNodeTTLFromEnv reads AVLP_LIVE_NODE_TTL (Go duration, default 24h).
+func LiveNodeTTLFromEnv() time.Duration {
+	v := strings.TrimSpace(os.Getenv("AVLP_LIVE_NODE_TTL"))
+	if v == "" {
+		return defaultLiveNodeTTL
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d <= 0 {
+		return defaultLiveNodeTTL
+	}
+	return d
 }
 
 // Dims returns the required content embedding dimensionality for this index.
@@ -91,6 +113,7 @@ func (idx *Index) Upsert(node Node) error {
 
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
+	idx.purgeLiveLocked(idx.now())
 
 	if existing, ok := idx.nodes[node.ID]; ok {
 		// Same full ID: replace embedding/metadata.
@@ -110,23 +133,26 @@ func (idx *Index) Upsert(node Node) error {
 
 // Len returns the number of indexed nodes.
 func (idx *Index) Len() int {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.purgeLiveLocked(idx.now())
 	return len(idx.nodes)
 }
 
 // HasULID reports whether a ULID segment is already in the ring.
 func (idx *Index) HasULID(ulid string) bool {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.purgeLiveLocked(idx.now())
 	_, ok := idx.ring[ulid]
 	return ok
 }
 
 // Nodes returns a snapshot of all indexed nodes in insertion order.
 func (idx *Index) Nodes() []Node {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.purgeLiveLocked(idx.now())
 	out := make([]Node, 0, len(idx.order))
 	for _, id := range idx.order {
 		n := idx.nodes[id]
@@ -141,8 +167,9 @@ func (idx *Index) Nodes() []Node {
 // Curated nodes win ties and near-ties: a live-generated station only wins when
 // it beats the best curated node by more than LivePreferenceMargin.
 func (idx *Index) Nearest(query []float32) Match {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.purgeLiveLocked(idx.now())
 
 	curated := Match{Found: false, Similarity: -1}
 	live := Match{Found: false, Similarity: -1}
@@ -200,10 +227,38 @@ func (idx *Index) registerNode(dimensionDUA, difficulty, format, resourceURL str
 		Embedding:       fitted,
 		IsLiveGenerated: isLive,
 	}
+	if isLive {
+		node.CreatedAt = idx.now()
+	}
 	if err := idx.Upsert(node); err != nil {
 		return Node{}, err
 	}
 	return node, nil
+}
+
+func (idx *Index) purgeLiveLocked(now time.Time) {
+	if idx.ttl <= 0 {
+		return
+	}
+	kept := idx.order[:0]
+	for _, id := range idx.order {
+		node, ok := idx.nodes[id]
+		if !ok {
+			continue
+		}
+		expired := node.IsLiveGenerated &&
+			!node.CreatedAt.IsZero() &&
+			now.Sub(node.CreatedAt) > idx.ttl
+		if !expired {
+			kept = append(kept, id)
+			continue
+		}
+		delete(idx.nodes, id)
+		if parts, err := ParseNodeID(id); err == nil {
+			delete(idx.ring, parts.ULID)
+		}
+	}
+	idx.order = kept
 }
 
 // TextEmbedder is the content embedding contract used by seed loaders.

@@ -60,6 +60,12 @@ func NewTrackingULID() (string, error) {
 	return id.String(), nil
 }
 
+// ValidateTrackingULID reports whether a tracking token is a canonical ULID.
+func ValidateTrackingULID(value string) bool {
+	id, err := ulid.ParseStrict(value)
+	return err == nil && id.String() == value
+}
+
 // NewEventID generates a unique event identifier.
 func NewEventID() (string, error) {
 	return NewTrackingULID()
