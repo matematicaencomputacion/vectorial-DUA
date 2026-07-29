@@ -214,6 +214,58 @@ async function subtopicProgressCheck() {
   assert(progressGets === 2, `esperaba un GET por carga, got: ${progressGets}`);
   await shot(page, "progress-03-reconciled.png");
   console.log("OK recarga con mismo student_id conserva Motor → progress-03-reconciled.png");
+
+  // Condición de carrera: búsqueda A lenta + B inmediata → solo B pinta.
+  await page.unroute("**/api/query");
+  const nodeA = "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FAV"; // variables-scope
+  const nodeB = automovilID;
+  let queryN = 0;
+  await page.route("**/api/query", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    queryN += 1;
+    const nodeID = queryN === 1 ? nodeA : nodeB;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        matched: {
+          node_id: nodeID,
+          dimension_dua: "Representacion",
+          resource_url: "interactive://" + nodeID,
+          similarity_score: 0.9,
+          is_live_generated: false,
+          retrieved_sources: [],
+          live_content: "",
+          has_interactive_payload: true,
+        },
+      }),
+    });
+  });
+  // Retrasa solo el GET del payload de A (no el de progreso ni el de B).
+  await page.route(`**/api/nodes/${encodeURIComponent(nodeA)}`, async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await new Promise((r) => setTimeout(r, 1500));
+    return route.continue();
+  });
+
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  await page.locator(".hints button", { hasText: "Ejemplo: variables y scope" }).click();
+  await page.click("#btn-query");
+  await page.waitForTimeout(80);
+  await page.locator(".hints button", { hasText: "Ejemplo: automóvil" }).click();
+  await page.click("#btn-query");
+  await page.waitForSelector(".progress-summary", { timeout: 20000 });
+  // Dejá que A termine de resolver: si no hay invalidación, pisaría el rail.
+  await page.waitForTimeout(1800);
+  const topic = (await page.locator("#rail-topic").innerText()).trim();
+  assert(/Automóvil|automóvil/i.test(topic), `rail debía quedar en B (automóvil), got: ${topic}`);
+  assert((await page.locator(".progress-summary").count()) === 1, "B debe mostrar el resumen de progreso");
+  assert(
+    !(await page.locator("#rail-body").innerText()).match(/Resumen express/i),
+    "A (variables/scope) no debía pintar la botonera depth tras B"
+  );
+  await shot(page, "progress-04-stale-race.png");
+  console.log("OK carrera A→B: solo B pinta el rail → progress-04-stale-race.png");
 }
 
 if (mode === "routerdown") {

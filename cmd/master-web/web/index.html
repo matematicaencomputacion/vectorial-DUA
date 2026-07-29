@@ -691,6 +691,17 @@
   let pollTimer = null;
   let activeTabId = null;
   let activeVoice = null; // sesión SpeechRecognition activa (o null)
+  // Cada cambio de contexto (nueva búsqueda, reset) invalida respuestas en vuelo.
+  let loadGeneration = 0;
+
+  function bumpLoadGeneration() {
+    loadGeneration += 1;
+    return loadGeneration;
+  }
+
+  function isStale(gen) {
+    return gen !== loadGeneration;
+  }
 
   const el = {
     form: document.getElementById("query-form"),
@@ -1381,26 +1392,35 @@
     setAskMode(true);
   }
 
-  async function loadProgressForNode(node) {
+  async function loadProgressForNode(node, gen) {
+    if (gen == null) gen = loadGeneration;
+    if (isStale(gen)) return;
     rawProgress = null;
     currentProgress = null;
     if (node.hierarchy) {
       try {
-        rawProgress = await api(
+        const progress = await api(
           "/api/nodes/" + encodeURIComponent(node.node_id) + "/progress?student_id=" + encodeURIComponent(studentId)
         );
+        if (isStale(gen)) return;
+        rawProgress = progress;
         currentProgress = deriveProgress(node.hierarchy, rawProgress.opened_subtopic_ids || [], rawProgress);
       } catch (_) {
+        if (isStale(gen)) return;
         // El nodo sigue siendo navegable; la próxima carga vuelve a reconciliar.
         currentProgress = deriveProgress(node.hierarchy, [], null);
       }
     }
   }
 
-  async function loadInteractiveNode(nodeId) {
+  async function loadInteractiveNode(nodeId, gen) {
+    if (gen == null) gen = loadGeneration;
+    if (isStale(gen)) return;
     const node = await api("/api/nodes/" + encodeURIComponent(nodeId));
+    if (isStale(gen)) return;
     currentNode = node;
-    await loadProgressForNode(node);
+    await loadProgressForNode(node, gen);
+    if (isStale(gen)) return;
     renderRail(node);
     setStageFromMedia({
       title: node.titulo,
@@ -1428,13 +1448,16 @@
     renderDev();
   }
 
-  async function handleMatched(matched) {
+  async function handleMatched(matched, gen) {
+    if (gen == null) gen = loadGeneration;
+    if (isStale(gen)) return;
     lastSimilarity = matched.similarity_score;
     renderDev();
     if (matched.has_interactive_payload) {
-      await loadInteractiveNode(matched.node_id);
+      await loadInteractiveNode(matched.node_id, gen);
       return;
     }
+    if (isStale(gen)) return;
     showNonInteractiveRail(matched.is_live_generated ? "live" : "static");
     if (matched.live_content) {
       setStageFromMedia({
@@ -1453,11 +1476,20 @@
     setStatus(matched.is_live_generated ? "Estación generada en el miss path." : "Match estático.", "ok");
   }
 
-  async function pollStation(trackingUlid) {
+  async function pollStation(trackingUlid, gen) {
+    if (gen == null) gen = loadGeneration;
     stopPoll();
     const tick = async function () {
+      if (isStale(gen)) {
+        stopPoll();
+        return;
+      }
       try {
         const st = await api("/api/stations/" + encodeURIComponent(trackingUlid) + "?student_id=" + encodeURIComponent(studentId));
+        if (isStale(gen)) {
+          stopPoll();
+          return;
+        }
         const msg = st.student_message || "Seguimos preparando tu estación…";
         if (st.status === "ready") {
           stopPoll();
@@ -1475,9 +1507,11 @@
                 const node = await fetch("/api/nodes/" + encodeURIComponent(st.node_id)).then(function (r) {
                   return r.ok ? r.json() : null;
                 });
+                if (isStale(gen)) return;
                 if (node && node.node_id) {
                   currentNode = node;
-                  await loadProgressForNode(node);
+                  await loadProgressForNode(node, gen);
+                  if (isStale(gen)) return;
                   renderRail(node);
                   renderDev();
                 }
@@ -1485,8 +1519,9 @@
             }
           } else if (st.node_id) {
             try {
-              await loadInteractiveNode(st.node_id);
+              await loadInteractiveNode(st.node_id, gen);
             } catch (_) {
+              if (isStale(gen)) return;
               showNonInteractiveRail("live");
               setStageFromMedia({
                 title: "Estación lista",
@@ -1502,6 +1537,7 @@
               markdown: msg,
             });
           }
+          if (isStale(gen)) return;
           setStatus("La estación está lista.", "ok");
           return;
         }
@@ -1515,6 +1551,10 @@
         showWaiting(msg, trackingUlid);
         setStatus(msg, "");
       } catch (e) {
+        if (isStale(gen)) {
+          stopPoll();
+          return;
+        }
         stopPoll();
         setAskMode(false);
         showWaiting((e.data && e.data.student_message) || e.message, trackingUlid);
@@ -1522,14 +1562,18 @@
       }
     };
     await tick();
-    pollTimer = setInterval(tick, 2000);
+    if (!isStale(gen)) {
+      pollTimer = setInterval(tick, 2000);
+    }
   }
 
   el.form.addEventListener("submit", async function (ev) {
     ev.preventDefault();
-    stopPoll();
     const queryText = el.doubt.value.trim();
     if (!queryText) return;
+    // Nueva búsqueda: invalida cargas/polling en vuelo y para el intervalo.
+    const gen = bumpLoadGeneration();
+    stopPoll();
     const frustration = Number(el.frustration.value);
     setStatus("Consultando el router…", "");
     try {
@@ -1542,8 +1586,9 @@
           frustration: frustration,
         }),
       });
+      if (isStale(gen)) return;
       if (route.matched) {
-        await handleMatched(route.matched);
+        await handleMatched(route.matched, gen);
       } else if (route.pending) {
         currentNode = null;
         rawProgress = null;
@@ -1554,11 +1599,12 @@
         renderDev();
         showWaiting(route.pending.message, route.pending.tracking_ulid);
         setStatus(route.pending.message || "Estación pendiente…", "");
-        await pollStation(route.pending.tracking_ulid);
+        await pollStation(route.pending.tracking_ulid, gen);
       } else {
         setStatus("Respuesta de ruteo inesperada.", "error");
       }
     } catch (e) {
+      if (isStale(gen)) return;
       // reportError already ran inside api() for HTTP failures
       if (!e || !e.status) {
         reportError(e, "Error de consulta. Probá de nuevo en un momento.");
@@ -1578,6 +1624,7 @@
       el.askDoubt.focus();
       return;
     }
+    const gen = loadGeneration;
     el.btnMutate.disabled = true;
     try {
       const res = await api("/api/nodes/" + encodeURIComponent(currentNode.node_id) + "/mutate", {
@@ -1589,6 +1636,7 @@
           frustration: Number(el.frustration.value),
         }),
       });
+      if (isStale(gen)) return;
       currentNode = res.node || currentNode;
       renderRail(currentNode);
       if (res.button) {

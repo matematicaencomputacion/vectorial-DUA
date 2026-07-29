@@ -24,3 +24,4 @@ nodo, el GET de progreso y `RecordSubtopicInteraction` usan el stack real.
 - `progress-01-clean.png`: acordeón limpio, contador 0 de 5 y estados «○ Por explorar».
 - `progress-02-motor-visited.png`: Motor «✓ Visitado», Caja Central «◐ Exploración iniciada» y contador 1 de 5, actualizado sin otro GET de progreso.
 - `progress-03-reconciled.png`: nueva carga en la misma pestaña; el `student_id` de `sessionStorage` recupera Motor desde el router.
+- `progress-04-stale-race.png`: búsqueda A lenta + B inmediata; solo B queda en el rail (invalidación por generación).

@@ -107,6 +107,11 @@ Flujo esperado en texto:
 
 Checklist manual (teclado + lector de pantalla + voz): `cmd/master-web/MANUAL_CHECKLIST.md`.
 
+**Trust model del prototipo.** Los RPCs y el gateway confían en el `student_id`
+declarado por el cliente — igual que `RecordSubtopicInteraction` /
+`RecordBotoneraInteraction` y el nuevo `GetSubtopicProgress`. Una fase
+multi-usuario requiere autenticación y autorización por estudiante (deuda Ola 4).
+
 Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
 
 El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**, calibrado con hash contra `data/knowledge_base`: PostGIS on-topic ~0.33, «que es un bit» ≤0.19). Sin hits queda el camino honesto («No encontré material verificado…»). Con embedders densos (bge-m3) conviene subir el piso.
