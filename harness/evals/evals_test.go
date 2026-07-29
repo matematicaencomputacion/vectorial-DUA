@@ -10,6 +10,7 @@ import (
 
 	"github.com/vectorial-dua/avlp/harness/evals"
 	"github.com/vectorial-dua/avlp/harness/telemetry"
+	"github.com/vectorial-dua/avlp/internal/testenv"
 	"github.com/vectorial-dua/avlp/pkg/livestation"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/vector"
@@ -39,6 +40,10 @@ func (b liveBridge) GenerateLive(ctx context.Context, req vector.LiveRequest) (v
 }
 
 func TestGoldenRoutingEvalsPass(t *testing.T) {
+	// Los goldens fijan el umbral default; heredar AVLP_* del shell del operador
+	// cambiaría el resultado y ocultaría regresiones de ruteo.
+	testenv.Isolate(t)
+
 	emb, err := evals.ResolveEmbedder("hash")
 	if err != nil {
 		t.Fatal(err)
@@ -70,6 +75,8 @@ func TestGoldenRoutingEvalsPass(t *testing.T) {
 }
 
 func TestResolveEmbedderModes(t *testing.T) {
+	testenv.Isolate(t)
+
 	h, err := evals.ResolveEmbedder("hash")
 	if err != nil {
 		t.Fatal(err)
@@ -80,13 +87,14 @@ func TestResolveEmbedderModes(t *testing.T) {
 	if _, err := evals.ResolveEmbedder("bogus"); err == nil {
 		t.Fatal("expected error for unknown mode")
 	}
-	t.Setenv("AVLP_EMBEDDING_URL", "")
 	if _, err := evals.ResolveEmbedder("env"); err == nil {
 		t.Fatal("env mode without URL should error")
 	}
 }
 
 func TestRAGFaithfulnessGolden(t *testing.T) {
+	testenv.Isolate(t)
+
 	store := rag.NewStore()
 	emb := rag.NewHashEmbedder(rag.DefaultEmbedDims)
 	if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: repoPath(t, "data", "knowledge_base"), Embedder: emb}); err != nil {
