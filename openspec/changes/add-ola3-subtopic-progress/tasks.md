@@ -15,4 +15,4 @@
 - [x] Actualizar optimistamente tras `RecordSubtopicInteraction`.
 - [x] Mostrar payload crudo en panel dev.
 - [x] Actualizar checklist y verificar con Playwright.
-- [ ] Ejecutar `go test -race ./...`, publicar PR y frenar para revisión.
+- [x] Ejecutar `go test -race ./...`, publicar PR y frenar para revisión.
