@@ -56,11 +56,25 @@ func (g *Gateway) Handler() http.Handler {
 			return
 		}
 		if g.Static != nil {
+			// Evitar que un index.html cacheado deje al alumno con una UI rota tras un deploy.
+			if isIndexHTMLPath(r.URL.Path) {
+				w.Header().Set("Cache-Control", "no-cache")
+			}
 			g.Static.ServeHTTP(w, r)
 			return
 		}
 		http.NotFound(w, r)
 	})
+}
+
+// isIndexHTMLPath reports whether the request is for the embedded shell document.
+func isIndexHTMLPath(p string) bool {
+	switch p {
+	case "", "/", "/index.html":
+		return true
+	default:
+		return false
+	}
 }
 
 type queryRequest struct {

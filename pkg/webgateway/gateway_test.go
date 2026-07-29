@@ -437,6 +437,16 @@ func TestGatewayStaticPlaceholder(t *testing.T) {
 	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), "AVLP") {
 		t.Fatalf("static: %d %s", rr.Code, rr.Body.String())
 	}
+	if got := rr.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Fatalf("index Cache-Control: want no-cache, got %q", got)
+	}
+
+	rr2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodGet, "/index.html", nil)
+	gw.Handler().ServeHTTP(rr2, req2)
+	if got := rr2.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Fatalf("/index.html Cache-Control: want no-cache, got %q", got)
+	}
 }
 
 func TestGatewayBotoneraRecord(t *testing.T) {
