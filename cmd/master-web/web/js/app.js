@@ -52,6 +52,7 @@ async function loadInteractiveNode(nodeId, token) {
     title: node.titulo,
     meta: (node.dimension_dua || "") + " · interactivo",
     mediaUrl: node.stage_media_default || (node.hierarchy && node.hierarchy.macro_media_url),
+    markdown: node.stage_markdown_default,
     clipTitle: node.titulo,
   });
   renderDev();

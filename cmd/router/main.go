@@ -84,16 +84,16 @@ func main() {
 	interactions.Logf = log.Printf
 	var reg *dua.Registry
 	var mutator *dua.Mutator
+	nodesDir := os.Getenv("AVLP_INTERACTIVE_NODES_DIR")
+	if nodesDir == "" {
+		nodesDir = "data/nodes/interactive"
+	}
+	if abs, err := filepath.Abs(nodesDir); err == nil {
+		nodesDir = abs
+	}
 
 	if dua.EnabledFromEnv() {
 		reg = dua.NewRegistry()
-		nodesDir := os.Getenv("AVLP_INTERACTIVE_NODES_DIR")
-		if nodesDir == "" {
-			nodesDir = "data/nodes/interactive"
-		}
-		if abs, err := filepath.Abs(nodesDir); err == nil {
-			nodesDir = abs
-		}
 		n, err := reg.LoadDir(nodesDir)
 		if err != nil {
 			log.Printf("interactive nodes load warning: %v", err)
@@ -140,6 +140,12 @@ func main() {
 		QueryEmbedder: emb,
 		Profiles:      profiles,
 		Interactions:  interactions,
+		Promoter: &dua.LiveStationPromoter{
+			Ledger:   router.Ledger,
+			Index:    index,
+			Registry: reg,
+			SeedsDir: nodesDir,
+		},
 	})
 
 	srv := grpc.NewServer()

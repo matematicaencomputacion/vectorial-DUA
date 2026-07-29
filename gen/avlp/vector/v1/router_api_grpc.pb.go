@@ -26,6 +26,7 @@ const (
 	VectorRouter_GetSubtopicProgress_FullMethodName       = "/avlp.vector.v1.VectorRouter/GetSubtopicProgress"
 	VectorRouter_RecordBotoneraInteraction_FullMethodName = "/avlp.vector.v1.VectorRouter/RecordBotoneraInteraction"
 	VectorRouter_GetLiveStation_FullMethodName            = "/avlp.vector.v1.VectorRouter/GetLiveStation"
+	VectorRouter_PromoteLiveStation_FullMethodName        = "/avlp.vector.v1.VectorRouter/PromoteLiveStation"
 )
 
 // VectorRouterClient is the client API for VectorRouter service.
@@ -48,6 +49,9 @@ type VectorRouterClient interface {
 	RecordBotoneraInteraction(ctx context.Context, in *BotoneraInteraction, opts ...grpc.CallOption) (*Ack, error)
 	// Poll a pending live station by tracking_ulid (student_id required for ownership check).
 	GetLiveStation(ctx context.Context, in *LiveStationQuery, opts ...grpc.CallOption) (*LiveStationStatus, error)
+	// Prototype trust model: knowing the tracking_ulid is the promotion capability.
+	// A multi-user deployment must require authenticated curator authorization.
+	PromoteLiveStation(ctx context.Context, in *PromoteLiveStationRequest, opts ...grpc.CallOption) (*PromoteLiveStationResponse, error)
 }
 
 type vectorRouterClient struct {
@@ -128,6 +132,16 @@ func (c *vectorRouterClient) GetLiveStation(ctx context.Context, in *LiveStation
 	return out, nil
 }
 
+func (c *vectorRouterClient) PromoteLiveStation(ctx context.Context, in *PromoteLiveStationRequest, opts ...grpc.CallOption) (*PromoteLiveStationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromoteLiveStationResponse)
+	err := c.cc.Invoke(ctx, VectorRouter_PromoteLiveStation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VectorRouterServer is the server API for VectorRouter service.
 // All implementations must embed UnimplementedVectorRouterServer
 // for forward compatibility.
@@ -148,6 +162,9 @@ type VectorRouterServer interface {
 	RecordBotoneraInteraction(context.Context, *BotoneraInteraction) (*Ack, error)
 	// Poll a pending live station by tracking_ulid (student_id required for ownership check).
 	GetLiveStation(context.Context, *LiveStationQuery) (*LiveStationStatus, error)
+	// Prototype trust model: knowing the tracking_ulid is the promotion capability.
+	// A multi-user deployment must require authenticated curator authorization.
+	PromoteLiveStation(context.Context, *PromoteLiveStationRequest) (*PromoteLiveStationResponse, error)
 	mustEmbedUnimplementedVectorRouterServer()
 }
 
@@ -178,6 +195,9 @@ func (UnimplementedVectorRouterServer) RecordBotoneraInteraction(context.Context
 }
 func (UnimplementedVectorRouterServer) GetLiveStation(context.Context, *LiveStationQuery) (*LiveStationStatus, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetLiveStation not implemented")
+}
+func (UnimplementedVectorRouterServer) PromoteLiveStation(context.Context, *PromoteLiveStationRequest) (*PromoteLiveStationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PromoteLiveStation not implemented")
 }
 func (UnimplementedVectorRouterServer) mustEmbedUnimplementedVectorRouterServer() {}
 func (UnimplementedVectorRouterServer) testEmbeddedByValue()                      {}
@@ -326,6 +346,24 @@ func _VectorRouter_GetLiveStation_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VectorRouter_PromoteLiveStation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PromoteLiveStationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VectorRouterServer).PromoteLiveStation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VectorRouter_PromoteLiveStation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VectorRouterServer).PromoteLiveStation(ctx, req.(*PromoteLiveStationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VectorRouter_ServiceDesc is the grpc.ServiceDesc for VectorRouter service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -360,6 +398,10 @@ var VectorRouter_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetLiveStation",
 			Handler:    _VectorRouter_GetLiveStation_Handler,
+		},
+		{
+			MethodName: "PromoteLiveStation",
+			Handler:    _VectorRouter_PromoteLiveStation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

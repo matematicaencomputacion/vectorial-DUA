@@ -10,14 +10,17 @@ func ToProto(n *InteractiveVideoNode) *vectorv1.InteractiveVideoNode {
 		return nil
 	}
 	out := &vectorv1.InteractiveVideoNode{
-		NodeId:            n.NodeID,
-		DimensionDua:      n.DimensionDUA,
-		Titulo:            n.Titulo,
-		LayoutType:        vectorv1.LayoutType_LAYOUT_TYPE_INTERACTIVE_DASHBOARD,
-		StageMediaDefault: n.StageMediaDefault,
-		Embedding:         append([]float32(nil), n.Embedding...),
-		BotoneraSchema:    botoneraSchemaToProto(n.BotoneraSchema),
-		Hierarchy:         hierarchyToProto(n.Hierarchy),
+		NodeId:                   n.NodeID,
+		DimensionDua:             n.DimensionDUA,
+		Titulo:                   n.Titulo,
+		LayoutType:               vectorv1.LayoutType_LAYOUT_TYPE_INTERACTIVE_DASHBOARD,
+		StageMediaDefault:        n.StageMediaDefault,
+		Embedding:                append([]float32(nil), n.Embedding...),
+		BotoneraSchema:           botoneraSchemaToProto(n.BotoneraSchema),
+		Hierarchy:                hierarchyToProto(n.Hierarchy),
+		StageMarkdownDefault:     n.StageMarkdownDefault,
+		RetrievedSources:         append([]string(nil), n.RetrievedSources...),
+		PromotedFromTrackingUlid: n.PromotedFromTrackingULID,
 	}
 	for _, b := range n.Botonera {
 		out.Botonera = append(out.Botonera, buttonToProto(b))

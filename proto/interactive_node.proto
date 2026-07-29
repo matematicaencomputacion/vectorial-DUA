@@ -173,6 +173,10 @@ message InteractiveVideoNode {
   DUANodeBotonera botonera_schema = 8;
   // Optional fractal accordion of subtopics.
   DUAHierarchicalTree hierarchy = 9;
+  // Persisted markdown for a reviewed live station promoted to curriculum.
+  string stage_markdown_default = 10;
+  repeated string retrieved_sources = 11;
+  string promoted_from_tracking_ulid = 12;
 }
 
 // NodeIdRequest fetches a single interactive node by id.

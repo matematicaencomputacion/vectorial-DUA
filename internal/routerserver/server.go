@@ -2,6 +2,7 @@ package routerserver
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"google.golang.org/grpc/codes"
@@ -22,6 +23,7 @@ type Deps struct {
 	QueryEmbedder rag.Embedder
 	Profiles      dua.ProfileRepository
 	Interactions  *dua.InteractionStore
+	Promoter      *dua.LiveStationPromoter
 }
 
 // Server implements the VectorRouter gRPC service using the canonical domain services.
@@ -33,6 +35,7 @@ type Server struct {
 	queryEmbedder rag.Embedder
 	profiles      dua.ProfileRepository
 	interactions  *dua.InteractionStore
+	promoter      *dua.LiveStationPromoter
 }
 
 // New builds the canonical gRPC handler implementation.
@@ -44,6 +47,7 @@ func New(deps Deps) *Server {
 		queryEmbedder: deps.QueryEmbedder,
 		profiles:      deps.Profiles,
 		interactions:  deps.Interactions,
+		promoter:      deps.Promoter,
 	}
 }
 
@@ -166,6 +170,42 @@ func (s *Server) GetLiveStation(ctx context.Context, req *vectorv1.LiveStationQu
 		out.RetrievedSources = append([]string(nil), rec.Result.Sources...)
 	}
 	return out, nil
+}
+
+func (s *Server) PromoteLiveStation(
+	ctx context.Context,
+	req *vectorv1.PromoteLiveStationRequest,
+) (*vectorv1.PromoteLiveStationResponse, error) {
+	_ = ctx
+	if req.GetTrackingUlid() == "" {
+		return nil, status.Error(codes.InvalidArgument, "tracking_ulid is required")
+	}
+	if s.promoter == nil {
+		return nil, status.Error(codes.FailedPrecondition, "live station promotion unavailable")
+	}
+	result, err := s.promoter.Promote(req.GetTrackingUlid())
+	switch {
+	case errors.Is(err, dua.ErrInvalidTrackingULID):
+		return nil, status.Error(codes.InvalidArgument, "tracking_ulid must be a valid ULID")
+	case errors.Is(err, dua.ErrStationNotFound):
+		return nil, status.Error(codes.NotFound, "live station not found or expired")
+	case errors.Is(err, dua.ErrStationNotReady):
+		return nil, status.Error(codes.FailedPrecondition, "live station is not ready")
+	case errors.Is(err, dua.ErrPromotionUnavailable):
+		return nil, status.Error(codes.FailedPrecondition, "live station promotion unavailable")
+	case err != nil:
+		log.Printf("promote live station %s: %v", req.GetTrackingUlid(), err)
+		return nil, status.Error(codes.Internal, "could not persist promoted station")
+	}
+	return &vectorv1.PromoteLiveStationResponse{
+		TrackingUlid:     result.TrackingULID,
+		NodeId:           result.Node.NodeID,
+		SeedPath:         result.SeedPath,
+		Created:          result.Created,
+		LiveContent:      result.Node.StageMarkdownDefault,
+		RetrievedSources: append([]string(nil), result.Node.RetrievedSources...),
+		DimensionDua:     result.Node.DimensionDUA,
+	}, nil
 }
 
 func (s *Server) GetInteractiveNode(ctx context.Context, req *vectorv1.NodeIdRequest) (*vectorv1.InteractiveVideoNode, error) {

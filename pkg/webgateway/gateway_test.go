@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
 	"github.com/vectorial-dua/avlp/internal/routerserver"
@@ -40,7 +41,12 @@ func (t *testLive) GenerateLive(ctx context.Context, req vector.LiveRequest) (ve
 	emb[0] = 1
 	return vector.LiveResult{
 		Node: vector.Node{
-			ID:           "dua::Representacion::adaptativo::conceptual::01TESTGATEWAYLIVE0000",
+			ID: vector.FormatNodeID(vector.NodeIDParts{
+				Dimension:  "Representacion",
+				Difficulty: "adaptativo",
+				Format:     "conceptual",
+				ULID:       req.TrackingULID,
+			}),
 			DimensionDUA: "Representacion",
 			Format:       "conceptual",
 			Embedding:    emb,
@@ -62,6 +68,9 @@ func (staticQueryEmbedder) Dims() int { return vector.ContentEmbedDims }
 type testBackend struct {
 	live     *testLive
 	profiles dua.ProfileRepository
+	index    *vector.Index
+	registry *dua.Registry
+	seedsDir string
 }
 
 func novelEmb() []float32 {
@@ -93,6 +102,7 @@ func startTestGateway(t *testing.T) (*webgateway.Gateway, *testBackend, func()) 
 	}
 	profiles := dua.NewProfileStore()
 	interactions := dua.NewInteractionStoreWithProfiles(profiles)
+	seedsDir := t.TempDir()
 	impl := routerserver.New(routerserver.Deps{
 		Router:        r,
 		Registry:      reg,
@@ -100,8 +110,20 @@ func startTestGateway(t *testing.T) (*webgateway.Gateway, *testBackend, func()) 
 		QueryEmbedder: staticQueryEmbedder{},
 		Profiles:      profiles,
 		Interactions:  interactions,
+		Promoter: &dua.LiveStationPromoter{
+			Ledger:   r.Ledger,
+			Index:    idx,
+			Registry: reg,
+			SeedsDir: seedsDir,
+		},
 	})
-	backend := &testBackend{live: live, profiles: profiles}
+	backend := &testBackend{
+		live:     live,
+		profiles: profiles,
+		index:    idx,
+		registry: reg,
+		seedsDir: seedsDir,
+	}
 
 	lis := bufconn.Listen(bufSize)
 	gs := grpc.NewServer()
@@ -285,6 +307,70 @@ func TestGatewaySubtopicProgress(t *testing.T) {
 	gw.Handler().ServeHTTP(noHierarchy, req)
 	if noHierarchy.Code != http.StatusNotFound {
 		t.Fatalf("no hierarchy status=%d body=%s", noHierarchy.Code, noHierarchy.Body.String())
+	}
+}
+
+func TestGatewayPromoteLiveStationRoundTrip(t *testing.T) {
+	gw, backend, cleanup := startTestGateway(t)
+	defer cleanup()
+	backend.live.fail = false
+
+	query := httptest.NewRecorder()
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/query",
+		strings.NewReader(`{"student_id":"teacher-demo","query_text":"una duda novel para promover"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	gw.Handler().ServeHTTP(query, req)
+	if query.Code != http.StatusOK {
+		t.Fatalf("query status=%d body=%s", query.Code, query.Body.String())
+	}
+	var route vectorv1.RouteResult
+	if err := protojson.Unmarshal(query.Body.Bytes(), &route); err != nil {
+		t.Fatal(err)
+	}
+	matched := route.GetMatched()
+	if matched == nil || matched.GetNodeId() == "" {
+		t.Fatalf("route=%+v", &route)
+	}
+	parts, err := vector.ParseNodeID(matched.GetNodeId())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	promoteURL := "/api/stations/" + parts.ULID + "/promote"
+	promote := func() *vectorv1.PromoteLiveStationResponse {
+		t.Helper()
+		rr := httptest.NewRecorder()
+		gw.Handler().ServeHTTP(rr, httptest.NewRequest(http.MethodPost, promoteURL, nil))
+		if rr.Code != http.StatusOK {
+			t.Fatalf("promote status=%d body=%s", rr.Code, rr.Body.String())
+		}
+		var got vectorv1.PromoteLiveStationResponse
+		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+			t.Fatal(err)
+		}
+		return &got
+	}
+
+	first := promote()
+	if !first.GetCreated() || first.GetNodeId() != matched.GetNodeId() ||
+		first.GetLiveContent() == "" || len(first.GetRetrievedSources()) != 1 {
+		t.Fatalf("first promotion=%+v", first)
+	}
+	if !strings.HasPrefix(first.GetSeedPath(), backend.seedsDir) {
+		t.Fatalf("seed path %q outside %q", first.GetSeedPath(), backend.seedsDir)
+	}
+	replay := promote()
+	if replay.GetCreated() || replay.GetNodeId() != first.GetNodeId() {
+		t.Fatalf("replay=%+v", replay)
+	}
+
+	node := httptest.NewRecorder()
+	gw.Handler().ServeHTTP(node, httptest.NewRequest(http.MethodGet, "/api/nodes/"+first.GetNodeId(), nil))
+	if node.Code != http.StatusOK || !strings.Contains(node.Body.String(), "stage_markdown_default") {
+		t.Fatalf("promoted node status=%d body=%s", node.Code, node.Body.String())
 	}
 }
 
