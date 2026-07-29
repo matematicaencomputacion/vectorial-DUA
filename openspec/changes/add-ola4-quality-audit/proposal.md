@@ -19,6 +19,7 @@ Esta salida alimenta la priorización conjunta revisor + Dario: qué entra a 4.c
 
 #### C1 — `index.html` supera ~1k líneas y concentra CSS + markup + app JS
 
+- **Estado:** ✅ Resuelto en [PR #8](https://github.com/matematicaencomputacion/vectorial-DUA/pull/8).
 - **Ubicación:** `cmd/master-web/web/index.html` (~1826; ~580 CSS, ~85 markup, ~1147 JS IIFE, ~48 funciones).
 - **Por qué importa:** Viola la regla no negociable del rubric (no dejar un archivo crecer injustificadamente más allá de ~1k). Un solo archivo es el stage, la botonera (legacy/tabs/matriz/jerarquía), voz, polling de estación, progreso, API client, markdown y guards de generación (`isStale` aparece decenas de veces). Cada Ola (3.b → 3.c → 4) añade ramas al mismo flujo ocupado: crecimiento spaghetti, no “un prototipo compacto”.
 - **Dirección recomendada:** Descomponer **sin framework** (ver temas especiales). Objetivo: shell HTML delgado + CSS + módulos JS por responsabilidad; `//go:embed web/*` sigue válido. No migrar a React/Vue en Ola 4.
@@ -27,18 +28,21 @@ Esta salida alimenta la priorización conjunta revisor + Dario: qué entra a 4.c
 
 #### H1 — Doble implementación del agregado de progreso sin harness de parity
 
+- **Estado:** ✅ Resuelto en [PR #8](https://github.com/matematicaencomputacion/vectorial-DUA/pull/8).
 - **Ubicación:** `pkg/dua/subtopic_progress.go` (`ProgressForTree` / `progressInSubtree`); `cmd/master-web/web/index.html` (`subtreeProgress`, `deriveProgress`, `updateHierarchyProgress`, `loadProgressForNode`); tests solo en Go (`subtopic_progress_test.go`).
 - **Por qué importa:** El diseño canónico (Ola 3.c) define total, intersección pre-order y estados de raíz en Go. El cliente **reescribe** el mismo walk y, tras `GET /progress`, descarta `root_states` del servidor y re-deriva con `deriveProgress(..., opened_ids)`. El UI además necesita estado por **cada** nodo del acordeón (Go solo expone raíces), así que la duplicación no es accidental: es deuda de contrato. Cualquier cambio de semántica (`visited`/`partial`/`unvisited`, IDs desconocidos, orden) puede divergir sin que CI lo note.
 - **Dirección recomendada:** Propiedad a largo plazo en temas especiales; plan mínimo: fixtures JSON compartidos + parity (Go test + smoke JS / golden Playwright), o enriquecer el RPC para anotar estados por nodo y dejar al cliente solo el set optimista de `opened`.
 
 #### H2 — Handlers gRPC canónicos en `cmd/router` y espejo casi completo en tests del gateway
 
+- **Estado:** ✅ Resuelto en [PR #7](https://github.com/matematicaencomputacion/vectorial-DUA/pull/7).
 - **Ubicación:** `cmd/router/main.go` (7 métodos `(*server)` + bootstrap `main`); `pkg/webgateway/gateway_test.go` (`inProcessRouter`, 7 métodos, comentario explícito “mirrors…”).
 - **Por qué importa:** Cada RPC nuevo se implementa dos veces. El harness de test ya diverge en detalles (frustración por defecto, embedder fake, mensajes). A ~501 líneas el archivo aún no cruza 1k, pero la **acumulación** + duplicación es el riesgo real ante Ola 4 (auth, política live, más RPCs).
 - **Dirección recomendada:** Extraer un paquete único de servidor (p. ej. `internal/routerserver`) con el tipo `Server` + handlers; `cmd/router` solo cablea deps y `Listen`; tests del gateway/router usan la misma implementación. No fragmentar un archivo por RPC todavía.
 
 #### H3 — Guards de generación / stale esparcidos como spaghetti de control flow
 
+- **Estado:** ✅ Resuelto en [PR #8](https://github.com/matematicaencomputacion/vectorial-DUA/pull/8).
 - **Ubicación:** `cmd/master-web/web/index.html` (`bumpLoadGeneration` / `isStale` / parámetro `gen` en cargas, poll, voz, submit; ~33 usos).
 - **Por qué importa:** El comportamiento (invalidar cargas en vuelo) es correcto y necesario, pero el modelo de cancelación está **inlined** en cada rama async. Un flujo nuevo obliga a recordar el ritual o reintroducir races. Refuerza C1.
 - **Dirección recomendada:** Al descomponer, encapsular en un `LoadSession` / `RequestGeneration` (módulo `session.js`): `begin()`, `token()`, `run(async fn)` que no-op si stale.
@@ -47,18 +51,21 @@ Esta salida alimenta la priorización conjunta revisor + Dario: qué entra a 4.c
 
 #### M1 — Adaptador `LiveGenerator` triplicado
 
+- **Estado:** ✅ Resuelto en [PR #7](https://github.com/matematicaencomputacion/vectorial-DUA/pull/7).
 - **Ubicación:** `cmd/router/main.go` (`liveBridge`); `cmd/harness/main.go` (`harnessLiveBridge`); `harness/evals/evals_test.go` (`liveBridge`).
 - **Por qué importa:** Tres wrappers idénticos `livestation.Request` ↔ `vector.LiveRequest`.
 - **Dirección:** Que `livestation.Generator` implemente `vector.LiveGenerator` (o un `AsLiveGenerator()` único). Borrar los tres adapters.
 
 #### M2 — `InteractionStore` vive en `hierarchy.go` (cohesión incorrecta)
 
+- **Estado:** ✅ Resuelto en [PR #7](https://github.com/matematicaencomputacion/vectorial-DUA/pull/7).
 - **Ubicación:** `pkg/dua/hierarchy.go` (tipos de árbol + store mutable de progreso/perfil).
 - **Por qué importa:** Mezcla modelo de jerarquía (puro/validación) con tracking de sesión. El progreso puro ya está en `subtopic_progress.go`.
 - **Dirección:** Mover a `interaction_store.go` (mismo package `dua`). Mecánico, bajo riesgo.
 
 #### M3 — `playwright-check.mjs` crece como segundo monolito de verificación
 
+- **Estado:** ⏳ Later — después de 4.c / 4.d.
 - **Ubicación:** `cmd/master-web/verify/playwright-check.mjs` (~405; modos `chips|progress|routerdown|full`).
 - **Por qué importa:** Si Ola 4 suma auth/live TTL, seguirá el destino de `index.html`.
 - **Dirección:** Partir por modo + runner mínimo; no bloquear features 4.c/4.d, sí acotar crecimiento.
@@ -71,6 +78,7 @@ Esta salida alimenta la priorización conjunta revisor + Dario: qué entra a 4.c
 
 #### M5 — Bootstrap grueso de `cmd/router` mezclado con handlers
 
+- **Estado:** ⏳ Later — split opcional posterior a H2.
 - **Ubicación:** `cmd/router/main.go` `main()` (~176 líneas de wiring).
 - **Por qué importa:** Dificulta reutilizar cableado; alarga el archivo de handlers.
 - **Dirección:** Tras H2, opcional `wire.go` / `bootstrap.go`. Un split handlers/wire basta.
@@ -79,11 +87,13 @@ Esta salida alimenta la priorización conjunta revisor + Dario: qué entra a 4.c
 
 #### L1 — CSS embebido y estilos inline residuales
 
+- **Estado:** ✅ Resuelto en [PR #8](https://github.com/matematicaencomputacion/vectorial-DUA/pull/8).
 - **Ubicación:** `<style>` en `index.html`; `style='…'` en rail vacío.
 - **Dirección:** `web/css/master.css` al descomponer (C1).
 
 #### L2 — `root_states` del API infrautilizado en el cliente
 
+- **Estado:** ✅ Resuelto en [PR #8](https://github.com/matematicaencomputacion/vectorial-DUA/pull/8).
 - **Ubicación:** respuesta `SubtopicProgress`; UI usa `subtreeProgress` local.
 - **Dirección:** Resolver junto con H1.
 
