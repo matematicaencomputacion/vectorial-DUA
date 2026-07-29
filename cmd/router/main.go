@@ -277,6 +277,9 @@ func (s *server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.Su
 }
 
 func (s *server) GetSubtopicProgress(ctx context.Context, req *vectorv1.SubtopicProgressQuery) (*vectorv1.SubtopicProgress, error) {
+	// Trust model (prototype): the client-declared student_id is trusted, same
+	// as RecordSubtopicInteraction / RecordBotoneraInteraction. A multi-user
+	// phase needs authentication and per-student authorization (Ola 4 debt).
 	_ = ctx
 	if req.GetStudentId() == "" || req.GetParentNodeId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "student_id and parent_node_id are required")

@@ -32,7 +32,7 @@ type Case struct {
 	MinSimilarityThreshold float32   `json:"min_similarity_threshold"`
 	ExpectedDimensionDUA   string    `json:"expected_dimension_dua"`
 	ExpectedFormat         string    `json:"expected_format"`
-	ExpectedOutcome        string    `json:"expected_outcome"` // static | live (semantic / embedder=env)
+	ExpectedOutcome        string    `json:"expected_outcome"`                // static | live (semantic / embedder=env)
 	ExpectedOutcomeHash    string    `json:"expected_outcome_hash,omitempty"` // when set, used under Mode=hash
 	ExpectedNodeIDPrefix   string    `json:"expected_node_id_prefix"`
 }
@@ -70,14 +70,14 @@ type CaseResult struct {
 
 // Report aggregates suite results.
 type Report struct {
-	RunID             string       `json:"run_id"`
-	StartedAtUnixMS   int64        `json:"started_at_unix_ms"`
-	FinishedAtUnixMS  int64        `json:"finished_at_unix_ms"`
-	TotalCases        int          `json:"total_cases"`
-	PassedCases       int          `json:"passed_cases"`
-	FailedCases       int          `json:"failed_cases"`
-	PassRate          float64      `json:"pass_rate"`
-	Results           []CaseResult `json:"results"`
+	RunID            string       `json:"run_id"`
+	StartedAtUnixMS  int64        `json:"started_at_unix_ms"`
+	FinishedAtUnixMS int64        `json:"finished_at_unix_ms"`
+	TotalCases       int          `json:"total_cases"`
+	PassedCases      int          `json:"passed_cases"`
+	FailedCases      int          `json:"failed_cases"`
+	PassRate         float64      `json:"pass_rate"`
+	Results          []CaseResult `json:"results"`
 }
 
 // LoadCases reads a golden JSON array from path.

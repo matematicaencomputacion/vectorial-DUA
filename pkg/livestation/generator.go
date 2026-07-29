@@ -15,12 +15,12 @@ import (
 
 // Result is a materialized live pedagogical station.
 type Result struct {
-	Node              vector.Node
-	Content           string
-	Sources           []string
-	TrackingULID      string
-	Prompt            rogerian.PromptBundle
-	Retrieved         []rag.ScoredChunk
+	Node         vector.Node
+	Content      string
+	Sources      []string
+	TrackingULID string
+	Prompt       rogerian.PromptBundle
+	Retrieved    []rag.ScoredChunk
 }
 
 // Generator turns a routing miss into a persisted live node via RAG + Rogers.
@@ -34,13 +34,13 @@ type Generator struct {
 
 // Request is the miss-path input.
 type Request struct {
-	StudentID     string
-	DoubtText     string
+	StudentID      string
+	DoubtText      string
 	QueryEmbedding []float32
-	Frustration   float32
-	Dimension     string
-	Format        string
-	TrackingULID  string
+	Frustration    float32
+	Dimension      string
+	Format         string
+	TrackingULID   string
 }
 
 // Generate retrieves context, synthesizes a station, and registers a live node.

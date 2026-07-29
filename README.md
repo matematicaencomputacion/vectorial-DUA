@@ -107,6 +107,11 @@ Flujo esperado en texto:
 
 Checklist manual (teclado + lector de pantalla + voz): `cmd/master-web/MANUAL_CHECKLIST.md`.
 
+**Trust model del prototipo.** Los RPCs y el gateway confían en el `student_id`
+declarado por el cliente — igual que `RecordSubtopicInteraction` /
+`RecordBotoneraInteraction` y el nuevo `GetSubtopicProgress`. Una fase
+multi-usuario requiere autenticación y autorización por estudiante (deuda Ola 4).
+
 Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
 
 El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**, calibrado con hash contra `data/knowledge_base`: PostGIS on-topic ~0.33, «que es un bit» ≤0.19). Sin hits queda el camino honesto («No encontré material verificado…»). Con embedders densos (bge-m3) conviene subir el piso.
@@ -187,3 +192,18 @@ go run ./cmd/harness -suite evals
 ```
 
 Regenerar Protobuf: `./scripts/gen-proto.ps1`
+
+### Tests y variables de entorno
+
+El ruteo lee `AVLP_*` en tiempo de ejecución (umbral de similitud, embedder, pisos
+de RAG, toggles de nodos interactivos). Un shell con `AVLP_SIMILARITY_THRESHOLD=0.55`
+exportado puede volver verde una regresión real, así que los tests fijan su propio
+entorno vía `internal/testenv`: `testenv.Isolate(t)` por test y `testenv.Clear()`
+desde `TestMain` en los paquetes que rutean. El helper limpia por prefijo, de modo
+que cubre variables nuevas sin actualizar una lista.
+
+Antes de un push, correr la suite sin nada exportado (`env | grep AVLP` vacío):
+
+```bash
+./scripts/test-clean.sh
+```

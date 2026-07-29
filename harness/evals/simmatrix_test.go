@@ -6,11 +6,14 @@ import (
 	"testing"
 
 	"github.com/vectorial-dua/avlp/harness/evals"
+	"github.com/vectorial-dua/avlp/internal/testenv"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
 func TestBuildSimMatrixHash(t *testing.T) {
+	testenv.Isolate(t)
+
 	emb := rag.NewHashEmbedder(rag.DefaultEmbedDims)
 	idx := vector.NewIndexWithDims(emb.Dims())
 	if err := vector.SeedDemoNodes(idx, emb); err != nil {

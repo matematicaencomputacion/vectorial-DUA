@@ -7,8 +7,9 @@
  * Usa Chrome del sistema (channel: chrome). Requiere master-web en AVLP_WEB_URL
  * (default http://127.0.0.1:8080) con el router arriba.
  *
- * Modos (AVLP_ONLY): "chips" solo el mapeo de chips, "routerdown" solo el
- * chequeo de router caído (levantar master-web sin router). Sin valor corre todo.
+ * Modos (AVLP_ONLY): "chips" solo el mapeo de chips, "progress" solo el
+ * acordeón que recuerda, "routerdown" solo el chequeo de router caído
+ * (levantar master-web sin router). Sin valor corre todo.
  */
 import { chromium } from "playwright";
 import fs from "node:fs";
@@ -128,10 +129,156 @@ async function routerDownCheck() {
   console.log(`OK router caído → mensaje amable: «${statusText}» → flow-06-router-caido.png`);
 }
 
+async function subtopicProgressCheck() {
+  let progressGets = 0;
+  const automovilID = "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FC0";
+  // El test apunta al acordeón, no a calibrar embeddings: fija solo la decisión
+  // de routing y deja nodo, progreso y Record* contra el stack real.
+  await page.route("**/api/query", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        matched: {
+          node_id: automovilID,
+          dimension_dua: "Representacion",
+          resource_url: "interactive://" + automovilID,
+          similarity_score: 0.9,
+          is_live_generated: false,
+          retrieved_sources: [],
+          live_content: "",
+          has_interactive_payload: true,
+        },
+      }),
+    });
+  });
+  page.on("request", (req) => {
+    if (req.method() === "GET" && /\/api\/nodes\/.+\/progress\?/.test(req.url())) progressGets++;
+  });
+
+  async function loadAutomovil() {
+    await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+    await page.locator(".hints button", { hasText: "Ejemplo: automóvil" }).click();
+    const waitProgress = page.waitForResponse(
+      (r) => /\/api\/nodes\/.+\/progress\?/.test(r.url()) && r.request().method() === "GET",
+      { timeout: 45000 }
+    );
+    await page.click("#btn-query");
+    const progressResponse = await waitProgress;
+    assert(progressResponse.ok(), `GET progress falló: ${progressResponse.status()}`);
+    await page.waitForSelector(".progress-summary", { timeout: 15000 });
+  }
+
+  await loadAutomovil();
+  const summary = page.locator(".progress-summary");
+  assert(/Exploraste 0 de 5 subtemas/.test(await summary.innerText()), `contador inicial: ${await summary.innerText()}`);
+  assert(
+    (await summary.getAttribute("aria-label")) === "Exploraste 0 de 5 subtemas",
+    `aria-label inicial: ${await summary.getAttribute("aria-label")}`
+  );
+  const cleanStates = await page.locator(".subtopic-state").allInnerTexts();
+  assert(cleanStates.length === 5, `esperaba 5 estados, got: ${cleanStates.length}`);
+  assert(cleanStates.every((s) => /○ Por explorar/.test(s)), `estados iniciales: ${JSON.stringify(cleanStates)}`);
+  await shot(page, "progress-01-clean.png");
+  console.log("OK acordeón limpio: 0 de 5, símbolos + texto → progress-01-clean.png");
+
+  const caja = page.locator('.accordion-trigger[data-subtopic-id="sub_caja_central"]');
+  const motor = page.locator('.accordion-trigger[data-subtopic-id="sub_motor"]');
+  await caja.click();
+  await motor.click();
+  const waitRecord = page.waitForResponse(
+    (r) => r.url().includes("/api/interactions/subtopic") && r.request().method() === "POST",
+    { timeout: 20000 }
+  );
+  await page.locator("#acc-sub_motor .subtopic-select").first().click();
+  const record = await waitRecord;
+  assert(record.ok(), `RecordSubtopicInteraction falló: ${record.status()}`);
+
+  assert(/Exploraste 1 de 5 subtemas/.test(await summary.innerText()), `contador optimista: ${await summary.innerText()}`);
+  assert(/◐ Exploración iniciada/.test(await caja.innerText()), `Caja Central: ${await caja.innerText()}`);
+  assert(/✓ Visitado/.test(await motor.innerText()), `Motor: ${await motor.innerText()}`);
+  assert(progressGets === 1, `la apertura no debe re-fetch completo; GET progress=${progressGets}`);
+  assert(!/%|100|complet/i.test(await summary.innerText()), `copy gamificado: ${await summary.innerText()}`);
+  const dev = await page.locator("#dev-panel").textContent();
+  assert(/progreso crudo de subtemas/.test(dev) && /progreso local/.test(dev) && /sub_motor/.test(dev), "panel dev sin progreso crudo/local");
+  await shot(page, "progress-02-motor-visited.png");
+  console.log("OK Motor visitado + Caja parcial + 1 de 5, sin re-fetch → progress-02-motor-visited.png");
+
+  // Misma pestaña: sessionStorage conserva student_id; una nueva carga
+  // reconcilia el optimismo contra InteractionStore en el router.
+  await loadAutomovil();
+  assert(/Exploraste 1 de 5 subtemas/.test(await summary.innerText()), `contador reconciliado: ${await summary.innerText()}`);
+  const reconciledMotor = page.locator('.accordion-trigger[data-subtopic-id="sub_motor"]');
+  assert(/✓ Visitado/.test(await reconciledMotor.innerText()), `Motor reconciliado: ${await reconciledMotor.innerText()}`);
+  assert(progressGets === 2, `esperaba un GET por carga, got: ${progressGets}`);
+  await shot(page, "progress-03-reconciled.png");
+  console.log("OK recarga con mismo student_id conserva Motor → progress-03-reconciled.png");
+
+  // Condición de carrera: búsqueda A lenta + B inmediata → solo B pinta.
+  await page.unroute("**/api/query");
+  const nodeA = "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FAV"; // variables-scope
+  const nodeB = automovilID;
+  let queryN = 0;
+  await page.route("**/api/query", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    queryN += 1;
+    const nodeID = queryN === 1 ? nodeA : nodeB;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        matched: {
+          node_id: nodeID,
+          dimension_dua: "Representacion",
+          resource_url: "interactive://" + nodeID,
+          similarity_score: 0.9,
+          is_live_generated: false,
+          retrieved_sources: [],
+          live_content: "",
+          has_interactive_payload: true,
+        },
+      }),
+    });
+  });
+  // Retrasa solo el GET del payload de A (no el de progreso ni el de B).
+  await page.route(`**/api/nodes/${encodeURIComponent(nodeA)}`, async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await new Promise((r) => setTimeout(r, 1500));
+    return route.continue();
+  });
+
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  await page.locator(".hints button", { hasText: "Ejemplo: variables y scope" }).click();
+  await page.click("#btn-query");
+  await page.waitForTimeout(80);
+  await page.locator(".hints button", { hasText: "Ejemplo: automóvil" }).click();
+  await page.click("#btn-query");
+  await page.waitForSelector(".progress-summary", { timeout: 20000 });
+  // Dejá que A termine de resolver: si no hay invalidación, pisaría el rail.
+  await page.waitForTimeout(1800);
+  const topic = (await page.locator("#rail-topic").innerText()).trim();
+  assert(/Automóvil|automóvil/i.test(topic), `rail debía quedar en B (automóvil), got: ${topic}`);
+  assert((await page.locator(".progress-summary").count()) === 1, "B debe mostrar el resumen de progreso");
+  assert(
+    !(await page.locator("#rail-body").innerText()).match(/Resumen express/i),
+    "A (variables/scope) no debía pintar la botonera depth tras B"
+  );
+  await shot(page, "progress-04-stale-race.png");
+  console.log("OK carrera A→B: solo B pinta el rail → progress-04-stale-race.png");
+}
+
 if (mode === "routerdown") {
   await routerDownCheck();
   await browser.close();
   console.log("verify OK (router caído)");
+  process.exit(0);
+}
+
+if (mode === "progress") {
+  await subtopicProgressCheck();
+  await browser.close();
+  console.log("verify OK (progreso de subtemas)");
   process.exit(0);
 }
 

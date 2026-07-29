@@ -474,6 +474,44 @@
     .accordion-trigger[aria-expanded="true"] .chev {
       transform: rotate(90deg);
     }
+    .accordion-trigger:hover {
+      background: var(--sand);
+      color: var(--teal-deep);
+    }
+    .accordion-label {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.1rem;
+      text-align: left;
+    }
+    .subtopic-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: var(--ink-soft);
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .subtopic-state[data-state="visited"] { color: var(--teal-deep); }
+    .subtopic-state[data-state="partial"] { color: #7c3d05; }
+    .progress-summary {
+      margin: 0.35rem 0 0;
+      padding: 0.5rem 0.6rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--sand);
+      color: var(--ink);
+      line-height: 1.35;
+    }
+    .progress-invitation {
+      display: block;
+      margin-top: 0.2rem;
+      color: var(--ink-soft);
+      font-size: 0.85rem;
+    }
     @media (prefers-reduced-motion: reduce) {
       .accordion-trigger .chev { transition: none; }
     }
@@ -641,14 +679,29 @@
   "use strict";
 
   const VE_LABELS = ["Dominio", "Sensorial", "Frustración", "Ritmo", "Autonomía"];
-  const studentId = "stu-" + Math.random().toString(36).slice(2, 10) + "-" + Date.now().toString(36);
+  const STUDENT_SESSION_KEY = "avlp-master-student-id";
+  const studentId = resolveStudentId();
   let ve = [0.5, 0.5, 0.5, 0.5, 0.5];
   let lastSimilarity = null;
   let currentNode = null;
+  let currentProgress = null;
+  let rawProgress = null;
+  let hierarchyUI = null;
   let interactiveSession = false; // true only after successful GetInteractiveNode
   let pollTimer = null;
   let activeTabId = null;
   let activeVoice = null; // sesión SpeechRecognition activa (o null)
+  // Cada cambio de contexto (nueva búsqueda, reset) invalida respuestas en vuelo.
+  let loadGeneration = 0;
+
+  function bumpLoadGeneration() {
+    loadGeneration += 1;
+    return loadGeneration;
+  }
+
+  function isStale(gen) {
+    return gen !== loadGeneration;
+  }
 
   const el = {
     form: document.getElementById("query-form"),
@@ -668,6 +721,18 @@
     status: document.getElementById("status"),
     dev: document.getElementById("dev-panel"),
   };
+
+  function resolveStudentId() {
+    var generated = "stu-" + Math.random().toString(36).slice(2, 10) + "-" + Date.now().toString(36);
+    try {
+      var existing = window.sessionStorage.getItem(STUDENT_SESSION_KEY);
+      if (existing) return existing;
+      window.sessionStorage.setItem(STUDENT_SESSION_KEY, generated);
+    } catch (_) {
+      // En contextos que bloquean storage, conserva el comportamiento en memoria.
+    }
+    return generated;
+  }
 
   function syncClearButton(textarea, btn) {
     if (!textarea || !btn) return;
@@ -751,11 +816,15 @@
 
   function renderDev() {
     const lines = [
-      "student_id (sesión en memoria): " + studentId,
+      "student_id (sesión del navegador): " + studentId,
       "V_e estimado (sesión; se actualiza con preference_delta de Record*):",
       ve.map((v, i) => "  [" + i + "] " + VE_LABELS[i] + " = " + v.toFixed(3)).join("\n"),
       "última similitud de ruteo: " + (lastSimilarity == null ? "—" : Number(lastSimilarity).toFixed(4)),
       "nodo actual: " + (currentNode && currentNode.node_id ? currentNode.node_id : "—"),
+      "progreso crudo de subtemas (API):",
+      rawProgress ? JSON.stringify(rawProgress, null, 2) : "—",
+      "progreso local (incluye actualización optimista):",
+      currentProgress ? JSON.stringify(currentProgress, null, 2) : "—",
     ];
     el.dev.textContent = lines.join("\n");
   }
@@ -919,8 +988,95 @@
     }
   }
 
+  function subtreeProgress(node, openedSet, orderedOpened) {
+    var total = 1;
+    var opened = openedSet.has(node.subtopic_id) ? 1 : 0;
+    if (opened && orderedOpened) orderedOpened.push(node.subtopic_id);
+    (node.child_subtopics || []).forEach(function (child) {
+      var childProgress = subtreeProgress(child, openedSet, orderedOpened);
+      total += childProgress.total;
+      opened += childProgress.opened;
+    });
+    return {
+      total: total,
+      opened: opened,
+      state: opened === 0 ? "unvisited" : (opened === total ? "visited" : "partial"),
+    };
+  }
+
+  function deriveProgress(tree, openedIDs, base) {
+    var openedSet = new Set(openedIDs || []);
+    var orderedOpened = [];
+    var total = 0;
+    var roots = (tree.subtopics || []).map(function (root) {
+      var branch = subtreeProgress(root, openedSet, orderedOpened);
+      total += branch.total;
+      return {
+        subtopic_id: root.subtopic_id,
+        title: root.title,
+        state: branch.state,
+      };
+    });
+    return {
+      student_id: (base && base.student_id) || studentId,
+      parent_node_id: (base && base.parent_node_id) || (currentNode && currentNode.node_id) || "",
+      opened_subtopic_ids: orderedOpened,
+      total_subtopics: total,
+      root_states: roots,
+    };
+  }
+
+  function progressStateCopy(state) {
+    if (state === "visited") return { symbol: "✓", text: "Visitado" };
+    if (state === "partial") return { symbol: "◐", text: "Exploración iniciada" };
+    return { symbol: "○", text: "Por explorar" };
+  }
+
+  function updateHierarchyProgress() {
+    if (!hierarchyUI || !currentProgress) return;
+    var tree = hierarchyUI.tree;
+    var root = hierarchyUI.root;
+    var openedSet = new Set(currentProgress.opened_subtopic_ids || []);
+    var explored = openedSet.size;
+    var total = Number(currentProgress.total_subtopics || 0);
+
+    hierarchyUI.summary.setAttribute("aria-label", "Exploraste " + explored + " de " + total + " subtemas");
+    hierarchyUI.summaryText.textContent = "Exploraste " + explored + " de " + total + " subtemas.";
+
+    var pendingRoots = [];
+    (tree.subtopics || []).forEach(function (rootNode) {
+      var rootProgress = subtreeProgress(rootNode, openedSet);
+      if (rootProgress.state !== "visited") pendingRoots.push(rootNode.title);
+    });
+    hierarchyUI.invitation.textContent = pendingRoots.length
+      ? "Te queda por explorar: " + pendingRoots.join(", ") + ". Elegí por dónde seguir."
+      : "Ya recorriste estas ramas. Podés volver a la que te resulte más útil.";
+
+    root.querySelectorAll("[data-subtopic-id]").forEach(function (trigger) {
+      var nodeID = trigger.getAttribute("data-subtopic-id");
+      var node = hierarchyUI.nodesByID[nodeID];
+      if (!node) return;
+      var state = subtreeProgress(node, openedSet).state;
+      var copy = progressStateCopy(state);
+      var badge = trigger.querySelector(".subtopic-state");
+      badge.dataset.state = state;
+      badge.textContent = copy.symbol + " " + copy.text;
+    });
+  }
+
+  function markSubtopicOpened(subtopicID) {
+    if (!currentNode || !currentNode.hierarchy) return;
+    var opened = new Set((currentProgress && currentProgress.opened_subtopic_ids) || []);
+    opened.add(subtopicID);
+    currentProgress = deriveProgress(currentNode.hierarchy, Array.from(opened), currentProgress);
+    updateHierarchyProgress();
+    renderDev();
+  }
+
   async function recordSubtopic(subtopicId, pathIds, orbitDelta) {
     if (!currentNode) return;
+    // Reflejo inmediato; la próxima carga reconcilia contra el router.
+    markSubtopicOpened(subtopicId);
     const body = {
       parent_node_id: currentNode.node_id,
       student_id: studentId,
@@ -1086,7 +1242,20 @@
   function renderHierarchy(tree, mount) {
     const root = document.createElement("div");
     root.className = "accordion";
+    root.setAttribute("role", "group");
     root.setAttribute("aria-label", tree.main_topic_title || "Subtemas");
+
+    const summary = document.createElement("p");
+    summary.className = "progress-summary";
+    summary.setAttribute("role", "status");
+    summary.setAttribute("aria-live", "polite");
+    summary.setAttribute("aria-atomic", "true");
+    const summaryText = document.createElement("span");
+    const invitation = document.createElement("span");
+    invitation.className = "progress-invitation";
+    summary.appendChild(summaryText);
+    summary.appendChild(invitation);
+    mount.appendChild(summary);
 
     const macro = document.createElement("button");
     macro.type = "button";
@@ -1102,8 +1271,11 @@
     });
     mount.appendChild(macro);
 
+    const nodesByID = {};
+
     function addNodes(nodes, parentEl, path) {
       (nodes || []).forEach(function (node) {
+        nodesByID[node.subtopic_id] = node;
         const item = document.createElement("div");
         item.className = "accordion-item";
         const id = "acc-" + node.subtopic_id;
@@ -1112,8 +1284,21 @@
         trigger.className = "accordion-trigger";
         trigger.setAttribute("aria-expanded", "false");
         trigger.setAttribute("aria-controls", id);
-        trigger.innerHTML = "<span>" + escapeHtml(node.title) + (node.is_optional ? " (opcional)" : "") +
-          '</span><span class="chev" aria-hidden="true">▸</span>';
+        trigger.setAttribute("data-subtopic-id", node.subtopic_id);
+        const label = document.createElement("span");
+        label.className = "accordion-label";
+        const title = document.createElement("span");
+        title.textContent = node.title + (node.is_optional ? " (opcional)" : "");
+        const progressState = document.createElement("span");
+        progressState.className = "subtopic-state";
+        label.appendChild(title);
+        label.appendChild(progressState);
+        const chevron = document.createElement("span");
+        chevron.className = "chev";
+        chevron.setAttribute("aria-hidden", "true");
+        chevron.textContent = "▸";
+        trigger.appendChild(label);
+        trigger.appendChild(chevron);
 
         const panel = document.createElement("div");
         panel.className = "accordion-panel";
@@ -1159,10 +1344,20 @@
 
     addNodes(tree.subtopics, root, []);
     mount.appendChild(root);
+    hierarchyUI = {
+      tree: tree,
+      root: root,
+      summary: summary,
+      summaryText: summaryText,
+      invitation: invitation,
+      nodesByID: nodesByID,
+    };
+    updateHierarchyProgress();
   }
 
   function renderRail(node) {
     el.railBody.innerHTML = "";
+    hierarchyUI = null;
     el.railTopic.textContent = (node.botonera_schema && node.botonera_schema.topic_title) ||
       (node.hierarchy && node.hierarchy.main_topic_title) ||
       node.titulo ||
@@ -1197,9 +1392,35 @@
     setAskMode(true);
   }
 
-  async function loadInteractiveNode(nodeId) {
+  async function loadProgressForNode(node, gen) {
+    if (gen == null) gen = loadGeneration;
+    if (isStale(gen)) return;
+    rawProgress = null;
+    currentProgress = null;
+    if (node.hierarchy) {
+      try {
+        const progress = await api(
+          "/api/nodes/" + encodeURIComponent(node.node_id) + "/progress?student_id=" + encodeURIComponent(studentId)
+        );
+        if (isStale(gen)) return;
+        rawProgress = progress;
+        currentProgress = deriveProgress(node.hierarchy, rawProgress.opened_subtopic_ids || [], rawProgress);
+      } catch (_) {
+        if (isStale(gen)) return;
+        // El nodo sigue siendo navegable; la próxima carga vuelve a reconciliar.
+        currentProgress = deriveProgress(node.hierarchy, [], null);
+      }
+    }
+  }
+
+  async function loadInteractiveNode(nodeId, gen) {
+    if (gen == null) gen = loadGeneration;
+    if (isStale(gen)) return;
     const node = await api("/api/nodes/" + encodeURIComponent(nodeId));
+    if (isStale(gen)) return;
     currentNode = node;
+    await loadProgressForNode(node, gen);
+    if (isStale(gen)) return;
     renderRail(node);
     setStageFromMedia({
       title: node.titulo,
@@ -1213,6 +1434,9 @@
 
   function showNonInteractiveRail(kind) {
     currentNode = null;
+    rawProgress = null;
+    currentProgress = null;
+    hierarchyUI = null;
     setAskMode(false);
     if (kind === "live") {
       el.railTopic.textContent = "Estación en vivo";
@@ -1221,15 +1445,19 @@
       el.railTopic.textContent = "Nodo estático";
       el.railBody.innerHTML = "<p style='margin:0;color:var(--ink-soft)'>Sin payload interactivo. Mostramos el recurso ruteado.</p>";
     }
+    renderDev();
   }
 
-  async function handleMatched(matched) {
+  async function handleMatched(matched, gen) {
+    if (gen == null) gen = loadGeneration;
+    if (isStale(gen)) return;
     lastSimilarity = matched.similarity_score;
     renderDev();
     if (matched.has_interactive_payload) {
-      await loadInteractiveNode(matched.node_id);
+      await loadInteractiveNode(matched.node_id, gen);
       return;
     }
+    if (isStale(gen)) return;
     showNonInteractiveRail(matched.is_live_generated ? "live" : "static");
     if (matched.live_content) {
       setStageFromMedia({
@@ -1248,11 +1476,20 @@
     setStatus(matched.is_live_generated ? "Estación generada en el miss path." : "Match estático.", "ok");
   }
 
-  async function pollStation(trackingUlid) {
+  async function pollStation(trackingUlid, gen) {
+    if (gen == null) gen = loadGeneration;
     stopPoll();
     const tick = async function () {
+      if (isStale(gen)) {
+        stopPoll();
+        return;
+      }
       try {
         const st = await api("/api/stations/" + encodeURIComponent(trackingUlid) + "?student_id=" + encodeURIComponent(studentId));
+        if (isStale(gen)) {
+          stopPoll();
+          return;
+        }
         const msg = st.student_message || "Seguimos preparando tu estación…";
         if (st.status === "ready") {
           stopPoll();
@@ -1270,16 +1507,21 @@
                 const node = await fetch("/api/nodes/" + encodeURIComponent(st.node_id)).then(function (r) {
                   return r.ok ? r.json() : null;
                 });
+                if (isStale(gen)) return;
                 if (node && node.node_id) {
                   currentNode = node;
+                  await loadProgressForNode(node, gen);
+                  if (isStale(gen)) return;
                   renderRail(node);
+                  renderDev();
                 }
               } catch (_) { /* keep non-interactive rail */ }
             }
           } else if (st.node_id) {
             try {
-              await loadInteractiveNode(st.node_id);
+              await loadInteractiveNode(st.node_id, gen);
             } catch (_) {
+              if (isStale(gen)) return;
               showNonInteractiveRail("live");
               setStageFromMedia({
                 title: "Estación lista",
@@ -1295,6 +1537,7 @@
               markdown: msg,
             });
           }
+          if (isStale(gen)) return;
           setStatus("La estación está lista.", "ok");
           return;
         }
@@ -1308,6 +1551,10 @@
         showWaiting(msg, trackingUlid);
         setStatus(msg, "");
       } catch (e) {
+        if (isStale(gen)) {
+          stopPoll();
+          return;
+        }
         stopPoll();
         setAskMode(false);
         showWaiting((e.data && e.data.student_message) || e.message, trackingUlid);
@@ -1315,14 +1562,18 @@
       }
     };
     await tick();
-    pollTimer = setInterval(tick, 2000);
+    if (!isStale(gen)) {
+      pollTimer = setInterval(tick, 2000);
+    }
   }
 
   el.form.addEventListener("submit", async function (ev) {
     ev.preventDefault();
-    stopPoll();
     const queryText = el.doubt.value.trim();
     if (!queryText) return;
+    // Nueva búsqueda: invalida cargas/polling en vuelo y para el intervalo.
+    const gen = bumpLoadGeneration();
+    stopPoll();
     const frustration = Number(el.frustration.value);
     setStatus("Consultando el router…", "");
     try {
@@ -1335,20 +1586,25 @@
           frustration: frustration,
         }),
       });
+      if (isStale(gen)) return;
       if (route.matched) {
-        await handleMatched(route.matched);
+        await handleMatched(route.matched, gen);
       } else if (route.pending) {
         currentNode = null;
+        rawProgress = null;
+        currentProgress = null;
+        hierarchyUI = null;
         setAskMode(false);
         lastSimilarity = null;
         renderDev();
         showWaiting(route.pending.message, route.pending.tracking_ulid);
         setStatus(route.pending.message || "Estación pendiente…", "");
-        await pollStation(route.pending.tracking_ulid);
+        await pollStation(route.pending.tracking_ulid, gen);
       } else {
         setStatus("Respuesta de ruteo inesperada.", "error");
       }
     } catch (e) {
+      if (isStale(gen)) return;
       // reportError already ran inside api() for HTTP failures
       if (!e || !e.status) {
         reportError(e, "Error de consulta. Probá de nuevo en un momento.");
@@ -1368,6 +1624,7 @@
       el.askDoubt.focus();
       return;
     }
+    const gen = loadGeneration;
     el.btnMutate.disabled = true;
     try {
       const res = await api("/api/nodes/" + encodeURIComponent(currentNode.node_id) + "/mutate", {
@@ -1379,6 +1636,7 @@
           frustration: Number(el.frustration.value),
         }),
       });
+      if (isStale(gen)) return;
       currentNode = res.node || currentNode;
       renderRail(currentNode);
       if (res.button) {

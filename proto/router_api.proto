@@ -13,6 +13,9 @@ service VectorRouter {
   rpc GetInteractiveNode(NodeIdRequest) returns (InteractiveVideoNode);
   rpc MutateInteractiveNode(MutateInteractiveRequest) returns (MutateInteractiveResponse);
   rpc RecordSubtopicInteraction(SubtopicInteraction) returns (Ack);
+  // GetSubtopicProgress trusts the client-declared student_id, same as the
+  // Record* RPCs. A multi-user deployment needs authentication and per-student
+  // authorization (tracked as Ola 4 debt).
   rpc GetSubtopicProgress(SubtopicProgressQuery) returns (SubtopicProgress);
   // Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
   // Legacy vector_delta is content-embedding space and is NEVER applied to V_e;

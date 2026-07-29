@@ -6,10 +6,10 @@ package rogerian
 type Tone string
 
 const (
-	ToneValidate    Tone = "validate"
-	ToneClarify     Tone = "clarify"
-	ToneEncourage   Tone = "encourage"
-	ToneReframe     Tone = "reframe"
+	ToneValidate  Tone = "validate"
+	ToneClarify   Tone = "clarify"
+	ToneEncourage Tone = "encourage"
+	ToneReframe   Tone = "reframe"
 )
 
 // ScaffoldHint suggests how the Agent should respond to a block.

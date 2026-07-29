@@ -10,9 +10,9 @@
 
 ## PR 7.2
 
-- [ ] Cargar progreso al abrir un nodo jerárquico.
-- [ ] Pintar símbolos, texto y contador accesible.
-- [ ] Actualizar optimistamente tras `RecordSubtopicInteraction`.
-- [ ] Mostrar payload crudo en panel dev.
-- [ ] Actualizar checklist y verificar con Playwright.
-- [ ] Ejecutar `go test -race ./...`, publicar PR y frenar para revisión.
+- [x] Cargar progreso al abrir un nodo jerárquico.
+- [x] Pintar símbolos, texto y contador accesible.
+- [x] Actualizar optimistamente tras `RecordSubtopicInteraction`.
+- [x] Mostrar payload crudo en panel dev.
+- [x] Actualizar checklist y verificar con Playwright.
+- [x] Ejecutar `go test -race ./...`, publicar PR y frenar para revisión.

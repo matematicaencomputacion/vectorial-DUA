@@ -10,13 +10,13 @@ import (
 
 // NodeNotFoundEvent is emitted when no static node meets the similarity threshold.
 type NodeNotFoundEvent struct {
-	EventID         string
-	TrackingULID    string
-	StudentID       string
-	QueryEmbedding  []float32
-	BestSimilarity  float32
-	Threshold       float32
-	Timestamp       time.Time
+	EventID        string
+	TrackingULID   string
+	StudentID      string
+	QueryEmbedding []float32
+	BestSimilarity float32
+	Threshold      float32
+	Timestamp      time.Time
 }
 
 // EventHandler consumes NodeNotFound events (in-process bus for this phase).

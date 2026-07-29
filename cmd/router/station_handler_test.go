@@ -52,10 +52,10 @@ func TestGetLiveStationPendingThenReady(t *testing.T) {
 	srv := &server{router: r}
 
 	route, err := srv.QueryNearestNode(context.Background(), &vectorv1.VectorQuery{
-		StudentState: &vectorv1.StudentVector{StudentId: "stu-a"},
-		QueryEmbedding: novelEmb(),
+		StudentState:           &vectorv1.StudentVector{StudentId: "stu-a"},
+		QueryEmbedding:         novelEmb(),
 		MinSimilarityThreshold: 0.85,
-		QueryText: "duda nueva",
+		QueryText:              "duda nueva",
 	})
 	if err != nil {
 		t.Fatal(err)

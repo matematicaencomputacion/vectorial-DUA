@@ -36,12 +36,12 @@ type LatencyStats struct {
 
 // Snapshot is the exportable control-plane telemetry document.
 type Snapshot struct {
-	SnapshotID      string            `json:"snapshot_id"`
-	TimestampUnixMS int64             `json:"timestamp_unix_ms"`
-	Counters        map[string]int64  `json:"counters"`
-	RoutingLatency  LatencyStats      `json:"routing_latency"`
-	LLMSpans        []LLMSpan         `json:"llm_spans"`
-	Extra           map[string]any    `json:"extra,omitempty"`
+	SnapshotID      string           `json:"snapshot_id"`
+	TimestampUnixMS int64            `json:"timestamp_unix_ms"`
+	Counters        map[string]int64 `json:"counters"`
+	RoutingLatency  LatencyStats     `json:"routing_latency"`
+	LLMSpans        []LLMSpan        `json:"llm_spans"`
+	Extra           map[string]any   `json:"extra,omitempty"`
 }
 
 // Collector is a process-local metrics + LLM trace sink.

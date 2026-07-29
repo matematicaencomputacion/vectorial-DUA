@@ -68,15 +68,15 @@ type CombinedCell struct {
 
 // DUANodeBotonera is a reusable structural botonera attached to a node.
 type DUANodeBotonera struct {
-	Kind              BotoneraSchemaKind  `json:"kind"`
-	TopicTitle        string              `json:"topic_title,omitempty"`
-	FlatButtons       []InteractiveButton `json:"flat_buttons,omitempty"`
-	DepthOptions      []DepthVariant      `json:"depth_options,omitempty"`
-	CognitiveOptions  []CognitiveVariant  `json:"cognitive_options,omitempty"`
-	EmergencyOptions  []EmergencyVariant  `json:"emergency_options,omitempty"`
-	DepthAxis         []string            `json:"depth_axis,omitempty"`
-	FormatAxis        []string            `json:"format_axis,omitempty"`
-	MatrixCells       []CombinedCell      `json:"matrix_cells,omitempty"`
+	Kind             BotoneraSchemaKind  `json:"kind"`
+	TopicTitle       string              `json:"topic_title,omitempty"`
+	FlatButtons      []InteractiveButton `json:"flat_buttons,omitempty"`
+	DepthOptions     []DepthVariant      `json:"depth_options,omitempty"`
+	CognitiveOptions []CognitiveVariant  `json:"cognitive_options,omitempty"`
+	EmergencyOptions []EmergencyVariant  `json:"emergency_options,omitempty"`
+	DepthAxis        []string            `json:"depth_axis,omitempty"`
+	FormatAxis       []string            `json:"format_axis,omitempty"`
+	MatrixCells      []CombinedCell      `json:"matrix_cells,omitempty"`
 }
 
 // Validate checks the active schema kind.

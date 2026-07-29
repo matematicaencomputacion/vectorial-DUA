@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/vectorial-dua/avlp/internal/testenv"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 )
 
@@ -270,9 +271,8 @@ func TestNormalizeEmbeddingURLPreservesFullPath(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	// Keep tests isolated from developer shell embedding config.
-	_ = os.Unsetenv("AVLP_EMBEDDING_URL")
-	_ = os.Unsetenv("AVLP_EMBEDDING_API_KEY")
-	_ = os.Unsetenv("AVLP_EMBEDDING_DIMS")
+	// Keep tests isolated from developer shell config: embedder URL/model and
+	// the RAG similarity floor all come from AVLP_*.
+	testenv.Clear()
 	os.Exit(m.Run())
 }
