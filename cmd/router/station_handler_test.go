@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
+	"github.com/vectorial-dua/avlp/internal/routerserver"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
@@ -49,7 +50,7 @@ func TestGetLiveStationPendingThenReady(t *testing.T) {
 	r.Enabled = true
 	live := &testLive{fail: true}
 	r.Live = live
-	srv := &server{router: r}
+	srv := routerserver.New(routerserver.Deps{Router: r})
 
 	route, err := srv.QueryNearestNode(context.Background(), &vectorv1.VectorQuery{
 		StudentState:           &vectorv1.StudentVector{StudentId: "stu-a"},
@@ -103,7 +104,7 @@ func TestGetLiveStationNotFoundMissingAndWrongStudent(t *testing.T) {
 	idx := vector.NewIndex()
 	r := vector.NewRouter(idx, vector.NewEventBus())
 	r.Enabled = false
-	srv := &server{router: r}
+	srv := routerserver.New(routerserver.Deps{Router: r})
 
 	route, err := srv.QueryNearestNode(context.Background(), &vectorv1.VectorQuery{
 		StudentState:           &vectorv1.StudentVector{StudentId: "owner"},

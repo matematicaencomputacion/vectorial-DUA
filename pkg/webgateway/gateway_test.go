@@ -15,14 +15,12 @@ import (
 	"testing"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
+	"github.com/vectorial-dua/avlp/internal/routerserver"
 	"github.com/vectorial-dua/avlp/pkg/dua"
-	"github.com/vectorial-dua/avlp/pkg/rogerian"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 	"github.com/vectorial-dua/avlp/pkg/webgateway"
 )
@@ -53,214 +51,23 @@ func (t *testLive) GenerateLive(ctx context.Context, req vector.LiveRequest) (ve
 	}, nil
 }
 
-// inProcessRouter mirrors the essential cmd/router handlers over bufconn gRPC.
-type inProcessRouter struct {
-	vectorv1.UnimplementedVectorRouterServer
-	router       *vector.Router
-	reg          *dua.Registry
-	mutator      *dua.Mutator
-	profiles     dua.ProfileRepository
-	interactions *dua.InteractionStore
-	live         *testLive
+type staticQueryEmbedder struct{}
+
+func (staticQueryEmbedder) Embed(context.Context, string) ([]float32, error) {
+	return novelEmb(), nil
+}
+
+func (staticQueryEmbedder) Dims() int { return vector.ContentEmbedDims }
+
+type testBackend struct {
+	live     *testLive
+	profiles dua.ProfileRepository
 }
 
 func novelEmb() []float32 {
 	q := make([]float32, vector.ContentEmbedDims)
 	q[len(q)-1] = 1
 	return q
-}
-
-func (s *inProcessRouter) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery) (*vectorv1.RouteResult, error) {
-	studentID := ""
-	frustration := float32(0)
-	frustrationProvided := false
-	if st := req.GetStudentState(); st != nil {
-		studentID = st.GetStudentId()
-		if sess := st.GetSession(); sess != nil && sess.FrustrationSignal != nil {
-			frustration = sess.GetFrustrationSignal()
-			frustrationProvided = true
-		}
-	}
-	resolvedFrustration := frustration
-	if !frustrationProvided {
-		resolvedFrustration = 0.5
-	}
-
-	emb := append([]float32(nil), req.GetQueryEmbedding()...)
-	if len(emb) == 0 {
-		emb = novelEmb() // force miss when only query_text (no embedder in this test harness)
-	}
-
-	outcome, err := s.router.QueryNearestWithOptions(ctx, studentID, emb, req.GetMinSimilarityThreshold(), vector.QueryOptions{
-		DoubtText:   req.GetQueryText(),
-		Frustration: resolvedFrustration,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if outcome.Matched {
-		hasInteractive := false
-		if s.reg != nil {
-			_, hasInteractive = s.reg.Get(outcome.Node.ID)
-		}
-		return &vectorv1.RouteResult{
-			Outcome: &vectorv1.RouteResult_Matched{
-				Matched: &vectorv1.NodeResponse{
-					NodeId:                outcome.Node.ID,
-					DimensionDua:          outcome.Node.DimensionDUA,
-					ResourceUrl:           outcome.Node.ResourceURL,
-					SimilarityScore:       outcome.Similarity,
-					IsLiveGenerated:       outcome.IsLiveGenerated,
-					RetrievedSources:      outcome.RetrievedSources,
-					LiveContent:           outcome.LiveContent,
-					HasInteractivePayload: hasInteractive,
-				},
-			},
-		}, nil
-	}
-	return &vectorv1.RouteResult{
-		Outcome: &vectorv1.RouteResult_Pending{
-			Pending: &vectorv1.LiveStationPending{
-				TrackingUlid: outcome.TrackingULID,
-				Status:       outcome.LiveStatus,
-				Message:      rogerian.LiveStationStudentMessage(outcome.LiveStatus, resolvedFrustration),
-			},
-		},
-	}, nil
-}
-
-func (s *inProcessRouter) GetLiveStation(ctx context.Context, req *vectorv1.LiveStationQuery) (*vectorv1.LiveStationStatus, error) {
-	if req.GetTrackingUlid() == "" || req.GetStudentId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "tracking_ulid and student_id are required")
-	}
-	rec, err := s.router.LookupStation(ctx, req.GetTrackingUlid(), req.GetStudentId())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "lookup station: %v", err)
-	}
-	if rec == nil {
-		return nil, status.Error(codes.NotFound, rogerian.LiveStationStudentMessage("expired", 0.5))
-	}
-	out := &vectorv1.LiveStationStatus{
-		TrackingUlid:   rec.TrackingULID,
-		Status:         rec.Status,
-		StudentMessage: rogerian.LiveStationStudentMessage(rec.Status, rec.Request.Frustration),
-	}
-	if rec.Status == vector.StationReady && rec.Result != nil {
-		out.NodeId = rec.Result.Node.ID
-		out.LiveContent = rec.Result.Content
-		out.RetrievedSources = append([]string(nil), rec.Result.Sources...)
-	}
-	return out, nil
-}
-
-func (s *inProcessRouter) GetInteractiveNode(ctx context.Context, req *vectorv1.NodeIdRequest) (*vectorv1.InteractiveVideoNode, error) {
-	_ = ctx
-	if s.reg == nil {
-		return nil, status.Error(codes.FailedPrecondition, "interactive nodes disabled")
-	}
-	n, ok := s.reg.Get(req.GetNodeId())
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetNodeId())
-	}
-	return dua.ToProto(n), nil
-}
-
-func (s *inProcessRouter) MutateInteractiveNode(ctx context.Context, req *vectorv1.MutateInteractiveRequest) (*vectorv1.MutateInteractiveResponse, error) {
-	if s.mutator == nil {
-		return nil, status.Error(codes.FailedPrecondition, "interactive mutation disabled")
-	}
-	res, err := s.mutator.Mutate(ctx, dua.MutateRequest{
-		NodeID:      req.GetNodeId(),
-		StudentID:   req.GetStudentId(),
-		DoubtText:   req.GetDoubtText(),
-		Frustration: req.GetFrustration(),
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	return &vectorv1.MutateInteractiveResponse{
-		Button: dua.ButtonToProto(res.Button),
-		Node:   dua.ToProto(res.Node),
-	}, nil
-}
-
-func (s *inProcessRouter) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.BotoneraInteraction) (*vectorv1.Ack, error) {
-	_ = ctx
-	if s.profiles == nil || s.reg == nil {
-		return nil, status.Error(codes.FailedPrecondition, "disabled")
-	}
-	if req.GetStudentId() == "" || req.GetNodeId() == "" || req.GetVariantId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "student_id, node_id, and variant_id are required")
-	}
-	n, ok := s.reg.Get(req.GetNodeId())
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetNodeId())
-	}
-	if !dua.HasBotoneraVariant(n, req.GetVariantId(), req.GetFormatId()) {
-		return nil, status.Errorf(codes.NotFound, "variant %q not found", req.GetVariantId())
-	}
-	delta := dua.ResolveBotoneraDelta(n, req.GetVariantId(), req.GetPreferenceDelta())
-	if len(delta) > 0 {
-		_, _ = s.profiles.Apply(req.GetStudentId(), delta)
-	}
-	return &vectorv1.Ack{Ok: true, Message: "recorded"}, nil
-}
-
-func (s *inProcessRouter) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.SubtopicInteraction) (*vectorv1.Ack, error) {
-	_ = ctx
-	if s.profiles == nil || s.interactions == nil || s.reg == nil {
-		return nil, status.Error(codes.FailedPrecondition, "disabled")
-	}
-	if req.GetStudentId() == "" || req.GetParentNodeId() == "" || req.GetSubtopicId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "student_id, parent_node_id, and subtopic_id are required")
-	}
-	n, ok := s.reg.Get(req.GetParentNodeId())
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
-	}
-	if n.Hierarchy == nil {
-		return nil, status.Errorf(codes.NotFound, "node %q has no hierarchy", req.GetParentNodeId())
-	}
-	if _, found := n.Hierarchy.FindByID(req.GetSubtopicId()); !found {
-		return nil, status.Errorf(codes.NotFound, "subtopic %q not found", req.GetSubtopicId())
-	}
-	delta := dua.ResolveSubtopicDelta(n.Hierarchy, req.GetSubtopicId(), req.GetPreferenceDelta())
-	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), delta)
-	return &vectorv1.Ack{Ok: true, Message: "recorded"}, nil
-}
-
-func (s *inProcessRouter) GetSubtopicProgress(ctx context.Context, req *vectorv1.SubtopicProgressQuery) (*vectorv1.SubtopicProgress, error) {
-	_ = ctx
-	if req.GetStudentId() == "" || req.GetParentNodeId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "student_id and parent_node_id are required")
-	}
-	node, ok := s.reg.Get(req.GetParentNodeId())
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
-	}
-	if node.Hierarchy == nil {
-		return nil, status.Errorf(codes.NotFound, "node %q has no hierarchy", req.GetParentNodeId())
-	}
-	opened := s.interactions.OpenedList(req.GetStudentId(), req.GetParentNodeId())
-	openedSet := make(map[string]struct{}, len(opened))
-	for _, id := range opened {
-		openedSet[id] = struct{}{}
-	}
-	progress := dua.ProgressForTree(node.Hierarchy, openedSet)
-	out := &vectorv1.SubtopicProgress{
-		StudentId:         req.GetStudentId(),
-		ParentNodeId:      req.GetParentNodeId(),
-		OpenedSubtopicIds: progress.OpenedSubtopicIDs,
-		TotalSubtopics:    int32(progress.TotalSubtopics),
-	}
-	for _, root := range progress.RootStates {
-		out.RootStates = append(out.RootStates, &vectorv1.RootSubtopicProgress{
-			SubtopicId: root.SubtopicID,
-			Title:      root.Title,
-			State:      string(root.State),
-		})
-	}
-	return out, nil
 }
 
 func seedDir(t *testing.T) string {
@@ -272,7 +79,7 @@ func seedDir(t *testing.T) string {
 	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "data", "nodes", "interactive"))
 }
 
-func startTestGateway(t *testing.T) (*webgateway.Gateway, *inProcessRouter, func()) {
+func startTestGateway(t *testing.T) (*webgateway.Gateway, *testBackend, func()) {
 	t.Helper()
 	idx := vector.NewIndex()
 	r := vector.NewRouter(idx, vector.NewEventBus())
@@ -286,14 +93,15 @@ func startTestGateway(t *testing.T) (*webgateway.Gateway, *inProcessRouter, func
 	}
 	profiles := dua.NewProfileStore()
 	interactions := dua.NewInteractionStoreWithProfiles(profiles)
-	impl := &inProcessRouter{
-		router:       r,
-		reg:          reg,
-		mutator:      &dua.Mutator{Registry: reg},
-		profiles:     profiles,
-		interactions: interactions,
-		live:         live,
-	}
+	impl := routerserver.New(routerserver.Deps{
+		Router:        r,
+		Registry:      reg,
+		Mutator:       &dua.Mutator{Registry: reg},
+		QueryEmbedder: staticQueryEmbedder{},
+		Profiles:      profiles,
+		Interactions:  interactions,
+	})
+	backend := &testBackend{live: live, profiles: profiles}
 
 	lis := bufconn.Listen(bufSize)
 	gs := grpc.NewServer()
@@ -317,7 +125,7 @@ func startTestGateway(t *testing.T) (*webgateway.Gateway, *inProcessRouter, func
 		gs.Stop()
 		_ = lis.Close()
 	}
-	return gw, impl, cleanup
+	return gw, backend, cleanup
 }
 
 func TestGatewayQueryPendingThenPollReady(t *testing.T) {
