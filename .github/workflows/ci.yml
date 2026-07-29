@@ -1,0 +1,32 @@
+# CI — cuarta pata automática del bucle (implementación → revisión fría → ojos de usuario → CI).
+# Corre sin Ollama: la suite es hash-por-default. scripts/test-clean.sh limpia AVLP_*
+# antes de testear, para que un runner o un shell contaminado no enmascare regresiones.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: build + test-clean
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test (entorno sin AVLP_*)
+        run: bash scripts/test-clean.sh

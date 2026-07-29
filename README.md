@@ -1,5 +1,7 @@
 # AVLP — Adaptive Vector Learning Platform (vectorial-DUA)
 
+[![CI](https://github.com/matematicaencomputacion/vectorial-DUA/actions/workflows/ci.yml/badge.svg)](https://github.com/matematicaencomputacion/vectorial-DUA/actions/workflows/ci.yml)
+
 Plataforma educativa vectorial y adaptativa (**DUA** + **Carl Rogers**), con **OpenSpec (SDD)**, **Harness**, **RAG** y **nodos interactivos** (Stage + botonera).
 
 ## Triángulo del entorno adaptativo
