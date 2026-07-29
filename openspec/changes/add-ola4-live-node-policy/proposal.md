@@ -17,6 +17,7 @@ Definir el ciclo de vida completo de los nodos generados en vivo: cuánto viven,
 3. **Calibración del margen** — 0.05 salió del comportamiento observado con bge-m3 y umbral 0.55, no de un barrido. Al crecer el corpus conviene derivarlo del harness (`-suite calibrate`) junto con el umbral.
 4. **Aislamiento por estudiante** — hoy la estación de un estudiante es visible en el matching de cualquier otro. Definir si el índice live debe particionarse por `student_id` o quedar compartido a propósito.
 5. **Observabilidad** — contador de nodos live vivos y de veces que el margen evitó un desplazamiento, para saber si el parche alcanza o hay que ir a exclusión total.
+6. **Contenido al re-matchear una estación** — apareció verificando Ola 3.b: el nodo live queda indexado pero su contenido vive en el `StationLedger`, indexado por `tracking_ulid`. Cuando un estudiante repite la duda y matchea su propio nodo, el Stage no tiene qué mostrar (solo la `resource_url`). Sin esto, «volver a tu estación» no se sostiene y el ítem 1 (TTL) es discutible: hay que decidir si el contenido se guarda con el nodo o si el match resuelve contra el ledger.
 
 ## Alternativa descartada en Ola 3.b
 
