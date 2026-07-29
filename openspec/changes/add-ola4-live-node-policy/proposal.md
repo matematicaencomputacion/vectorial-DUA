@@ -4,20 +4,28 @@
 
 Ola 3.b (C1) cerró el prototipo web del nodo interactivo. Durante la validación funcional apareció un efecto de sesión larga: cada miss registra una estación en vivo en el mismo índice k-NN que los nodos curados, así que tras varias dudas novel una consulta real matcheó `live://stations/…` en lugar del nodo interactivo correspondiente.
 
-El parche que entró en Ola 3.b es un **margen**: `vector.Node.IsLiveGenerated` marca las estaciones y `Index.Nearest` solo devuelve una live si supera al mejor curado por más de `LivePreferenceMargin` (0.05). Es suficiente para que lo curado sea el default sin volver inalcanzable una estación ya generada, pero no resuelve el crecimiento del índice. Esta change **no implementa** nada: registra la deuda.
+El parche que entró en Ola 3.b es un **margen**: `vector.Node.IsLiveGenerated` marca las estaciones y `Index.Nearest` solo devuelve una live si supera al mejor curado por más de `LivePreferenceMargin` (0.05). Es suficiente para que lo curado sea el default sin volver inalcanzable una estación ya generada, pero no resuelve el crecimiento del índice. Ola 4.c implementa el ciclo mínimo: expiración de nodos live y promoción docente de una estación revisada.
 
 ## Objetivo
 
 Definir el ciclo de vida completo de los nodos generados en vivo: cuánto viven, cuándo se descartan y cómo asciende a curado el material que demostró servir.
 
+## Capabilities
+
+- **live-node-lifecycle:** expiración perezosa de nodos live y promoción manual, idempotente y persistente de estaciones listas a nodos curados.
+
 ## Alcance incluido (Ola 4)
 
 1. **TTL de nodos live en el índice** — hoy `StationLedger` tiene TTL (`AVLP_STATION_TTL`, default 24h) pero el nodo indexado no expira: sobrevive a la estación que lo originó. Decidir si el TTL del ledger debe desalojar la entrada k-NN y con qué granularidad (por estudiante, global).
 2. **Promoción manual a curado** — una estación que se repite es señal de hueco en el currículum. Falta el camino explícito (revisión humana → `embedding_descriptor` + botonera → nodo curado) y el registro de qué se promovió y por qué.
-3. **Calibración del margen** — 0.05 salió del comportamiento observado con bge-m3 y umbral 0.55, no de un barrido. Al crecer el corpus conviene derivarlo del harness (`-suite calibrate`) junto con el umbral.
-4. **Aislamiento por estudiante** — hoy la estación de un estudiante es visible en el matching de cualquier otro. Definir si el índice live debe particionarse por `student_id` o quedar compartido a propósito. Relacionado: el prototipo confía en el `student_id` declarado por el cliente para `Record*` y `GetSubtopicProgress` (sin autenticación); una fase multi-usuario requiere autenticación y autorización por estudiante.
-5. **Observabilidad** — contador de nodos live vivos y de veces que el margen evitó un desplazamiento, para saber si el parche alcanza o hay que ir a exclusión total.
-6. **Contenido al re-matchear una estación** — apareció verificando Ola 3.b: el nodo live queda indexado pero su contenido vive en el `StationLedger`, indexado por `tracking_ulid`. Cuando un estudiante repite la duda y matchea su propio nodo, el Stage no tiene qué mostrar (solo la `resource_url`). Sin esto, «volver a tu estación» no se sostiene y el ítem 1 (TTL) es discutible: hay que decidir si el contenido se guarda con el nodo o si el match resuelve contra el ledger.
+3. **Persistencia del contenido promovido** — el seed curado conserva el markdown y las fuentes de la estación para seguir siendo útil tras reiniciar el proceso.
+
+## Later
+
+- **Calibración del margen:** derivar 0.05 desde el harness junto con el umbral.
+- **Aislamiento por estudiante:** requiere autenticación y autorización; el prototipo aún confía en IDs declarados por cliente.
+- **Observabilidad:** contadores de live vivos y decisiones ganadas por el margen.
+- **Contenido al re-matchear una live no promovida:** resolver contra ledger o persistir contenido fuera del índice.
 
 ## Alternativa descartada en Ola 3.b
 
