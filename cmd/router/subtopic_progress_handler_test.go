@@ -86,6 +86,9 @@ func TestGetSubtopicProgressBufconnEmptyAndAfterRecords(t *testing.T) {
 		empty.GetRootStates()[1].GetState() != string(dua.ProgressUnvisited) {
 		t.Fatalf("empty root states=%+v", empty.GetRootStates())
 	}
+	if len(empty.GetNodeStates()) != 5 {
+		t.Fatalf("empty node states=%+v", empty.GetNodeStates())
+	}
 
 	for _, id := range []string{"sub_motor", "sub_4_ruedas"} {
 		_, err := client.RecordSubtopicInteraction(ctx, &vectorv1.SubtopicInteraction{
@@ -114,6 +117,16 @@ func TestGetSubtopicProgressBufconnEmptyAndAfterRecords(t *testing.T) {
 		roots[0].GetSubtopicId() != "sub_caja_central" || roots[0].GetState() != string(dua.ProgressPartial) ||
 		roots[1].GetSubtopicId() != "sub_4_ruedas" || roots[1].GetState() != string(dua.ProgressVisited) {
 		t.Fatalf("RootStates=%+v", roots)
+	}
+	nodes := got.GetNodeStates()
+	if len(nodes) != 5 ||
+		nodes[0].GetSubtopicId() != "sub_caja_central" ||
+		nodes[0].GetState() != string(dua.ProgressPartial) ||
+		nodes[0].GetOpenedInSubtree() != 1 ||
+		nodes[0].GetTotalInSubtree() != 4 ||
+		nodes[3].GetSubtopicId() != "sub_motor" ||
+		nodes[3].GetState() != string(dua.ProgressVisited) {
+		t.Fatalf("NodeStates=%+v", nodes)
 	}
 }
 

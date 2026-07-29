@@ -83,6 +83,15 @@ func TestProgressForTreeVisitedPartialAndUnvisited(t *testing.T) {
 			if !reflect.DeepEqual(got.OpenedSubtopicIDs, tt.wantIDs) {
 				t.Fatalf("OpenedSubtopicIDs=%v want=%v", got.OpenedSubtopicIDs, tt.wantIDs)
 			}
+			if len(got.NodeStates) != 4 {
+				t.Fatalf("NodeStates=%+v", got.NodeStates)
+			}
+			for _, root := range got.RootStates {
+				node := nodeProgressByID(t, got.NodeStates, root.SubtopicID)
+				if node.State != root.State {
+					t.Fatalf("root/node state mismatch root=%+v node=%+v", root, node)
+				}
+			}
 		})
 	}
 }
@@ -128,4 +137,30 @@ func TestProgressForAutomovilSeedNestedTree(t *testing.T) {
 	if got.RootStates[1].SubtopicID != "sub_4_ruedas" || got.RootStates[1].State != dua.ProgressVisited {
 		t.Fatalf("ruedas=%+v want visited", got.RootStates[1])
 	}
+	if len(got.NodeStates) != 5 {
+		t.Fatalf("NodeStates=%+v", got.NodeStates)
+	}
+	motor := nodeProgressByID(t, got.NodeStates, "sub_motor")
+	if motor.State != dua.ProgressVisited || motor.OpenedInSubtree != 1 || motor.TotalInSubtree != 1 {
+		t.Fatalf("motor=%+v want visited 1/1", motor)
+	}
+	caja := nodeProgressByID(t, got.NodeStates, "sub_caja_central")
+	if caja.State != dua.ProgressPartial || caja.OpenedInSubtree != 1 || caja.TotalInSubtree != 4 {
+		t.Fatalf("caja=%+v want partial 1/4", caja)
+	}
+	asientos := nodeProgressByID(t, got.NodeStates, "sub_asientos")
+	if asientos.State != dua.ProgressUnvisited || asientos.OpenedInSubtree != 0 || asientos.TotalInSubtree != 1 {
+		t.Fatalf("asientos=%+v want unvisited 0/1", asientos)
+	}
+}
+
+func nodeProgressByID(t *testing.T, states []dua.NodeSubtopicProgress, id string) dua.NodeSubtopicProgress {
+	t.Helper()
+	for _, state := range states {
+		if state.SubtopicID == id {
+			return state
+		}
+	}
+	t.Fatalf("node state %q not found in %+v", id, states)
+	return dua.NodeSubtopicProgress{}
 }

@@ -19,7 +19,7 @@ import (
 	"github.com/vectorial-dua/avlp/pkg/webgateway"
 )
 
-//go:embed web/*
+//go:embed web
 var webFS embed.FS
 
 const (

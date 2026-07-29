@@ -239,6 +239,9 @@ func TestGatewaySubtopicProgress(t *testing.T) {
 	if empty.GetTotalSubtopics() != 5 || len(empty.GetOpenedSubtopicIds()) != 0 {
 		t.Fatalf("empty progress=%+v", empty)
 	}
+	if len(empty.GetNodeStates()) != 5 {
+		t.Fatalf("empty node states=%+v", empty.GetNodeStates())
+	}
 
 	for _, subtopicID := range []string{"sub_motor", "sub_4_ruedas"} {
 		body := `{"student_id":"` + studentID + `","parent_node_id":"` + nodeID + `","subtopic_id":"` + subtopicID + `"}`
@@ -258,6 +261,16 @@ func TestGatewaySubtopicProgress(t *testing.T) {
 	roots := got.GetRootStates()
 	if len(roots) != 2 || roots[0].GetState() != "partial" || roots[1].GetState() != "visited" {
 		t.Fatalf("roots=%+v", roots)
+	}
+	nodes := got.GetNodeStates()
+	if len(nodes) != 5 ||
+		nodes[0].GetSubtopicId() != "sub_caja_central" ||
+		nodes[0].GetState() != "partial" ||
+		nodes[0].GetOpenedInSubtree() != 1 ||
+		nodes[0].GetTotalInSubtree() != 4 ||
+		nodes[3].GetSubtopicId() != "sub_motor" ||
+		nodes[3].GetState() != "visited" {
+		t.Fatalf("nodes=%+v", nodes)
 	}
 
 	missingStudent := httptest.NewRecorder()
@@ -351,6 +364,13 @@ func TestGatewayStaticPlaceholder(t *testing.T) {
 	gw.Handler().ServeHTTP(rr2, req2)
 	if got := rr2.Header().Get("Cache-Control"); got != "no-cache" {
 		t.Fatalf("/index.html Cache-Control: want no-cache, got %q", got)
+	}
+
+	rr3 := httptest.NewRecorder()
+	req3 := httptest.NewRequest(http.MethodGet, "/js/app.js", nil)
+	gw.Handler().ServeHTTP(rr3, req3)
+	if got := rr3.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Fatalf("/js/app.js Cache-Control: want no-cache, got %q", got)
 	}
 }
 

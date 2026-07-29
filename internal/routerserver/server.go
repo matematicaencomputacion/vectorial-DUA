@@ -298,12 +298,22 @@ func (s *Server) GetSubtopicProgress(ctx context.Context, req *vectorv1.Subtopic
 		OpenedSubtopicIds: progress.OpenedSubtopicIDs,
 		TotalSubtopics:    int32(progress.TotalSubtopics),
 		RootStates:        make([]*vectorv1.RootSubtopicProgress, 0, len(progress.RootStates)),
+		NodeStates:        make([]*vectorv1.NodeSubtopicProgress, 0, len(progress.NodeStates)),
 	}
 	for _, root := range progress.RootStates {
 		out.RootStates = append(out.RootStates, &vectorv1.RootSubtopicProgress{
 			SubtopicId: root.SubtopicID,
 			Title:      root.Title,
 			State:      string(root.State),
+		})
+	}
+	for _, node := range progress.NodeStates {
+		out.NodeStates = append(out.NodeStates, &vectorv1.NodeSubtopicProgress{
+			SubtopicId:      node.SubtopicID,
+			Title:           node.Title,
+			State:           string(node.State),
+			OpenedInSubtree: int32(node.OpenedInSubtree),
+			TotalInSubtree:  int32(node.TotalInSubtree),
 		})
 	}
 	return out, nil
