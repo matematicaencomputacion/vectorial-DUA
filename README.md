@@ -187,3 +187,18 @@ go run ./cmd/harness -suite evals
 ```
 
 Regenerar Protobuf: `./scripts/gen-proto.ps1`
+
+### Tests y variables de entorno
+
+El ruteo lee `AVLP_*` en tiempo de ejecución (umbral de similitud, embedder, pisos
+de RAG, toggles de nodos interactivos). Un shell con `AVLP_SIMILARITY_THRESHOLD=0.55`
+exportado puede volver verde una regresión real, así que los tests fijan su propio
+entorno vía `internal/testenv`: `testenv.Isolate(t)` por test y `testenv.Clear()`
+desde `TestMain` en los paquetes que rutean. El helper limpia por prefijo, de modo
+que cubre variables nuevas sin actualizar una lista.
+
+Antes de un push, correr la suite sin nada exportado (`env | grep AVLP` vacío):
+
+```bash
+./scripts/test-clean.sh
+```
