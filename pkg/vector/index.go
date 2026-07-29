@@ -9,13 +9,25 @@ import (
 
 // Node is an in-memory pedagogical DUA resource in vector space.
 type Node struct {
-	ID           string
-	DimensionDUA string
-	Difficulty   string
-	Format       string
-	ResourceURL  string
-	Embedding    []float32
+	ID              string
+	DimensionDUA    string
+	Difficulty      string
+	Format          string
+	ResourceURL     string
+	Embedding       []float32
+	IsLiveGenerated bool // RAG-generated station, not reviewed curriculum
 }
+
+// LivePreferenceMargin is how much better a live-generated station must score
+// than the best curated node before it wins static matching.
+//
+// Live stations stay in the index so a student who repeats a novel doubt lands
+// on the station already built for them instead of paying for a new one. But one
+// accumulates per miss, and an unweighted k-NN lets them eclipse curated nodes
+// after a long session — precisely the nodes that carry the botonera, the DUA
+// schemas and reviewed pedagogy. The margin keeps curated material as the
+// default without making live stations unreachable.
+const LivePreferenceMargin = 0.05
 
 // Match is the nearest-neighbor result for a query embedding.
 type Match struct {
@@ -125,24 +137,52 @@ func (idx *Index) Nodes() []Node {
 }
 
 // Nearest finds the closest node by cosine similarity (k=1 brute-force k-NN).
+//
+// Curated nodes win ties and near-ties: a live-generated station only wins when
+// it beats the best curated node by more than LivePreferenceMargin.
 func (idx *Index) Nearest(query []float32) Match {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
-	best := Match{Found: false, Similarity: -1}
+	curated := Match{Found: false, Similarity: -1}
+	live := Match{Found: false, Similarity: -1}
 	for _, id := range idx.order {
 		node := idx.nodes[id]
+		best := &curated
+		if node.IsLiveGenerated {
+			best = &live
+		}
 		sim := CosineSimilarity(query, node.Embedding)
 		if !best.Found || sim > best.Similarity {
-			best = Match{Node: node, Similarity: sim, Found: true}
+			*best = Match{Node: node, Similarity: sim, Found: true}
 		}
 	}
-	return best
+
+	switch {
+	case !live.Found:
+		return curated
+	case !curated.Found:
+		return live
+	case live.Similarity > curated.Similarity+LivePreferenceMargin:
+		return live
+	default:
+		return curated
+	}
 }
 
-// RegisterNode creates a hierarchical ULID id and upserts the node.
+// RegisterNode creates a hierarchical ULID id and upserts a curated node.
 // Embeddings must match the index dimensionality (see FitIndexEmbedding).
 func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32) (Node, error) {
+	return idx.registerNode(dimensionDUA, difficulty, format, resourceURL, embedding, false)
+}
+
+// RegisterLiveNode registers a RAG-generated station, matched under
+// LivePreferenceMargin so it never quietly displaces curated material.
+func (idx *Index) RegisterLiveNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32) (Node, error) {
+	return idx.registerNode(dimensionDUA, difficulty, format, resourceURL, embedding, true)
+}
+
+func (idx *Index) registerNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32, isLive bool) (Node, error) {
 	fitted, err := FitIndexEmbedding(embedding, idx.Dims())
 	if err != nil {
 		return Node{}, err
@@ -152,12 +192,13 @@ func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL str
 		return Node{}, err
 	}
 	node := Node{
-		ID:           id,
-		DimensionDUA: dimensionDUA,
-		Difficulty:   difficulty,
-		Format:       format,
-		ResourceURL:  resourceURL,
-		Embedding:    fitted,
+		ID:              id,
+		DimensionDUA:    dimensionDUA,
+		Difficulty:      difficulty,
+		Format:          format,
+		ResourceURL:     resourceURL,
+		Embedding:       fitted,
+		IsLiveGenerated: isLive,
 	}
 	if err := idx.Upsert(node); err != nil {
 		return Node{}, err

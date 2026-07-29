@@ -2,6 +2,7 @@ package vector_test
 
 import (
 	"context"
+	"math"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -191,6 +192,72 @@ func TestRouterInProcessLatencyP99(t *testing.T) {
 	t.Logf("router in-process p99=%s (%d ns) max=%s", p99, p99.Nanoseconds(), samples[n-1])
 	if p99 > 15*time.Millisecond {
 		t.Fatalf("p99 latency %s exceeds 15ms target", p99)
+	}
+}
+
+// atCos returns a vector whose cosine similarity with atCos(1) is cos.
+func atCos(cos float64) []float32 {
+	return []float32{float32(cos), float32(math.Sqrt(1 - cos*cos)), 0, 0, 0}
+}
+
+// indexQuery projects a literal into the index space; Nearest compares raw
+// vectors and scores length mismatches as 0.
+func indexQuery(v []float32) []float32 {
+	return vector.MustFitContentEmbedding(v)
+}
+
+func TestQueryPrefersCuratedOverNearbyLiveStation(t *testing.T) {
+	idx := vector.NewIndex()
+	curated, err := idx.RegisterNode("Representacion", "basico", "visual", "master://nodes/curated", atCos(0.80))
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Millisecond)
+	// Scores higher than the curated node, but inside LivePreferenceMargin.
+	if _, err := idx.RegisterLiveNode("Representacion", "adaptativo", "conceptual", "live://stations/nearby", atCos(0.83)); err != nil {
+		t.Fatal(err)
+	}
+
+	r := vector.NewRouter(idx, vector.NewEventBus())
+	out, err := r.QueryNearest("stu-curated", atCos(1), 0.55)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out.Matched {
+		t.Fatalf("expected static match, got %+v", out)
+	}
+	if out.Node.ID != curated.ID {
+		t.Fatalf("live station eclipsed curated node: got %s (%s)", out.Node.ID, out.Node.ResourceURL)
+	}
+}
+
+func TestNearestAllowsLiveStationBeyondMargin(t *testing.T) {
+	idx := vector.NewIndex()
+	if _, err := idx.RegisterNode("Representacion", "basico", "visual", "master://nodes/curated", atCos(0.80)); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Millisecond)
+	live, err := idx.RegisterLiveNode("Representacion", "adaptativo", "conceptual", "live://stations/clear-win", atCos(0.95))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	match := idx.Nearest(indexQuery(atCos(1)))
+	if !match.Found || match.Node.ID != live.ID {
+		t.Fatalf("live station should win beyond the margin, got %+v", match)
+	}
+}
+
+func TestNearestReturnsLiveStationWhenNoCuratedNode(t *testing.T) {
+	idx := vector.NewIndex()
+	live, err := idx.RegisterLiveNode("Representacion", "adaptativo", "conceptual", "live://stations/only", atCos(0.70))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	match := idx.Nearest(indexQuery(atCos(1)))
+	if !match.Found || match.Node.ID != live.ID {
+		t.Fatalf("a returning student must still reach their station, got %+v", match)
 	}
 }
 

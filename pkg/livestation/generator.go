@@ -98,7 +98,7 @@ func (g *Generator) Generate(ctx context.Context, req Request) (Result, error) {
 		return Result{}, fmt.Errorf("live station embedding: %w", err)
 	}
 
-	node, err := g.Nodes.RegisterNode(req.Dimension, "adaptativo", req.Format, "live://stations/"+req.TrackingULID, emb)
+	node, err := g.Nodes.RegisterLiveNode(req.Dimension, "adaptativo", req.Format, "live://stations/"+req.TrackingULID, emb)
 	if err != nil {
 		return Result{}, err
 	}

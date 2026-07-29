@@ -54,6 +54,8 @@ Duda → Router k-NN
 
 En un nodo interactivo, **“+ Tengo una duda diferente”** llama a `MutateInteractiveNode` y appende un botón `is_live_generated=true`.
 
+Las estaciones en vivo quedan indexadas (quien repite una duda novel vuelve a su estación en lugar de pagar una nueva), pero se acumulan una por miss. Para que no eclipsen al material curado —el que trae botonera, schemas DUA y pedagogía revisada—, un nodo live gana el matching estático solo si supera al mejor curado por más de `vector.LivePreferenceMargin` (**0.05**); ante empate o diferencia menor gana el curado. La política definitiva (TTL de nodos live, promoción manual a curado) es deuda de Ola 4.
+
 ## Ciclo de vida de estaciones pendientes
 
 Cuando el miss no puede materializar la estación al instante (RAG off/fallo), `QueryNearestNode` devuelve `LiveStationPending` con `tracking_ulid` y un **mensaje rogeriano en español** (no diagnóstico técnico). El router registra la solicitud en `StationLedger` (`in_progress` | `ready` | `failed`, TTL `AVLP_STATION_TTL`, default 24h).
@@ -171,7 +173,8 @@ vectorial-DUA/
 │   ├── add-hierarchical-subtopic-node/
 │   ├── add-ola2-adaptive-debt/   (deuda Ola 2, saldada)
 │   ├── add-ola3-station-ledger/  (Ola 3.a / C2 cerrada — tag v0.3.0-ola3a)
-│   └── add-ola3-master-web/      (Ola 3.b / C1 — prototipo Stage + botonera)
+│   ├── add-ola3-master-web/      (Ola 3.b / C1 — prototipo Stage + botonera)
+│   └── add-ola4-live-node-policy/ (deuda Ola 4: TTL y promoción de nodos live)
 └── scripts/
 ```
 
