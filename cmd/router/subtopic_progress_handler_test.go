@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
+	"github.com/vectorial-dua/avlp/internal/routerserver"
 	"github.com/vectorial-dua/avlp/pkg/dua"
 )
 
@@ -37,11 +38,11 @@ func startProgressClient(t *testing.T) vectorv1.VectorRouterClient {
 		t.Fatal(err)
 	}
 	profiles := dua.NewProfileStore()
-	impl := &server{
-		reg:          reg,
-		profiles:     profiles,
-		interactions: dua.NewInteractionStoreWithProfiles(profiles),
-	}
+	impl := routerserver.New(routerserver.Deps{
+		Registry:     reg,
+		Profiles:     profiles,
+		Interactions: dua.NewInteractionStoreWithProfiles(profiles),
+	})
 
 	lis := bufconn.Listen(progressBufSize)
 	grpcServer := grpc.NewServer()

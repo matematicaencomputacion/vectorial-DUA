@@ -19,19 +19,6 @@ import (
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
-type harnessLiveBridge struct{ g *livestation.Generator }
-
-func (b harnessLiveBridge) GenerateLive(ctx context.Context, req vector.LiveRequest) (vector.LiveResult, error) {
-	res, err := b.g.Generate(ctx, livestation.Request{
-		StudentID: req.StudentID, DoubtText: req.DoubtText, QueryEmbedding: req.QueryEmbedding,
-		Frustration: req.Frustration, Dimension: req.Dimension, Format: req.Format, TrackingULID: req.TrackingULID,
-	})
-	if err != nil {
-		return vector.LiveResult{}, err
-	}
-	return vector.LiveResult{Node: res.Node, Content: res.Content, Sources: res.Sources, TrackingULID: res.TrackingULID}, nil
-}
-
 func main() {
 	suite := flag.String("suite", "evals", "evals | simmatrix | calibrate | sandbox | load | all")
 	casesPath := flag.String("cases", "harness/evals/cases/routing_golden.json", "golden evals dataset")
@@ -77,11 +64,11 @@ func main() {
 			log.Printf("RAG chunks indexed: %d", n)
 		}
 		router := vector.NewRouter(idx, vector.NewEventBus())
-		router.Live = harnessLiveBridge{g: &livestation.Generator{
+		router.Live = &livestation.Generator{
 			Retriever: rag.NewRetriever(store, emb, 3),
 			Nodes:     idx,
 			Tel:       tel,
-		}}
+		}
 		cases, err := evals.LoadCases(*casesPath)
 		if err != nil {
 			log.Fatalf("load cases: %v", err)
