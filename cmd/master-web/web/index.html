@@ -136,6 +136,36 @@
       gap: 0.45rem;
       align-items: start;
     }
+    .field-input {
+      position: relative;
+      min-width: 0;
+    }
+    .field-input textarea {
+      width: 100%;
+      padding-right: 2.35rem;
+    }
+    .clear-field-btn {
+      position: absolute;
+      top: 0.35rem;
+      right: 0.3rem;
+      width: 1.85rem;
+      height: 1.85rem;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink-soft);
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .clear-field-btn:hover {
+      background: var(--sand);
+      color: var(--ink);
+    }
     .mic-btn {
       width: 2.75rem;
       min-height: 3.2rem;
@@ -536,7 +566,10 @@
           <span class="shortcut-hint" id="doubt-mic-hint" hidden>Atajo: Ctrl+M para dictar</span>
         </div>
         <div class="input-with-mic" id="doubt-mic-wrap">
-          <textarea id="doubt" name="doubt" required placeholder="Escribí tu duda en español…"></textarea>
+          <div class="field-input">
+            <textarea id="doubt" name="doubt" required placeholder="Escribí tu duda en español…"></textarea>
+            <button type="button" class="clear-field-btn" id="doubt-clear" hidden aria-label="Borrar el texto">✕</button>
+          </div>
         </div>
       </div>
       <div class="query-actions">
@@ -582,7 +615,10 @@
             <label for="ask-doubt"><strong>+ Tengo una duda diferente</strong></label>
           </div>
           <div class="input-with-mic" id="ask-mic-wrap">
-            <textarea id="ask-doubt" placeholder="Otra duda sobre este nodo…"></textarea>
+            <div class="field-input">
+              <textarea id="ask-doubt" placeholder="Otra duda sobre este nodo…"></textarea>
+              <button type="button" class="clear-field-btn" id="ask-doubt-clear" hidden aria-label="Borrar el texto">✕</button>
+            </div>
           </div>
           <button type="button" id="btn-mutate" class="secondary">Generar botón en vivo</button>
         </div>
@@ -617,6 +653,7 @@
   const el = {
     form: document.getElementById("query-form"),
     doubt: document.getElementById("doubt"),
+    doubtClear: document.getElementById("doubt-clear"),
     frustration: document.getElementById("frustration"),
     stageTitle: document.getElementById("stage-title"),
     stageMeta: document.getElementById("stage-meta"),
@@ -626,10 +663,36 @@
     askBox: document.getElementById("ask-box"),
     askHint: document.getElementById("ask-hint"),
     askDoubt: document.getElementById("ask-doubt"),
+    askDoubtClear: document.getElementById("ask-doubt-clear"),
     btnMutate: document.getElementById("btn-mutate"),
     status: document.getElementById("status"),
     dev: document.getElementById("dev-panel"),
   };
+
+  function syncClearButton(textarea, btn) {
+    if (!textarea || !btn) return;
+    btn.hidden = !String(textarea.value || "").length;
+  }
+
+  function wireClearButton(textarea, btn) {
+    if (!textarea || !btn) return;
+    syncClearButton(textarea, btn);
+    textarea.addEventListener("input", function () {
+      syncClearButton(textarea, btn);
+    });
+    btn.addEventListener("click", function () {
+      setTextareaValue(textarea, "");
+      textarea.focus();
+    });
+  }
+
+  wireClearButton(el.doubt, el.doubtClear);
+  wireClearButton(el.askDoubt, el.askDoubtClear);
+
+  function setTextareaValue(textarea, value) {
+    textarea.value = value;
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  }
 
   function setStatus(msg, tone) {
     el.status.textContent = msg || "";
@@ -667,7 +730,7 @@
     el.askBox.hidden = !interactiveSession;
     el.askHint.hidden = interactiveSession;
     if (!interactiveSession && el.askDoubt) {
-      el.askDoubt.value = "";
+      setTextareaValue(el.askDoubt, "");
     }
     if (!interactiveSession && activeVoice && activeVoice.textarea === el.askDoubt) {
       stopActiveVoice({ cancelled: true });
@@ -1327,7 +1390,7 @@
           clipTitle: res.button.label,
         });
       }
-      el.askDoubt.value = "";
+      setTextareaValue(el.askDoubt, "");
       setStatus("Botón en vivo agregado a la botonera.", "ok");
       renderDev();
     } catch (e) {
@@ -1339,7 +1402,7 @@
 
   document.querySelectorAll(".hints [data-hint]").forEach(function (btn) {
     btn.addEventListener("click", function () {
-      el.doubt.value = btn.getAttribute("data-hint");
+      setTextareaValue(el.doubt, btn.getAttribute("data-hint"));
       el.doubt.focus();
       setStatus("Ejemplo cargado en «Tu duda». Pulsá «Buscar estación» para ejecutar.", "ok");
     });
@@ -1421,12 +1484,12 @@
       }
       var prefix = base && String(base).trim() ? String(base).replace(/\s+$/, "") + " " : "";
       if (finalText) {
-        textarea.value = prefix + finalText.trim();
+        setTextareaValue(textarea, prefix + finalText.trim());
         stopActiveVoice({});
         setStatus(readyHint || "Dictado listo. Revisá el texto y confirmá con el botón correspondiente.", "ok");
         textarea.focus();
       } else {
-        textarea.value = prefix + interim;
+        setTextareaValue(textarea, prefix + interim);
       }
     };
 
