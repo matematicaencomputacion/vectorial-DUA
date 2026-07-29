@@ -431,6 +431,82 @@ func (x *RootSubtopicProgress) GetState() string {
 	return ""
 }
 
+type NodeSubtopicProgress struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SubtopicId      string                 `protobuf:"bytes,1,opt,name=subtopic_id,json=subtopicId,proto3" json:"subtopic_id,omitempty"`
+	Title           string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	State           string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"` // "visited" | "partial" | "unvisited"
+	OpenedInSubtree int32                  `protobuf:"varint,4,opt,name=opened_in_subtree,json=openedInSubtree,proto3" json:"opened_in_subtree,omitempty"`
+	TotalInSubtree  int32                  `protobuf:"varint,5,opt,name=total_in_subtree,json=totalInSubtree,proto3" json:"total_in_subtree,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *NodeSubtopicProgress) Reset() {
+	*x = NodeSubtopicProgress{}
+	mi := &file_router_api_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeSubtopicProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeSubtopicProgress) ProtoMessage() {}
+
+func (x *NodeSubtopicProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_router_api_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeSubtopicProgress.ProtoReflect.Descriptor instead.
+func (*NodeSubtopicProgress) Descriptor() ([]byte, []int) {
+	return file_router_api_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *NodeSubtopicProgress) GetSubtopicId() string {
+	if x != nil {
+		return x.SubtopicId
+	}
+	return ""
+}
+
+func (x *NodeSubtopicProgress) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *NodeSubtopicProgress) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *NodeSubtopicProgress) GetOpenedInSubtree() int32 {
+	if x != nil {
+		return x.OpenedInSubtree
+	}
+	return 0
+}
+
+func (x *NodeSubtopicProgress) GetTotalInSubtree() int32 {
+	if x != nil {
+		return x.TotalInSubtree
+	}
+	return 0
+}
+
 type SubtopicProgress struct {
 	state             protoimpl.MessageState  `protogen:"open.v1"`
 	StudentId         string                  `protobuf:"bytes,1,opt,name=student_id,json=studentId,proto3" json:"student_id,omitempty"`
@@ -438,13 +514,14 @@ type SubtopicProgress struct {
 	OpenedSubtopicIds []string                `protobuf:"bytes,3,rep,name=opened_subtopic_ids,json=openedSubtopicIds,proto3" json:"opened_subtopic_ids,omitempty"`
 	TotalSubtopics    int32                   `protobuf:"varint,4,opt,name=total_subtopics,json=totalSubtopics,proto3" json:"total_subtopics,omitempty"`
 	RootStates        []*RootSubtopicProgress `protobuf:"bytes,5,rep,name=root_states,json=rootStates,proto3" json:"root_states,omitempty"`
+	NodeStates        []*NodeSubtopicProgress `protobuf:"bytes,6,rep,name=node_states,json=nodeStates,proto3" json:"node_states,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SubtopicProgress) Reset() {
 	*x = SubtopicProgress{}
-	mi := &file_router_api_proto_msgTypes[6]
+	mi := &file_router_api_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -456,7 +533,7 @@ func (x *SubtopicProgress) String() string {
 func (*SubtopicProgress) ProtoMessage() {}
 
 func (x *SubtopicProgress) ProtoReflect() protoreflect.Message {
-	mi := &file_router_api_proto_msgTypes[6]
+	mi := &file_router_api_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -469,7 +546,7 @@ func (x *SubtopicProgress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubtopicProgress.ProtoReflect.Descriptor instead.
 func (*SubtopicProgress) Descriptor() ([]byte, []int) {
-	return file_router_api_proto_rawDescGZIP(), []int{6}
+	return file_router_api_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SubtopicProgress) GetStudentId() string {
@@ -507,6 +584,13 @@ func (x *SubtopicProgress) GetRootStates() []*RootSubtopicProgress {
 	return nil
 }
 
+func (x *SubtopicProgress) GetNodeStates() []*NodeSubtopicProgress {
+	if x != nil {
+		return x.NodeStates
+	}
+	return nil
+}
+
 type RouteResult struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Outcome:
@@ -520,7 +604,7 @@ type RouteResult struct {
 
 func (x *RouteResult) Reset() {
 	*x = RouteResult{}
-	mi := &file_router_api_proto_msgTypes[7]
+	mi := &file_router_api_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -532,7 +616,7 @@ func (x *RouteResult) String() string {
 func (*RouteResult) ProtoMessage() {}
 
 func (x *RouteResult) ProtoReflect() protoreflect.Message {
-	mi := &file_router_api_proto_msgTypes[7]
+	mi := &file_router_api_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -545,7 +629,7 @@ func (x *RouteResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RouteResult.ProtoReflect.Descriptor instead.
 func (*RouteResult) Descriptor() ([]byte, []int) {
-	return file_router_api_proto_rawDescGZIP(), []int{7}
+	return file_router_api_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RouteResult) GetOutcome() isRouteResult_Outcome {
@@ -626,7 +710,14 @@ const file_router_api_proto_rawDesc = "" +
 	"\vsubtopic_id\x18\x01 \x01(\tR\n" +
 	"subtopicId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x14\n" +
-	"\x05state\x18\x03 \x01(\tR\x05state\"\xf7\x01\n" +
+	"\x05state\x18\x03 \x01(\tR\x05state\"\xb9\x01\n" +
+	"\x14NodeSubtopicProgress\x12\x1f\n" +
+	"\vsubtopic_id\x18\x01 \x01(\tR\n" +
+	"subtopicId\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x14\n" +
+	"\x05state\x18\x03 \x01(\tR\x05state\x12*\n" +
+	"\x11opened_in_subtree\x18\x04 \x01(\x05R\x0fopenedInSubtree\x12(\n" +
+	"\x10total_in_subtree\x18\x05 \x01(\x05R\x0etotalInSubtree\"\xbe\x02\n" +
 	"\x10SubtopicProgress\x12\x1d\n" +
 	"\n" +
 	"student_id\x18\x01 \x01(\tR\tstudentId\x12$\n" +
@@ -634,7 +725,9 @@ const file_router_api_proto_rawDesc = "" +
 	"\x13opened_subtopic_ids\x18\x03 \x03(\tR\x11openedSubtopicIds\x12'\n" +
 	"\x0ftotal_subtopics\x18\x04 \x01(\x05R\x0etotalSubtopics\x12E\n" +
 	"\vroot_states\x18\x05 \x03(\v2$.avlp.vector.v1.RootSubtopicProgressR\n" +
-	"rootStates\"\x92\x01\n" +
+	"rootStates\x12E\n" +
+	"\vnode_states\x18\x06 \x03(\v2$.avlp.vector.v1.NodeSubtopicProgressR\n" +
+	"nodeStates\"\x92\x01\n" +
 	"\vRouteResult\x128\n" +
 	"\amatched\x18\x01 \x01(\v2\x1c.avlp.vector.v1.NodeResponseH\x00R\amatched\x12>\n" +
 	"\apending\x18\x02 \x01(\v2\".avlp.vector.v1.LiveStationPendingH\x00R\apendingB\t\n" +
@@ -660,7 +753,7 @@ func file_router_api_proto_rawDescGZIP() []byte {
 	return file_router_api_proto_rawDescData
 }
 
-var file_router_api_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_router_api_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_router_api_proto_goTypes = []any{
 	(*NodeResponse)(nil),              // 0: avlp.vector.v1.NodeResponse
 	(*LiveStationPending)(nil),        // 1: avlp.vector.v1.LiveStationPending
@@ -668,40 +761,42 @@ var file_router_api_proto_goTypes = []any{
 	(*LiveStationStatus)(nil),         // 3: avlp.vector.v1.LiveStationStatus
 	(*SubtopicProgressQuery)(nil),     // 4: avlp.vector.v1.SubtopicProgressQuery
 	(*RootSubtopicProgress)(nil),      // 5: avlp.vector.v1.RootSubtopicProgress
-	(*SubtopicProgress)(nil),          // 6: avlp.vector.v1.SubtopicProgress
-	(*RouteResult)(nil),               // 7: avlp.vector.v1.RouteResult
-	(*VectorQuery)(nil),               // 8: avlp.vector.v1.VectorQuery
-	(*NodeIdRequest)(nil),             // 9: avlp.vector.v1.NodeIdRequest
-	(*MutateInteractiveRequest)(nil),  // 10: avlp.vector.v1.MutateInteractiveRequest
-	(*SubtopicInteraction)(nil),       // 11: avlp.vector.v1.SubtopicInteraction
-	(*BotoneraInteraction)(nil),       // 12: avlp.vector.v1.BotoneraInteraction
-	(*InteractiveVideoNode)(nil),      // 13: avlp.vector.v1.InteractiveVideoNode
-	(*MutateInteractiveResponse)(nil), // 14: avlp.vector.v1.MutateInteractiveResponse
-	(*Ack)(nil),                       // 15: avlp.vector.v1.Ack
+	(*NodeSubtopicProgress)(nil),      // 6: avlp.vector.v1.NodeSubtopicProgress
+	(*SubtopicProgress)(nil),          // 7: avlp.vector.v1.SubtopicProgress
+	(*RouteResult)(nil),               // 8: avlp.vector.v1.RouteResult
+	(*VectorQuery)(nil),               // 9: avlp.vector.v1.VectorQuery
+	(*NodeIdRequest)(nil),             // 10: avlp.vector.v1.NodeIdRequest
+	(*MutateInteractiveRequest)(nil),  // 11: avlp.vector.v1.MutateInteractiveRequest
+	(*SubtopicInteraction)(nil),       // 12: avlp.vector.v1.SubtopicInteraction
+	(*BotoneraInteraction)(nil),       // 13: avlp.vector.v1.BotoneraInteraction
+	(*InteractiveVideoNode)(nil),      // 14: avlp.vector.v1.InteractiveVideoNode
+	(*MutateInteractiveResponse)(nil), // 15: avlp.vector.v1.MutateInteractiveResponse
+	(*Ack)(nil),                       // 16: avlp.vector.v1.Ack
 }
 var file_router_api_proto_depIdxs = []int32{
 	5,  // 0: avlp.vector.v1.SubtopicProgress.root_states:type_name -> avlp.vector.v1.RootSubtopicProgress
-	0,  // 1: avlp.vector.v1.RouteResult.matched:type_name -> avlp.vector.v1.NodeResponse
-	1,  // 2: avlp.vector.v1.RouteResult.pending:type_name -> avlp.vector.v1.LiveStationPending
-	8,  // 3: avlp.vector.v1.VectorRouter.QueryNearestNode:input_type -> avlp.vector.v1.VectorQuery
-	9,  // 4: avlp.vector.v1.VectorRouter.GetInteractiveNode:input_type -> avlp.vector.v1.NodeIdRequest
-	10, // 5: avlp.vector.v1.VectorRouter.MutateInteractiveNode:input_type -> avlp.vector.v1.MutateInteractiveRequest
-	11, // 6: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:input_type -> avlp.vector.v1.SubtopicInteraction
-	4,  // 7: avlp.vector.v1.VectorRouter.GetSubtopicProgress:input_type -> avlp.vector.v1.SubtopicProgressQuery
-	12, // 8: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:input_type -> avlp.vector.v1.BotoneraInteraction
-	2,  // 9: avlp.vector.v1.VectorRouter.GetLiveStation:input_type -> avlp.vector.v1.LiveStationQuery
-	7,  // 10: avlp.vector.v1.VectorRouter.QueryNearestNode:output_type -> avlp.vector.v1.RouteResult
-	13, // 11: avlp.vector.v1.VectorRouter.GetInteractiveNode:output_type -> avlp.vector.v1.InteractiveVideoNode
-	14, // 12: avlp.vector.v1.VectorRouter.MutateInteractiveNode:output_type -> avlp.vector.v1.MutateInteractiveResponse
-	15, // 13: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:output_type -> avlp.vector.v1.Ack
-	6,  // 14: avlp.vector.v1.VectorRouter.GetSubtopicProgress:output_type -> avlp.vector.v1.SubtopicProgress
-	15, // 15: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:output_type -> avlp.vector.v1.Ack
-	3,  // 16: avlp.vector.v1.VectorRouter.GetLiveStation:output_type -> avlp.vector.v1.LiveStationStatus
-	10, // [10:17] is the sub-list for method output_type
-	3,  // [3:10] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	6,  // 1: avlp.vector.v1.SubtopicProgress.node_states:type_name -> avlp.vector.v1.NodeSubtopicProgress
+	0,  // 2: avlp.vector.v1.RouteResult.matched:type_name -> avlp.vector.v1.NodeResponse
+	1,  // 3: avlp.vector.v1.RouteResult.pending:type_name -> avlp.vector.v1.LiveStationPending
+	9,  // 4: avlp.vector.v1.VectorRouter.QueryNearestNode:input_type -> avlp.vector.v1.VectorQuery
+	10, // 5: avlp.vector.v1.VectorRouter.GetInteractiveNode:input_type -> avlp.vector.v1.NodeIdRequest
+	11, // 6: avlp.vector.v1.VectorRouter.MutateInteractiveNode:input_type -> avlp.vector.v1.MutateInteractiveRequest
+	12, // 7: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:input_type -> avlp.vector.v1.SubtopicInteraction
+	4,  // 8: avlp.vector.v1.VectorRouter.GetSubtopicProgress:input_type -> avlp.vector.v1.SubtopicProgressQuery
+	13, // 9: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:input_type -> avlp.vector.v1.BotoneraInteraction
+	2,  // 10: avlp.vector.v1.VectorRouter.GetLiveStation:input_type -> avlp.vector.v1.LiveStationQuery
+	8,  // 11: avlp.vector.v1.VectorRouter.QueryNearestNode:output_type -> avlp.vector.v1.RouteResult
+	14, // 12: avlp.vector.v1.VectorRouter.GetInteractiveNode:output_type -> avlp.vector.v1.InteractiveVideoNode
+	15, // 13: avlp.vector.v1.VectorRouter.MutateInteractiveNode:output_type -> avlp.vector.v1.MutateInteractiveResponse
+	16, // 14: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:output_type -> avlp.vector.v1.Ack
+	7,  // 15: avlp.vector.v1.VectorRouter.GetSubtopicProgress:output_type -> avlp.vector.v1.SubtopicProgress
+	16, // 16: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:output_type -> avlp.vector.v1.Ack
+	3,  // 17: avlp.vector.v1.VectorRouter.GetLiveStation:output_type -> avlp.vector.v1.LiveStationStatus
+	11, // [11:18] is the sub-list for method output_type
+	4,  // [4:11] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_router_api_proto_init() }
@@ -711,7 +806,7 @@ func file_router_api_proto_init() {
 	}
 	file_student_state_proto_init()
 	file_interactive_node_proto_init()
-	file_router_api_proto_msgTypes[7].OneofWrappers = []any{
+	file_router_api_proto_msgTypes[8].OneofWrappers = []any{
 		(*RouteResult_Matched)(nil),
 		(*RouteResult_Pending)(nil),
 	}
@@ -721,7 +816,7 @@ func file_router_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_router_api_proto_rawDesc), len(file_router_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

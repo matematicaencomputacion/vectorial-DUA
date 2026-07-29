@@ -69,12 +69,21 @@ message RootSubtopicProgress {
   string state = 3; // "visited" | "partial" | "unvisited"
 }
 
+message NodeSubtopicProgress {
+  string subtopic_id = 1;
+  string title = 2;
+  string state = 3; // "visited" | "partial" | "unvisited"
+  int32 opened_in_subtree = 4;
+  int32 total_in_subtree = 5;
+}
+
 message SubtopicProgress {
   string student_id = 1;
   string parent_node_id = 2;
   repeated string opened_subtopic_ids = 3;
   int32 total_subtopics = 4;
   repeated RootSubtopicProgress root_states = 5;
+  repeated NodeSubtopicProgress node_states = 6;
 }
 
 message RouteResult {
