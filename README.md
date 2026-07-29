@@ -179,7 +179,8 @@ vectorial-DUA/
 │   ├── add-ola2-adaptive-debt/   (deuda Ola 2, saldada)
 │   ├── add-ola3-station-ledger/  (Ola 3.a / C2 cerrada — tag v0.3.0-ola3a)
 │   ├── add-ola4-live-node-policy/ (deuda Ola 4: TTL y promoción de nodos live)
-│   └── archive/2026-07-29-add-ola3-master-web/ (Ola 3.b / C1 — tag v0.3.1-ola3b)
+│   ├── archive/2026-07-29-add-ola3-master-web/ (Ola 3.b / C1 — tag v0.3.1-ola3b)
+│   └── archive/2026-07-29-add-ola3-subtopic-progress/ (Ola 3.c / C4 — tag v0.3.2-ola3c)
 └── scripts/
 ```
 
