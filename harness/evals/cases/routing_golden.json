@@ -16,7 +16,7 @@
   {
     "case_id": "parameter-conceptual-static",
     "description": "Qué es un parámetro → tarjeta conceptual",
-    "comment": "Paráfrasis natural. Hash y embedder=env superan el umbral hacia el nodo curado conceptual.",
+    "comment": "Paráfrasis natural. Bajo hash → live; con embedder=env + umbral 0.55 (bge-m3) → static.",
     "student_id": "stu-param-1",
     "query_embedding": [],
     "query_text": "estoy perdido: ¿qué diferencia hay entre un parámetro y una variable normal?",
@@ -24,13 +24,13 @@
     "expected_dimension_dua": "Representacion",
     "expected_format": "conceptual",
     "expected_outcome": "static",
-    "expected_outcome_hash": "static",
+    "expected_outcome_hash": "live",
     "expected_node_id_prefix": "dua::Representacion::basico::conceptual"
   },
   {
     "case_id": "quotes-practica-static",
     "description": "Comillas/string → celda práctica",
-    "comment": "Paráfrasis natural. Hash y embedder=env superan el umbral hacia el nodo curado de práctica.",
+    "comment": "Paráfrasis natural. Bajo hash → live; con embedder=env + umbral 0.55 (bge-m3) → static.",
     "student_id": "stu-str-1",
     "query_embedding": [],
     "query_text": "mi código se rompe por las comillas del string, ¿puedo probarlo en una celda?",
@@ -38,7 +38,7 @@
     "expected_dimension_dua": "Accion",
     "expected_format": "practica",
     "expected_outcome": "static",
-    "expected_outcome_hash": "static",
+    "expected_outcome_hash": "live",
     "expected_node_id_prefix": "dua::Accion::basico::practica"
   },
   {
@@ -57,8 +57,8 @@
   },
   {
     "case_id": "env-compromiso-natural-phrasing",
-    "description": "Fraseo natural sobre .env → nodo estático de Compromiso",
-    "comment": "Hash y embedder=env superan el umbral hacia Compromiso conceptual; con bge-m3 calibrado los matches quedan en 0.665–0.765 y fuera-manifold ≤0.386. Usar -suite simmatrix al re-calibrar. Deuda (g): automatizar elección de umbral al crecer el corpus.",
+    "description": "Fraseo natural sobre .env → static con embedder semántico; live bajo hash",
+    "comment": "Con HashEmbedder → expected_outcome_hash live. Con embedder=env + umbral 0.55 (bge-m3 calibrado: matches 0.665–0.765, fuera-manifold ≤0.386, brecha ~0.28) y doc-expansion → static Compromiso. Usar -suite simmatrix al re-calibrar. Deuda (g): automatizar elección de umbral al crecer el corpus.",
     "student_id": "stu-eng-natural-1",
     "query_embedding": [],
     "query_text": "¿por qué debería importarme configurar el .env?",
@@ -66,7 +66,7 @@
     "expected_dimension_dua": "Compromiso",
     "expected_format": "conceptual",
     "expected_outcome": "static",
-    "expected_outcome_hash": "static",
+    "expected_outcome_hash": "live",
     "expected_node_id_prefix": "dua::Compromiso::basico::conceptual"
   },
   {
