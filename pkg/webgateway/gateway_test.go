@@ -229,6 +229,40 @@ func (s *inProcessRouter) RecordSubtopicInteraction(ctx context.Context, req *ve
 	return &vectorv1.Ack{Ok: true, Message: "recorded"}, nil
 }
 
+func (s *inProcessRouter) GetSubtopicProgress(ctx context.Context, req *vectorv1.SubtopicProgressQuery) (*vectorv1.SubtopicProgress, error) {
+	_ = ctx
+	if req.GetStudentId() == "" || req.GetParentNodeId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "student_id and parent_node_id are required")
+	}
+	node, ok := s.reg.Get(req.GetParentNodeId())
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
+	}
+	if node.Hierarchy == nil {
+		return nil, status.Errorf(codes.NotFound, "node %q has no hierarchy", req.GetParentNodeId())
+	}
+	opened := s.interactions.OpenedList(req.GetStudentId(), req.GetParentNodeId())
+	openedSet := make(map[string]struct{}, len(opened))
+	for _, id := range opened {
+		openedSet[id] = struct{}{}
+	}
+	progress := dua.ProgressForTree(node.Hierarchy, openedSet)
+	out := &vectorv1.SubtopicProgress{
+		StudentId:         req.GetStudentId(),
+		ParentNodeId:      req.GetParentNodeId(),
+		OpenedSubtopicIds: progress.OpenedSubtopicIDs,
+		TotalSubtopics:    int32(progress.TotalSubtopics),
+	}
+	for _, root := range progress.RootStates {
+		out.RootStates = append(out.RootStates, &vectorv1.RootSubtopicProgress{
+			SubtopicId: root.SubtopicID,
+			Title:      root.Title,
+			State:      string(root.State),
+		})
+	}
+	return out, nil
+}
+
 func seedDir(t *testing.T) string {
 	t.Helper()
 	_, file, _, ok := runtime.Caller(0)
@@ -367,6 +401,69 @@ func TestGatewayGetNodeAndMutate(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), "live_") && !strings.Contains(rr.Body.String(), "LIVE:") {
 		t.Fatalf("expected live button in mutate response: %s", rr.Body.String())
+	}
+}
+
+func TestGatewaySubtopicProgress(t *testing.T) {
+	gw, _, cleanup := startTestGateway(t)
+	defer cleanup()
+
+	const nodeID = "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FC0"
+	const studentID = "stu-progress-web"
+	progressURL := "/api/nodes/" + nodeID + "/progress?student_id=" + studentID
+
+	getProgress := func() *vectorv1.SubtopicProgress {
+		t.Helper()
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, progressURL, nil)
+		gw.Handler().ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("progress status=%d body=%s", rr.Code, rr.Body.String())
+		}
+		var got vectorv1.SubtopicProgress
+		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+			t.Fatal(err)
+		}
+		return &got
+	}
+
+	empty := getProgress()
+	if empty.GetTotalSubtopics() != 5 || len(empty.GetOpenedSubtopicIds()) != 0 {
+		t.Fatalf("empty progress=%+v", empty)
+	}
+
+	for _, subtopicID := range []string{"sub_motor", "sub_4_ruedas"} {
+		body := `{"student_id":"` + studentID + `","parent_node_id":"` + nodeID + `","subtopic_id":"` + subtopicID + `"}`
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/interactions/subtopic", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		gw.Handler().ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("record %s status=%d body=%s", subtopicID, rr.Code, rr.Body.String())
+		}
+	}
+
+	got := getProgress()
+	if opened := got.GetOpenedSubtopicIds(); len(opened) != 2 || opened[0] != "sub_motor" || opened[1] != "sub_4_ruedas" {
+		t.Fatalf("opened=%v", got.GetOpenedSubtopicIds())
+	}
+	roots := got.GetRootStates()
+	if len(roots) != 2 || roots[0].GetState() != "partial" || roots[1].GetState() != "visited" {
+		t.Fatalf("roots=%+v", roots)
+	}
+
+	missingStudent := httptest.NewRecorder()
+	gw.Handler().ServeHTTP(missingStudent, httptest.NewRequest(http.MethodGet, "/api/nodes/"+nodeID+"/progress", nil))
+	if missingStudent.Code != http.StatusBadRequest {
+		t.Fatalf("missing student status=%d body=%s", missingStudent.Code, missingStudent.Body.String())
+	}
+
+	noHierarchy := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/nodes/dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FAV/progress?student_id="+studentID, nil)
+	gw.Handler().ServeHTTP(noHierarchy, req)
+	if noHierarchy.Code != http.StatusNotFound {
+		t.Fatalf("no hierarchy status=%d body=%s", noHierarchy.Code, noHierarchy.Body.String())
 	}
 }
 
