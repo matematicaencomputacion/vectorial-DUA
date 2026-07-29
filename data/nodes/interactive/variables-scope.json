@@ -20,7 +20,7 @@
     "depth_options": [
       {
         "variant_id": "express_30s",
-        "label": "ELITE / TL;DR (30–45s)",
+        "label": "Resumen express (30–45s)",
         "media_url": "https://cdn.example.com/videos/vars/express.mp4",
         "duration_seconds": 40,
         "format_type": "video",

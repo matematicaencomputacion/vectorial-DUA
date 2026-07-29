@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/vectorial-dua/avlp/pkg/livestation"
@@ -43,5 +44,38 @@ func TestGenerateLiveStationWithSources(t *testing.T) {
 	}
 	if len(res.Node.Embedding) != vector.ContentEmbedDims {
 		t.Fatalf("live node embedding dims=%d want %d", len(res.Node.Embedding), vector.ContentEmbedDims)
+	}
+}
+
+func TestGenerateOffTopicYieldsHonestEmptySources(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	kb := filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "data", "knowledge_base"))
+	store := rag.NewStore()
+	emb := rag.NewHashEmbedder(64)
+	if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: kb, Embedder: emb}); err != nil {
+		t.Fatal(err)
+	}
+	idx := vector.NewIndex()
+	ret := rag.NewRetriever(store, emb, 5)
+	ret.MinSimilarity = rag.DefaultMinSimilarity
+	gen := &livestation.Generator{Retriever: ret, Nodes: idx}
+	res, err := gen.Generate(context.Background(), livestation.Request{
+		StudentID:   "s-bit",
+		DoubtText:   "que es un bit",
+		Frustration: 0.4,
+		Dimension:   "Representacion",
+		Format:      "conceptual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Sources) != 0 {
+		t.Fatalf("expected no spurious sources, got %v", res.Sources)
+	}
+	if len(res.Retrieved) != 0 {
+		t.Fatalf("expected no retrieved chunks, got %d", len(res.Retrieved))
+	}
+	if !strings.Contains(res.Content, "No encontré material verificado") {
+		t.Fatalf("expected honest empty-KB copy, got %q", res.Content)
 	}
 }

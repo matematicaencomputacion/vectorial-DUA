@@ -1,0 +1,12 @@
+{
+  "name": "avlp-master-web-verify",
+  "private": true,
+  "description": "Playwright checks for master-web a11y/state fixes (optional local evidence)",
+  "type": "module",
+  "scripts": {
+    "verify": "node playwright-check.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.57.0"
+  }
+}

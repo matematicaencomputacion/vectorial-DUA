@@ -19,3 +19,6 @@ vendor/
 # Local env
 .env
 *.log
+
+# Local runtime state (profile store)
+data/profiles.json

@@ -1,0 +1,54 @@
+# Checklist manual — prototipo Master (PR 6.2)
+
+Verificación humana (Dario / revisor). No hay tests automatizados del DOM.
+
+## Arranque
+
+```bash
+go run ./cmd/router
+go run ./cmd/master-web
+# abrir http://127.0.0.1:8080
+```
+
+## Flujo funcional
+
+- [ ] Duda con ejemplo «variables y scope» → carga nodo interactivo (Stage + botonera depth)
+- [ ] Toque de opción de profundidad actualiza el Stage (título / media_url) y el panel de desarrollo refleja cambio en $V_e$
+- [ ] Ejemplo «async/await» → botonera cognitiva; «PostGIS» → matriz combined; «automóvil» → acordeón (abrir Motor sin pasar por Asientos)
+- [ ] «+ Tengo una duda diferente» → aparece botón LIVE en la botonera
+- [ ] Ejemplo «fuera de tema (honesto)» → estación sin fuentes espurias; Stage con «No encontré material verificado…»
+- [ ] Nodo estático / estación live: **no** muestra «+ Tengo una duda diferente»; sí el hint «Para una duda nueva…»
+- [ ] Error de API (p. ej. mutación inválida) aparece en la franja de estado con `aria-live="assertive"`
+- [ ] Label «Probá con:» + chips «Ejemplo: …»; al tocar un chip, el status indica que hay que pulsar «Buscar estación»
+
+## Voz (Chrome / Edge — Web Speech API)
+
+Soportado donde exista `SpeechRecognition` / `webkitSpeechRecognition`. Si no hay API, el botón de micrófono **no aparece** (sin mensaje de error). Probado en Chrome.
+
+- [ ] Micrófono junto a «Tu duda»: al tocar (o **Ctrl+M**) pasa a «escuchando» (`aria-pressed="true"`, aviso en estado); el texto aparece en el textarea; al cerrar la frase se detiene **sin** auto-enviar — revisás y pulsás «Buscar estación»
+- [ ] Segundo toque (o Ctrl+M de nuevo) cancela a mitad de dictado; estado visible
+- [ ] Denegar permiso de micrófono → mensaje amable en el área de estado (`aria-live` assertive), nunca silencio
+- [ ] Con nodo interactivo: el mismo micrófono aparece en «+ Tengo una duda diferente»; dictás, revisás y confirmás con «Generar botón en vivo»
+- [ ] Página fresca: el bloque «+ Tengo una duda diferente» **no** es visible (evidencia Playwright: `verify/out/01-fresh-ask-box-hidden.png`)
+- [ ] Con router caído: el estado muestra mensaje contenedor en español, **sin** `dial tcp` / transport (evidencia: `verify/out/02-router-down-friendly.png`)
+
+## Teclado
+
+- [ ] Tab recorre: skip-link → duda → micrófono (si hay) → frustración → Buscar → chips → Stage → opciones de botonera → mutación → panel dev
+- [ ] Ctrl+M inicia/cancela dictado en «Tu duda» (Chrome/Edge)
+- [ ] En botonera tipo tabs (depth/cognitive/emergency): flechas ↑/↓ o ←/→ mueven selección; Enter/Espacio activa
+- [ ] En acordeón: Enter/Espacio expande/colapsa (`aria-expanded`); se puede abrir un hijo (p. ej. Motor) sin haber activado Asientos
+- [ ] Foco siempre visible (anillo azul)
+
+## Lector de pantalla (VoiceOver / NVDA / similar)
+
+- [ ] Stage tiene `aria-live="polite"`: al pasar a espera o al cambiar el clip se anuncia el contenido nuevo sin robar foco de forma agresiva
+- [ ] La línea de estado (`role="status"`) anuncia errores y confirmaciones
+- [ ] Botonera schema expone `role="tablist"` / `role="tab"` (o botones con nombre accesible en matriz/legacy)
+- [ ] Acordeón: botón con `aria-expanded` y panel asociado vía `aria-controls`
+- [ ] Textos de UI en español (sin jerga técnica de umbral/threshold en la espera)
+
+## Visual / motion
+
+- [ ] Contraste texto/fondo razonable (AA) en Stage oscuro y botonera clara
+- [ ] Con `prefers-reduced-motion: reduce`, la barra de espera no anima (o queda estática)

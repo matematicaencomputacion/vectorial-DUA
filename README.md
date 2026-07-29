@@ -54,6 +54,8 @@ Duda → Router k-NN
 
 En un nodo interactivo, **“+ Tengo una duda diferente”** llama a `MutateInteractiveNode` y appende un botón `is_live_generated=true`.
 
+Las estaciones en vivo quedan indexadas (quien repite una duda novel vuelve a su estación en lugar de pagar una nueva), pero se acumulan una por miss. Para que no eclipsen al material curado —el que trae botonera, schemas DUA y pedagogía revisada—, un nodo live gana el matching estático solo si supera al mejor curado por más de `vector.LivePreferenceMargin` (**0.05**); ante empate o diferencia menor gana el curado. La política definitiva (TTL de nodos live, promoción manual a curado) es deuda de Ola 4.
+
 ## Ciclo de vida de estaciones pendientes
 
 Cuando el miss no puede materializar la estación al instante (RAG off/fallo), `QueryNearestNode` devuelve `LiveStationPending` con `tracking_ulid` y un **mensaje rogeriano en español** (no diagnóstico técnico). El router registra la solicitud en `StationLedger` (`in_progress` | `ready` | `failed`, TTL `AVLP_STATION_TTL`, default 24h).
@@ -78,6 +80,36 @@ Ejemplo de flujo completo:
 go run ./cmd/router
 go run ./cmd/router-client -mode poll -student demo-student
 ```
+
+## Prototipo web
+
+UI Master de laboratorio (Stage ~70% + botonera ~30%) sobre el gateway HTTP/JSON. No es producción: es fiel al contrato interactivo y al camino de estaciones pendientes.
+
+```bash
+go run ./cmd/router                 # gRPC :50051
+go run ./cmd/master-web             # http://127.0.0.1:8080  (AVLP_WEB_ADDR / AVLP_ROUTER_ADDR)
+```
+
+Flujo esperado en texto:
+
+```text
+1. Escribís una duda (o usás un chip de ejemplo) → POST /api/query
+2a. Match + has_interactive_payload → GET /api/nodes/{id}
+    Stage muestra stage_media_default; botonera renderiza
+    schema (depth|cognitive|emergency|combined), legacy y/o hierarchy
+2b. Pending → pantalla de espera con student_message rogeriano
+    poll GET /api/stations/{ulid}?student_id=… cada 2s
+    ready → live_content (Markdown simple) en el Stage
+3. Toque de botonera/subtema → POST /api/interactions/…
+4. “+ Tengo una duda diferente” → POST /api/nodes/{id}/mutate
+    el botón LIVE aparece en la botonera sin recargar la página
+```
+
+Checklist manual (teclado + lector de pantalla + voz): `cmd/master-web/MANUAL_CHECKLIST.md`.
+
+Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
+
+El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**, calibrado con hash contra `data/knowledge_base`: PostGIS on-topic ~0.33, «que es un bit» ≤0.19). Sin hits queda el camino honesto («No encontré material verificado…»). Con embedders densos (bge-m3) conviene subir el piso.
 
 ## Embeddings
 
@@ -126,8 +158,8 @@ El snapshot es versionado (`version`, `ve_dims`, `profiles`). Escritura atómica
 
 ```text
 vectorial-DUA/
-├── cmd/{router,router-client,harness}
-├── pkg/{vector,rag,livestation,dua,rogerian}
+├── cmd/{router,router-client,harness,master-web}
+├── pkg/{vector,rag,livestation,dua,rogerian,webgateway}
 ├── data/knowledge_base/
 ├── data/nodes/interactive/
 ├── proto/ + gen/
@@ -140,7 +172,9 @@ vectorial-DUA/
 │   ├── add-dua-botonera-schemas/
 │   ├── add-hierarchical-subtopic-node/
 │   ├── add-ola2-adaptive-debt/   (deuda Ola 2, saldada)
-│   └── add-ola3-station-ledger/  (Ola 3.a / C2 cerrada — tag v0.3.0-ola3a)
+│   ├── add-ola3-station-ledger/  (Ola 3.a / C2 cerrada — tag v0.3.0-ola3a)
+│   ├── add-ola4-live-node-policy/ (deuda Ola 4: TTL y promoción de nodos live)
+│   └── archive/2026-07-29-add-ola3-master-web/ (Ola 3.b / C1 — tag v0.3.1-ola3b)
 └── scripts/
 ```
 

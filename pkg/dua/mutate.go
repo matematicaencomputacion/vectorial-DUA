@@ -30,8 +30,9 @@ type MutateRequest struct {
 
 // MutateResult is the new button and updated node snapshot.
 type MutateResult struct {
-	Button InteractiveButton
-	Node   *InteractiveVideoNode
+	Button  InteractiveButton
+	Node    *InteractiveVideoNode
+	Sources []string // material que ancló el botón; no se muestra en el label
 }
 
 // Mutate retrieves RAG context and appends a live PLAY_CLIP button grounded in sources.
@@ -91,10 +92,9 @@ func (m *Mutator) Mutate(ctx context.Context, req MutateRequest) (MutateResult, 
 		return MutateResult{}, fmt.Errorf("vector_delta content projection: %w", err)
 	}
 
+	// El label es lo único que el estudiante lee: su duda, sin rutas internas.
+	// Las fuentes viajan en la metadata de la estación.
 	label := truncateLabel(req.DoubtText, 64)
-	if len(sources) > 0 {
-		label = truncateLabel(req.DoubtText, 48) + " [" + filepathBase(sources[0]) + "]"
-	}
 	mediaURL := "live://interactive/" + req.NodeID + "/" + btnID
 
 	btn := InteractiveButton{
@@ -112,7 +112,7 @@ func (m *Mutator) Mutate(ctx context.Context, req MutateRequest) (MutateResult, 
 	if err != nil {
 		return MutateResult{}, err
 	}
-	return MutateResult{Button: btn, Node: node}, nil
+	return MutateResult{Button: btn, Node: node, Sources: sources}, nil
 }
 
 func newButtonULID() (string, error) {
@@ -130,12 +130,4 @@ func truncateLabel(s string, n int) string {
 		return s
 	}
 	return string(r[:n]) + "…"
-}
-
-func filepathBase(p string) string {
-	p = strings.ReplaceAll(p, "\\", "/")
-	if i := strings.LastIndex(p, "/"); i >= 0 {
-		return p[i+1:]
-	}
-	return p
 }

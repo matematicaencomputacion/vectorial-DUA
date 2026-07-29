@@ -213,7 +213,7 @@ func (s *registeringLive) GenerateLive(ctx context.Context, req vector.LiveReque
 	}
 	emb := make([]float32, s.idx.Dims())
 	emb[0] = 1
-	node, err := s.idx.RegisterNode("Representacion", "adaptativo", "conceptual", "live://race", emb)
+	node, err := s.idx.RegisterLiveNode("Representacion", "adaptativo", "conceptual", "live://race", emb)
 	if err != nil {
 		return vector.LiveResult{}, err
 	}
