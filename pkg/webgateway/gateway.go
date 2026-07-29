@@ -45,6 +45,7 @@ func (g *Gateway) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/query", g.handleQuery)
 	mux.HandleFunc("GET /api/nodes/{id}", g.handleGetNode)
+	mux.HandleFunc("GET /api/nodes/{id}/progress", g.handleSubtopicProgress)
 	mux.HandleFunc("POST /api/nodes/{id}/mutate", g.handleMutate)
 	mux.HandleFunc("POST /api/interactions/botonera", g.handleBotonera)
 	mux.HandleFunc("POST /api/interactions/subtopic", g.handleSubtopic)
@@ -120,6 +121,24 @@ func (g *Gateway) handleGetNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res, err := g.Client.GetInteractiveNode(r.Context(), &vectorv1.NodeIdRequest{NodeId: id})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	writeProto(w, http.StatusOK, res)
+}
+
+func (g *Gateway) handleSubtopicProgress(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	studentID := r.URL.Query().Get("student_id")
+	if id == "" || studentID == "" {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "node id and student_id are required", "")
+		return
+	}
+	res, err := g.Client.GetSubtopicProgress(r.Context(), &vectorv1.SubtopicProgressQuery{
+		StudentId:    studentID,
+		ParentNodeId: id,
+	})
 	if err != nil {
 		writeGRPCError(w, err)
 		return

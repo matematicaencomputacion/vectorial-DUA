@@ -276,6 +276,50 @@ func (s *server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.Su
 	return neutralAck(), nil
 }
 
+func (s *server) GetSubtopicProgress(ctx context.Context, req *vectorv1.SubtopicProgressQuery) (*vectorv1.SubtopicProgress, error) {
+	_ = ctx
+	if req.GetStudentId() == "" || req.GetParentNodeId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "student_id and parent_node_id are required")
+	}
+	if s.interactions == nil {
+		return nil, status.Error(codes.FailedPrecondition, "subtopic interactions disabled")
+	}
+	if s.reg == nil {
+		return nil, status.Error(codes.FailedPrecondition, "interactive nodes disabled")
+	}
+
+	node, ok := s.reg.Get(req.GetParentNodeId())
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "interactive node %q not found", req.GetParentNodeId())
+	}
+	if node.Hierarchy == nil {
+		return nil, status.Errorf(codes.NotFound, "node %q has no hierarchy", req.GetParentNodeId())
+	}
+
+	opened := s.interactions.OpenedList(req.GetStudentId(), req.GetParentNodeId())
+	openedSet := make(map[string]struct{}, len(opened))
+	for _, id := range opened {
+		openedSet[id] = struct{}{}
+	}
+	progress := dua.ProgressForTree(node.Hierarchy, openedSet)
+
+	out := &vectorv1.SubtopicProgress{
+		StudentId:         req.GetStudentId(),
+		ParentNodeId:      req.GetParentNodeId(),
+		OpenedSubtopicIds: progress.OpenedSubtopicIDs,
+		TotalSubtopics:    int32(progress.TotalSubtopics),
+		RootStates:        make([]*vectorv1.RootSubtopicProgress, 0, len(progress.RootStates)),
+	}
+	for _, root := range progress.RootStates {
+		out.RootStates = append(out.RootStates, &vectorv1.RootSubtopicProgress{
+			SubtopicId: root.SubtopicID,
+			Title:      root.Title,
+			State:      string(root.State),
+		})
+	}
+	return out, nil
+}
+
 func main() {
 	addr := defaultAddr
 	if v := os.Getenv("AVLP_ROUTER_ADDR"); v != "" {
