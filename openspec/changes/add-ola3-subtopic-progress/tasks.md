@@ -6,7 +6,7 @@
 - [x] Agregar mensajes y RPC al proto; regenerar stubs Go.
 - [x] Implementar handler con validaciones y tests.
 - [x] Exponer endpoint HTTP y testear gateway.
-- [ ] Ejecutar `go test -race ./...`, publicar PR y frenar para revisión.
+- [x] Ejecutar `go test -race ./...`, publicar PR y frenar para revisión.
 
 ## PR 7.2
 
