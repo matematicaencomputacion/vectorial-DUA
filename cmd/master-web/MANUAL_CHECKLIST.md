@@ -1,6 +1,6 @@
-# Checklist manual — prototipo Master (PR 6.2)
+# Checklist manual — prototipo Master (Ola 3.c)
 
-Verificación humana (Dario / revisor). No hay tests automatizados del DOM.
+Verificación humana (Dario / revisor), complementaria a Playwright.
 
 ## Arranque
 
@@ -21,6 +21,16 @@ go run ./cmd/master-web
 - [ ] Error de API (p. ej. mutación inválida) aparece en la franja de estado con `aria-live="assertive"`
 - [ ] Label «Probá con:» + chips «Ejemplo: …»; al tocar un chip, el status indica que hay que pulsar «Buscar estación»
 
+## Progreso de subtemas (Compromiso / autorregulación)
+
+- [ ] Primera carga de «automóvil»: contador accesible «Exploraste 0 de 5 subtemas»; cada rama muestra símbolo + texto («○ Por explorar»), nunca solo color
+- [ ] Expandir Caja Central → Motor y pulsar «Abrir en Stage: Motor»: Motor pasa a «✓ Visitado», Caja Central a «◐ Exploración iniciada» y el contador a «Exploraste 1 de 5 subtemas»
+- [ ] El cambio aparece inmediatamente al tocar, sin un segundo GET de progreso; al volver a cargar el nodo, el estado se reconcilia con el router
+- [ ] El copy invita sin presionar («Te queda por explorar: …»): no hay porcentajes, barras, rachas ni llamados a completar 100%
+- [ ] Reiniciar **solo `master-web`**, conservar el router y recargar la misma pestaña: `student_id` se mantiene en `sessionStorage` y Motor sigue visitado
+- [ ] Reiniciar el router sí borra este progreso: `InteractionStore` continúa siendo en memoria en Ola 3.c
+- [ ] Panel de desarrollo: muestra por separado el payload crudo de progreso devuelto por la API y el estado local optimista
+
 ## Voz (Chrome / Edge — Web Speech API)
 
 Soportado donde exista `SpeechRecognition` / `webkitSpeechRecognition`. Si no hay API, el botón de micrófono **no aparece** (sin mensaje de error). Probado en Chrome.
@@ -38,6 +48,7 @@ Soportado donde exista `SpeechRecognition` / `webkitSpeechRecognition`. Si no ha
 - [ ] Ctrl+M inicia/cancela dictado en «Tu duda» (Chrome/Edge)
 - [ ] En botonera tipo tabs (depth/cognitive/emergency): flechas ↑/↓ o ←/→ mueven selección; Enter/Espacio activa
 - [ ] En acordeón: Enter/Espacio expande/colapsa (`aria-expanded`); se puede abrir un hijo (p. ej. Motor) sin haber activado Asientos
+- [ ] Tras abrir Motor, el foco permanece operable y el acordeón actualizado sigue recorrible por Tab
 - [ ] Foco siempre visible (anillo azul)
 
 ## Lector de pantalla (VoiceOver / NVDA / similar)
@@ -46,6 +57,7 @@ Soportado donde exista `SpeechRecognition` / `webkitSpeechRecognition`. Si no ha
 - [ ] La línea de estado (`role="status"`) anuncia errores y confirmaciones
 - [ ] Botonera schema expone `role="tablist"` / `role="tab"` (o botones con nombre accesible en matriz/legacy)
 - [ ] Acordeón: botón con `aria-expanded` y panel asociado vía `aria-controls`
+- [ ] El lector anuncia «Exploraste N de M subtemas» al cambiar y cada botón incluye «Visitado», «Exploración iniciada» o «Por explorar» en su nombre accesible
 - [ ] Textos de UI en español (sin jerga técnica de umbral/threshold en la espera)
 
 ## Visual / motion
