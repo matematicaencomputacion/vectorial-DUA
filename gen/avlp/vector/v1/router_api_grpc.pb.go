@@ -23,6 +23,7 @@ const (
 	VectorRouter_GetInteractiveNode_FullMethodName        = "/avlp.vector.v1.VectorRouter/GetInteractiveNode"
 	VectorRouter_MutateInteractiveNode_FullMethodName     = "/avlp.vector.v1.VectorRouter/MutateInteractiveNode"
 	VectorRouter_RecordSubtopicInteraction_FullMethodName = "/avlp.vector.v1.VectorRouter/RecordSubtopicInteraction"
+	VectorRouter_GetSubtopicProgress_FullMethodName       = "/avlp.vector.v1.VectorRouter/GetSubtopicProgress"
 	VectorRouter_RecordBotoneraInteraction_FullMethodName = "/avlp.vector.v1.VectorRouter/RecordBotoneraInteraction"
 	VectorRouter_GetLiveStation_FullMethodName            = "/avlp.vector.v1.VectorRouter/GetLiveStation"
 )
@@ -37,6 +38,7 @@ type VectorRouterClient interface {
 	GetInteractiveNode(ctx context.Context, in *NodeIdRequest, opts ...grpc.CallOption) (*InteractiveVideoNode, error)
 	MutateInteractiveNode(ctx context.Context, in *MutateInteractiveRequest, opts ...grpc.CallOption) (*MutateInteractiveResponse, error)
 	RecordSubtopicInteraction(ctx context.Context, in *SubtopicInteraction, opts ...grpc.CallOption) (*Ack, error)
+	GetSubtopicProgress(ctx context.Context, in *SubtopicProgressQuery, opts ...grpc.CallOption) (*SubtopicProgress, error)
 	// Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
 	// Legacy vector_delta is content-embedding space and is NEVER applied to V_e;
 	// without a client preference_delta the RPC returns Ack without Apply.
@@ -93,6 +95,16 @@ func (c *vectorRouterClient) RecordSubtopicInteraction(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *vectorRouterClient) GetSubtopicProgress(ctx context.Context, in *SubtopicProgressQuery, opts ...grpc.CallOption) (*SubtopicProgress, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubtopicProgress)
+	err := c.cc.Invoke(ctx, VectorRouter_GetSubtopicProgress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *vectorRouterClient) RecordBotoneraInteraction(ctx context.Context, in *BotoneraInteraction, opts ...grpc.CallOption) (*Ack, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Ack)
@@ -123,6 +135,7 @@ type VectorRouterServer interface {
 	GetInteractiveNode(context.Context, *NodeIdRequest) (*InteractiveVideoNode, error)
 	MutateInteractiveNode(context.Context, *MutateInteractiveRequest) (*MutateInteractiveResponse, error)
 	RecordSubtopicInteraction(context.Context, *SubtopicInteraction) (*Ack, error)
+	GetSubtopicProgress(context.Context, *SubtopicProgressQuery) (*SubtopicProgress, error)
 	// Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
 	// Legacy vector_delta is content-embedding space and is NEVER applied to V_e;
 	// without a client preference_delta the RPC returns Ack without Apply.
@@ -150,6 +163,9 @@ func (UnimplementedVectorRouterServer) MutateInteractiveNode(context.Context, *M
 }
 func (UnimplementedVectorRouterServer) RecordSubtopicInteraction(context.Context, *SubtopicInteraction) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecordSubtopicInteraction not implemented")
+}
+func (UnimplementedVectorRouterServer) GetSubtopicProgress(context.Context, *SubtopicProgressQuery) (*SubtopicProgress, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSubtopicProgress not implemented")
 }
 func (UnimplementedVectorRouterServer) RecordBotoneraInteraction(context.Context, *BotoneraInteraction) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecordBotoneraInteraction not implemented")
@@ -250,6 +266,24 @@ func _VectorRouter_RecordSubtopicInteraction_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VectorRouter_GetSubtopicProgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubtopicProgressQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VectorRouterServer).GetSubtopicProgress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VectorRouter_GetSubtopicProgress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VectorRouterServer).GetSubtopicProgress(ctx, req.(*SubtopicProgressQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _VectorRouter_RecordBotoneraInteraction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BotoneraInteraction)
 	if err := dec(in); err != nil {
@@ -308,6 +342,10 @@ var VectorRouter_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RecordSubtopicInteraction",
 			Handler:    _VectorRouter_RecordSubtopicInteraction_Handler,
+		},
+		{
+			MethodName: "GetSubtopicProgress",
+			Handler:    _VectorRouter_GetSubtopicProgress_Handler,
 		},
 		{
 			MethodName: "RecordBotoneraInteraction",
