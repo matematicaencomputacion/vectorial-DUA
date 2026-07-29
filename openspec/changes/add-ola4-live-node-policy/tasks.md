@@ -20,4 +20,4 @@
 ## 4. Verificación
 
 - [x] 4.1 Ejecutar generación de proto, formateo, build, vet y `scripts/test-clean.sh`.
-- [ ] 4.2 Publicar PR 8.5 y confirmar CI verde.
+- [x] 4.2 Publicar PR 8.5 y confirmar CI verde.
