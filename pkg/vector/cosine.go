@@ -3,7 +3,6 @@ package vector
 import (
 	"math"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -39,15 +38,7 @@ func CosineSimilarity(a, b []float32) float32 {
 // 0.85 is calibrated for hash/plumbing. Semantic embedders (e.g. bge-m3)
 // typically need a lower cutoff (~0.6 as a starting point); validate empirically.
 func EffectiveDefaultThreshold() float32 {
-	v := strings.TrimSpace(os.Getenv("AVLP_SIMILARITY_THRESHOLD"))
-	if v == "" {
-		return DefaultSimilarityThreshold
-	}
-	f, err := strconv.ParseFloat(v, 32)
-	if err != nil || f <= 0 || f > 1 {
-		return DefaultSimilarityThreshold
-	}
-	return float32(f)
+	return ResolveEffectiveThreshold(strings.TrimSpace(os.Getenv("AVLP_CONFIG_PATH"))).Value
 }
 
 // ResolveThreshold returns the query threshold when in (0, 1]; otherwise the
