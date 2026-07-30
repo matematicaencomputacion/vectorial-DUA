@@ -29,16 +29,19 @@ type InteractiveButton struct {
 
 // InteractiveVideoNode is a Stage + botonera DUA resource.
 type InteractiveVideoNode struct {
-	NodeID              string               `json:"node_id"`
-	DimensionDUA        string               `json:"dimension_dua"`
-	Titulo              string               `json:"titulo"`
-	LayoutType          LayoutType           `json:"layout_type"`
-	StageMediaDefault   string               `json:"stage_media_default"`
-	Botonera            []InteractiveButton  `json:"botonera,omitempty"`
-	Embedding           []float32            `json:"embedding,omitempty"`
-	EmbeddingDescriptor string               `json:"embedding_descriptor,omitempty"`
-	BotoneraSchema      *DUANodeBotonera     `json:"botonera_schema,omitempty"`
-	Hierarchy           *DUAHierarchicalTree `json:"hierarchy,omitempty"`
+	NodeID                   string               `json:"node_id"`
+	DimensionDUA             string               `json:"dimension_dua"`
+	Titulo                   string               `json:"titulo"`
+	LayoutType               LayoutType           `json:"layout_type"`
+	StageMediaDefault        string               `json:"stage_media_default"`
+	Botonera                 []InteractiveButton  `json:"botonera,omitempty"`
+	Embedding                []float32            `json:"embedding,omitempty"`
+	EmbeddingDescriptor      string               `json:"embedding_descriptor,omitempty"`
+	BotoneraSchema           *DUANodeBotonera     `json:"botonera_schema,omitempty"`
+	Hierarchy                *DUAHierarchicalTree `json:"hierarchy,omitempty"`
+	StageMarkdownDefault     string               `json:"stage_markdown_default,omitempty"`
+	RetrievedSources         []string             `json:"retrieved_sources,omitempty"`
+	PromotedFromTrackingULID string               `json:"promoted_from_tracking_ulid,omitempty"`
 }
 
 // Validate checks structural integrity of an interactive node.
@@ -120,6 +123,7 @@ func (n *InteractiveVideoNode) Clone() *InteractiveVideoNode {
 	out := *n
 	out.Botonera = append([]InteractiveButton(nil), n.Botonera...)
 	out.Embedding = append([]float32(nil), n.Embedding...)
+	out.RetrievedSources = append([]string(nil), n.RetrievedSources...)
 	for i := range out.Botonera {
 		out.Botonera[i].VectorDelta = append([]float32(nil), n.Botonera[i].VectorDelta...)
 	}

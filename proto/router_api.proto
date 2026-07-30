@@ -23,6 +23,9 @@ service VectorRouter {
   rpc RecordBotoneraInteraction(BotoneraInteraction) returns (Ack);
   // Poll a pending live station by tracking_ulid (student_id required for ownership check).
   rpc GetLiveStation(LiveStationQuery) returns (LiveStationStatus);
+  // Prototype trust model: knowing the tracking_ulid is the promotion capability.
+  // A multi-user deployment must require authenticated curator authorization.
+  rpc PromoteLiveStation(PromoteLiveStationRequest) returns (PromoteLiveStationResponse);
 }
 
 message NodeResponse {
@@ -56,6 +59,20 @@ message LiveStationStatus {
   string node_id = 4;
   string live_content = 5;
   repeated string retrieved_sources = 6;
+}
+
+message PromoteLiveStationRequest {
+  string tracking_ulid = 1;
+}
+
+message PromoteLiveStationResponse {
+  string tracking_ulid = 1;
+  string node_id = 2;
+  string seed_path = 3;
+  bool created = 4;
+  string live_content = 5;
+  repeated string retrieved_sources = 6;
+  string dimension_dua = 7;
 }
 
 message SubtopicProgressQuery {

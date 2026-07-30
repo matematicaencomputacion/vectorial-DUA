@@ -50,6 +50,7 @@ func (g *Gateway) Handler() http.Handler {
 	mux.HandleFunc("POST /api/interactions/botonera", g.handleBotonera)
 	mux.HandleFunc("POST /api/interactions/subtopic", g.handleSubtopic)
 	mux.HandleFunc("GET /api/stations/{tracking_ulid}", g.handleStation)
+	mux.HandleFunc("POST /api/stations/{tracking_ulid}/promote", g.handlePromoteStation)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
@@ -203,6 +204,22 @@ func (g *Gateway) handleStation(w http.ResponseWriter, r *http.Request) {
 	res, err := g.Client.GetLiveStation(r.Context(), &vectorv1.LiveStationQuery{
 		TrackingUlid: ulid,
 		StudentId:    studentID,
+	})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	writeProto(w, http.StatusOK, res)
+}
+
+func (g *Gateway) handlePromoteStation(w http.ResponseWriter, r *http.Request) {
+	ulid := r.PathValue("tracking_ulid")
+	if ulid == "" {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "tracking_ulid is required", "")
+		return
+	}
+	res, err := g.Client.PromoteLiveStation(r.Context(), &vectorv1.PromoteLiveStationRequest{
+		TrackingUlid: ulid,
 	})
 	if err != nil {
 		writeGRPCError(w, err)

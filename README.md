@@ -56,7 +56,7 @@ Duda → Router k-NN
 
 En un nodo interactivo, **“+ Tengo una duda diferente”** llama a `MutateInteractiveNode` y appende un botón `is_live_generated=true`.
 
-Las estaciones en vivo quedan indexadas (quien repite una duda novel vuelve a su estación en lugar de pagar una nueva), pero se acumulan una por miss. Para que no eclipsen al material curado —el que trae botonera, schemas DUA y pedagogía revisada—, un nodo live gana el matching estático solo si supera al mejor curado por más de `vector.LivePreferenceMargin` (**0.05**); ante empate o diferencia menor gana el curado. La política definitiva (TTL de nodos live, promoción manual a curado) es deuda de Ola 4.
+Las estaciones en vivo quedan indexadas (quien repite una duda novel vuelve a su estación en lugar de pagar una nueva). Para que no eclipsen al material curado —el que trae botonera, schemas DUA y pedagogía revisada—, un nodo live gana el matching estático solo si supera al mejor curado por más de `vector.LivePreferenceMargin` (**0.05**); ante empate o diferencia menor gana el curado. Además, los nodos live vencen perezosamente según `AVLP_LIVE_NODE_TTL` (duración Go, default **24h**); los curados no expiran.
 
 ## Ciclo de vida de estaciones pendientes
 
@@ -75,6 +75,17 @@ GetLiveStation (poll) ──► in_progress (sigue el mensaje rogeriano)
 ```
 
 Lazy retry: si el generator ya está disponible, el poll puede disparar un único `GenerateLive`. Un flag `retrying` bajo lock evita generaciones duplicadas ante polls concurrentes.
+
+Una estación `ready` que un docente revisó puede ascender a currículo persistente:
+
+```text
+PromoteLiveStation(tracking_ulid)
+POST /api/stations/{tracking_ulid}/promote
+  → seed data/nodes/interactive/promoted-{tracking_ulid}.json
+  → mismo node_id, ahora curado e idempotente
+```
+
+El seed conserva markdown, fuentes y embedding; por eso vuelve a cargarse después de reiniciar el router. El directorio respeta `AVLP_INTERACTIVE_NODES_DIR`.
 
 Ejemplo de flujo completo:
 
@@ -111,8 +122,9 @@ Checklist manual (teclado + lector de pantalla + voz): `cmd/master-web/MANUAL_CH
 
 **Trust model del prototipo.** Los RPCs y el gateway confían en el `student_id`
 declarado por el cliente — igual que `RecordSubtopicInteraction` /
-`RecordBotoneraInteraction` y el nuevo `GetSubtopicProgress`. Una fase
-multi-usuario requiere autenticación y autorización por estudiante (deuda Ola 4).
+`RecordBotoneraInteraction` y `GetSubtopicProgress`. La promoción confía en la
+posesión del `tracking_ulid`; una fase multi-usuario requiere autenticación,
+autorización por estudiante y rol docente para promover.
 
 Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
 

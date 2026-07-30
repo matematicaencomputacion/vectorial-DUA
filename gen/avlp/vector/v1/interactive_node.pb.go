@@ -1261,9 +1261,13 @@ type InteractiveVideoNode struct {
 	// Structured reusable botonera schema (preferred by Master when set).
 	BotoneraSchema *DUANodeBotonera `protobuf:"bytes,8,opt,name=botonera_schema,json=botoneraSchema,proto3" json:"botonera_schema,omitempty"`
 	// Optional fractal accordion of subtopics.
-	Hierarchy     *DUAHierarchicalTree `protobuf:"bytes,9,opt,name=hierarchy,proto3" json:"hierarchy,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Hierarchy *DUAHierarchicalTree `protobuf:"bytes,9,opt,name=hierarchy,proto3" json:"hierarchy,omitempty"`
+	// Persisted markdown for a reviewed live station promoted to curriculum.
+	StageMarkdownDefault     string   `protobuf:"bytes,10,opt,name=stage_markdown_default,json=stageMarkdownDefault,proto3" json:"stage_markdown_default,omitempty"`
+	RetrievedSources         []string `protobuf:"bytes,11,rep,name=retrieved_sources,json=retrievedSources,proto3" json:"retrieved_sources,omitempty"`
+	PromotedFromTrackingUlid string   `protobuf:"bytes,12,opt,name=promoted_from_tracking_ulid,json=promotedFromTrackingUlid,proto3" json:"promoted_from_tracking_ulid,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *InteractiveVideoNode) Reset() {
@@ -1357,6 +1361,27 @@ func (x *InteractiveVideoNode) GetHierarchy() *DUAHierarchicalTree {
 		return x.Hierarchy
 	}
 	return nil
+}
+
+func (x *InteractiveVideoNode) GetStageMarkdownDefault() string {
+	if x != nil {
+		return x.StageMarkdownDefault
+	}
+	return ""
+}
+
+func (x *InteractiveVideoNode) GetRetrievedSources() []string {
+	if x != nil {
+		return x.RetrievedSources
+	}
+	return nil
+}
+
+func (x *InteractiveVideoNode) GetPromotedFromTrackingUlid() string {
+	if x != nil {
+		return x.PromotedFromTrackingUlid
+	}
+	return ""
 }
 
 // NodeIdRequest fetches a single interactive node by id.
@@ -1638,7 +1663,7 @@ const file_interactive_node_proto_rawDesc = "" +
 	"\x11timestamp_unix_ms\x18\x06 \x01(\x03R\x0ftimestampUnixMs\"/\n" +
 	"\x03Ack\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xc3\x03\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xe5\x04\n" +
 	"\x14InteractiveVideoNode\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12#\n" +
 	"\rdimension_dua\x18\x02 \x01(\tR\fdimensionDua\x12\x16\n" +
@@ -1649,7 +1674,11 @@ const file_interactive_node_proto_rawDesc = "" +
 	"\bbotonera\x18\x06 \x03(\v2!.avlp.vector.v1.InteractiveButtonR\bbotonera\x12\x1c\n" +
 	"\tembedding\x18\a \x03(\x02R\tembedding\x12H\n" +
 	"\x0fbotonera_schema\x18\b \x01(\v2\x1f.avlp.vector.v1.DUANodeBotoneraR\x0ebotoneraSchema\x12A\n" +
-	"\thierarchy\x18\t \x01(\v2#.avlp.vector.v1.DUAHierarchicalTreeR\thierarchy\"(\n" +
+	"\thierarchy\x18\t \x01(\v2#.avlp.vector.v1.DUAHierarchicalTreeR\thierarchy\x124\n" +
+	"\x16stage_markdown_default\x18\n" +
+	" \x01(\tR\x14stageMarkdownDefault\x12+\n" +
+	"\x11retrieved_sources\x18\v \x03(\tR\x10retrievedSources\x12=\n" +
+	"\x1bpromoted_from_tracking_ulid\x18\f \x01(\tR\x18promotedFromTrackingUlid\"(\n" +
 	"\rNodeIdRequest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\"\xbc\x01\n" +
 	"\x18MutateInteractiveRequest\x12\x17\n" +

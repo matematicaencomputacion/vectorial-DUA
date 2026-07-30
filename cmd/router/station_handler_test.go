@@ -27,7 +27,12 @@ func (t *testLive) GenerateLive(ctx context.Context, req vector.LiveRequest) (ve
 	emb[0] = 1
 	return vector.LiveResult{
 		Node: vector.Node{
-			ID:           "dua::Representacion::adaptativo::conceptual::01TESTGETLIVESTATION00",
+			ID: vector.FormatNodeID(vector.NodeIDParts{
+				Dimension:  "Representacion",
+				Difficulty: "adaptativo",
+				Format:     "conceptual",
+				ULID:       req.TrackingULID,
+			}),
 			DimensionDUA: "Representacion",
 			Format:       "conceptual",
 			Embedding:    emb,
