@@ -19,6 +19,7 @@ import (
 	"github.com/vectorial-dua/avlp/pkg/dua"
 	"github.com/vectorial-dua/avlp/pkg/livestation"
 	"github.com/vectorial-dua/avlp/pkg/rag"
+	"github.com/vectorial-dua/avlp/pkg/rogerian"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
@@ -39,6 +40,16 @@ func main() {
 		log.Fatalf("embedding backend: %v", err)
 	}
 	log.Printf("embedder active: dims=%d", emb.Dims())
+
+	synthesizer, err := rogerian.NewHTTPSynthesizerFromEnv()
+	if err != nil {
+		log.Fatalf("LLM synthesizer: %v", err)
+	}
+	if synthesizer == nil {
+		log.Printf("LLM synthesizer disabled: extractive fallback active (set AVLP_LLM_URL to enable)")
+	} else {
+		log.Printf("LLM synthesizer active: model=%s", synthesizer.ModelName())
+	}
 
 	index := vector.NewIndexWithDims(emb.Dims())
 	if err := vector.SeedDemoNodes(index, emb); err != nil {
@@ -87,8 +98,10 @@ func main() {
 		} else {
 			log.Printf("RAG knowledge base indexed: %d chunks from %s", n, kb)
 			gen := &livestation.Generator{
-				Retriever: rag.NewRetriever(store, emb, 3),
-				Nodes:     index,
+				Retriever:   rag.NewRetriever(store, emb, 3),
+				Nodes:       index,
+				Synthesizer: synthesizer,
+				Logf:        log.Printf,
 			}
 			router.Live = gen
 		}

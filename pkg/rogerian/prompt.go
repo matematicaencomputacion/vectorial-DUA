@@ -63,7 +63,8 @@ func (PromptBuilder) Build(in BuildInput) PromptBundle {
 	system := strings.Join([]string{
 		"Eres un facilitador rogeriano de aprendizaje (Carl Rogers + DUA).",
 		"NO juzgues el punto de partida del estudiante.",
-		"Usa ÚNICAMENTE el contexto citado; si falta información, dilo con honestidad.",
+		"Usa ÚNICAMENTE el contexto citado; no uses conocimiento previo ni completes vacíos.",
+		"Si el contexto falta o no alcanza, dilo con honestidad.",
 		fmt.Sprintf("Dimensión DUA: %s. Formato preferido: %s.", dim, format),
 		fmt.Sprintf("Tono: %s — %s", hint.Tone, hint.Message),
 	}, " ")
@@ -81,6 +82,7 @@ func (PromptBuilder) Build(in BuildInput) PromptBundle {
 2. Explica el concepto con el formato DUA pedido.
 3. Cita las fuentes [#] usadas.
 4. Propón un micro-ejercicio seguro (sin presión).
+5. No agregues una sección Fuentes; la aplicación la construye.
 `, system, strings.TrimSpace(in.DoubtText), contextBlock)
 
 	return PromptBundle{

@@ -25,11 +25,13 @@ type Result struct {
 
 // Generator turns a routing miss into a persisted live node via RAG + Rogers.
 type Generator struct {
-	Retriever *rag.Retriever
-	Nodes     *vector.Index
-	Builder   rogerian.PromptBuilder
-	Tel       *telemetry.Collector
-	TopK      int
+	Retriever   *rag.Retriever
+	Nodes       *vector.Index
+	Builder     rogerian.PromptBuilder
+	Synthesizer rogerian.Synthesizer
+	Tel         *telemetry.Collector
+	Logf        func(format string, args ...any)
+	TopK        int
 }
 
 // Request is the miss-path input.
@@ -109,8 +111,16 @@ func (g *Generator) Generate(ctx context.Context, req Request) (Result, error) {
 		Chunks:      hits,
 	})
 
-	content := synthesize(prompt, hits)
 	sources := rag.Sources(hits)
+	content, model, synthesisErr := g.synthesize(ctx, prompt, hits)
+	if synthesisErr != nil {
+		g.logf("LLM synthesis failed; using extractive fallback: %v", synthesisErr)
+		if g.Tel != nil {
+			g.Tel.Inc("livestation_synthesis_fallback_total", 1)
+		}
+	} else if g.Synthesizer == nil {
+		g.logf("LLM synthesizer unavailable; using extractive fallback")
+	}
 
 	emb := append([]float32(nil), req.QueryEmbedding...)
 	if len(emb) == 0 {
@@ -131,12 +141,13 @@ func (g *Generator) Generate(ctx context.Context, req Request) (Result, error) {
 
 	if g.Tel != nil {
 		g.Tel.TraceLLM(telemetry.LLMSpan{
-			Model:            "template-livestation",
+			Model:            model,
 			Purpose:          "live_station",
 			PromptTokens:     len(strings.Fields(prompt.FullPrompt)),
 			CompletionTokens: len(strings.Fields(content)),
 			LatencyMS:        time.Since(start).Milliseconds(),
-			Success:          true,
+			Success:          synthesisErr == nil,
+			ErrorMessage:     errorMessage(synthesisErr),
 			ParentRunID:      req.TrackingULID,
 		})
 		g.Tel.Inc("livestation_generated_total", 1)
@@ -152,7 +163,23 @@ func (g *Generator) Generate(ctx context.Context, req Request) (Result, error) {
 	}, nil
 }
 
-func synthesize(p rogerian.PromptBundle, hits []rag.ScoredChunk) string {
+func (g *Generator) synthesize(
+	ctx context.Context,
+	p rogerian.PromptBundle,
+	hits []rag.ScoredChunk,
+) (content, model string, synthesisErr error) {
+	model = "extractive-fallback"
+	if g.Synthesizer != nil {
+		generated, err := g.Synthesizer.Synthesize(ctx, p)
+		if err == nil {
+			return appendSources(generated, p.Sources), synthesizerModel(g.Synthesizer), nil
+		}
+		synthesisErr = err
+	}
+	return appendSources(synthesizeExtractive(p, hits), p.Sources), model, synthesisErr
+}
+
+func synthesizeExtractive(p rogerian.PromptBundle, hits []rag.ScoredChunk) string {
 	var b strings.Builder
 	b.WriteString("# Estación en vivo\n\n")
 	b.WriteString("## Contención\n")
@@ -178,11 +205,57 @@ func synthesize(p rogerian.PromptBundle, hits []rag.ScoredChunk) string {
 	default:
 		b.WriteString("Explica con tus palabras (2–3 frases) la idea principal de la fuente [1], sin agregar datos externos.\n")
 	}
-	b.WriteString("\n## Fuentes\n")
-	for i, s := range p.Sources {
-		b.WriteString(fmt.Sprintf("- [%d] %s\n", i+1, s))
+	return b.String()
+}
+
+func appendSources(content string, sources []string) string {
+	var b strings.Builder
+	b.WriteString(stripGeneratedSources(content))
+	b.WriteString("\n\n## Fuentes\n")
+	if len(sources) == 0 {
+		b.WriteString("- Sin fuentes recuperadas.\n")
+		return b.String()
+	}
+	for i, source := range sources {
+		b.WriteString(fmt.Sprintf("- [%d] %s\n", i+1, source))
 	}
 	return b.String()
+}
+
+func stripGeneratedSources(content string) string {
+	lines := strings.Split(strings.TrimSpace(content), "\n")
+	for i, line := range lines {
+		heading := strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), "#"))
+		if strings.EqualFold(heading, "Fuentes") {
+			return strings.TrimSpace(strings.Join(lines[:i], "\n"))
+		}
+	}
+	return strings.TrimSpace(content)
+}
+
+func synthesizerModel(synth rogerian.Synthesizer) string {
+	type modelNamer interface {
+		ModelName() string
+	}
+	if named, ok := synth.(modelNamer); ok {
+		if model := strings.TrimSpace(named.ModelName()); model != "" {
+			return model
+		}
+	}
+	return "configured-synthesizer"
+}
+
+func errorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
+func (g *Generator) logf(format string, args ...any) {
+	if g.Logf != nil {
+		g.Logf(format, args...)
+	}
 }
 
 // HintLine maps tone to a short facilitator line.
