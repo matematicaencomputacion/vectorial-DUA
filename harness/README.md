@@ -29,6 +29,12 @@ Reportes en `harness/out/`.
 --apply` persiste el umbral estático en `data/avlp.json`; `-config` permite
 elegir otra ruta.
 
+Faithfulness expone dos modos en `harness/evals`: `extractive` exige que los
+chunks aparezcan en la respuesta; `generative` usa precisión de términos
+grounded, cobertura de términos clave y atribución de fuente. El segundo es un
+guardrail léxico offline: no detecta contradicciones y puede penalizar
+paráfrasis válidas, por lo que no reemplaza revisión humana.
+
 ## OpenSpec
 
 Change: `openspec/changes/init-harness-and-vector-router/`

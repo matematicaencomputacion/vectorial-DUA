@@ -157,6 +157,10 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_EMBEDDING_API_KEY` | vacío | Bearer opcional |
 | `AVLP_EMBEDDING_DIMS` | descubrimiento | Dims fijas del cliente HTTP |
 | `AVLP_EMBEDDING_TIMEOUT` | `10s` | Timeout HTTP del embedder |
+| `AVLP_LLM_URL` | vacío → fallback extractivo | Base Chat Completions compatible (`…/v1`) |
+| `AVLP_LLM_MODEL` | `qwen3:4b-instruct` | Modelo de síntesis generativa |
+| `AVLP_LLM_API_KEY` | vacío | Bearer opcional del backend LLM |
+| `AVLP_LLM_TIMEOUT` | `30s` | Timeout total de síntesis |
 | `AVLP_RAG_MIN_SIMILARITY` | `0.30` | Piso coseno de hits RAG |
 | `AVLP_RAG_ENABLED` | `true` | Materializar estaciones live vía RAG |
 | `AVLP_KB_ROOT` | `data/knowledge_base` | Raíz de la base documental |
@@ -169,6 +173,32 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_WEB_ADDR` | `127.0.0.1:8080` | Bind HTTP de `master-web` |
 
 **Precedencia del umbral estático:** request gRPC válido > `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` / `data/avlp.json`) > `0.85`. El router loguea valor y origen al arrancar.
+
+## Síntesis LLM local (Ollama)
+
+Sin `AVLP_LLM_URL`, las estaciones usan el renderer extractivo y el router lo
+informa en logs. Para explicaciones generativas 100% locales:
+
+```bash
+ollama pull qwen3:4b-instruct
+
+export AVLP_LLM_URL=http://localhost:11434/v1
+export AVLP_LLM_MODEL=qwen3:4b-instruct
+go run ./cmd/router
+
+# Verificación opcional (fuera de CI; TestMain limpia AVLP_*):
+RUN_LLM_INTEGRATION=1 go test ./pkg/livestation -run GenerateWithConfiguredLLMIntegration -v
+```
+
+Recomendación base: [`qwen3:4b-instruct`](https://ollama.com/library/qwen3/tags)
+por su soporte multilingüe/español y tamaño cuantizado de ~2.5 GB, razonable
+para un Mac mini con memoria limitada. Con 16 GB o más, `qwen3:8b` (~5.2 GB Q4)
+mejora calidad a cambio de latencia y memoria.
+
+El modelo recibe el `FullPrompt` grounded (contexto RAG + tono rogeriano +
+formato DUA). Debe usar únicamente ese contexto; la aplicación agrega `Fuentes`
+al final y, ante timeout/error, registra la causa y vuelve explícitamente al
+modo extractivo. La revisión docente sigue siendo obligatoria antes de promover.
 
 ## Embeddings
 
