@@ -59,10 +59,7 @@ func TestRetrieveMinSimilarityDropsOffTopic(t *testing.T) {
 	}
 
 	ret := rag.NewRetriever(store, emb, 5)
-	// The chunk simmatrix shows overlap between the weakest on-topic PostGIS
-	// case and this off-topic control. This explicit stricter floor verifies
-	// filtering without pretending one hash threshold separates every case.
-	ret.MinSimilarity = 0.47
+	ret.MinSimilarity = rag.DefaultMinSimilarity
 
 	off, err := ret.RetrieveText(context.Background(), "que es un bit")
 	if err != nil {

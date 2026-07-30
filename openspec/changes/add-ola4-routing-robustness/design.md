@@ -47,6 +47,11 @@ consecutivas iguales. Así todos los productores comparten la regla, incluyendo
 ingesta RAG y generación live. `golang.org/x/text/unicode/norm` evita tablas
 manuales incompletas.
 
+El embedder hash filtra además palabras funcionales españolas frecuentes
+después de normalizar. Sin este paso, quitar la tilde de «qué» elevaba
+artificialmente la similitud del control off-topic; la matriz demuestra que el
+filtro restaura una separación positiva sin tocar el embedder HTTP.
+
 El typo no fonético `escopes` se registra además como lenguaje observado en el
 descriptor del seed de Variables y Scope; no se introduce un corrector general.
 
@@ -67,8 +72,8 @@ disimula ni se aplica automáticamente.
   simétricamente y se cubre con goldens; un embedder semántico atenúa el riesgo.
 - **`--apply` puede persistir una sugerencia con warning** → el warning queda
   visible en consola y reporte; el operador conserva el acto explícito.
-- **Hash no separa todo el corpus RAG con un piso único** → la matriz documenta
-  el solapamiento; no se eleva el default perdiendo PostGIS.
+- **Las stopwords hash dependen del idioma** → la lista es pequeña, explícita y
+  exclusiva del stub offline; los embedders semánticos reciben el texto normalizado completo.
 - **Config corrupta** → fallback no fatal a default con origen registrado.
 
 ## Migration Plan

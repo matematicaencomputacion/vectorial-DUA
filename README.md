@@ -128,7 +128,7 @@ autorización por estudiante y rol docente para promover.
 
 Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
 
-El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**). La simmatrix query×chunk documenta el compromiso de cada embedder: con hash, el caso PostGIS más débil (~0.34) y el control off-topic «qué es un bit» (~0.36) se superponen, por lo que no existe un único piso que separe ambos sin perder recall. Sin hits queda el camino honesto («No encontré material verificado…»); con embedders densos el piso debe recalibrarse con datos.
+El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**). La simmatrix query×chunk documenta el compromiso de cada embedder: con hash normalizado, el caso on-topic más débil queda ~0.36 y el control off-topic «qué es un bit» ~0.24 (piso sugerido ~0.30). Sin hits queda el camino honesto («No encontré material verificado…»); con embedders densos el piso debe recalibrarse con datos.
 
 ## Embeddings
 
@@ -164,7 +164,7 @@ go run ./cmd/harness -suite evals -embedder env
 
 `calibrate` sugiere umbral = punto medio entre la peor similitud correcta y la mejor incorrecta (margen a cada lado; aviso si margen &lt; 0.05). `--apply` lo escribe atómicamente en `data/avlp.json` (o `-config <ruta>`). Al arrancar, el router registra el valor y origen efectivos con precedencia `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` o la ruta default) > `0.85`. Un umbral válido enviado en el request conserva máxima prioridad. El índice usa las dims del embedder activo. Evals CI usan hash.
 
-Antes de embeber, tanto queries como descriptores de seeds y chunks pasan por la misma normalización: minúsculas, eliminación de diacríticos y colapso de letras consecutivas repetidas. Esto mantiene simétrico el espacio de búsqueda; el caso real «variables y escopes» forma parte de la matriz y de los tests de ruteo/RAG.
+Antes de embeber, tanto queries como descriptores de seeds y chunks pasan por la misma normalización: minúsculas, eliminación de diacríticos y colapso de letras consecutivas repetidas. El embedder hash también descarta palabras funcionales frecuentes para que no inflen similitudes off-topic. Esto mantiene simétrico el espacio de búsqueda; el caso real «variables y escopes» forma parte de la matriz y de los tests de ruteo/RAG.
 
 ## Perfiles del estudiante ($V_e$)
 
