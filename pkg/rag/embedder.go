@@ -43,7 +43,7 @@ func (h *HashEmbedder) Dims() int { return h.dims }
 func (h *HashEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
 	_ = ctx
 	vec := make([]float32, h.dims)
-	tokens := Tokenize(text)
+	tokens := Tokenize(NormalizeForEmbed(text))
 	if len(tokens) == 0 {
 		tokens = []string{"empty"}
 	}

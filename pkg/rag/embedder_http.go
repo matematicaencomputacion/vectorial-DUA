@@ -141,7 +141,7 @@ func (h *HTTPEmbedder) Embed(ctx context.Context, text string) ([]float32, error
 	if h == nil {
 		return nil, fmt.Errorf("HTTPEmbedder is nil")
 	}
-	text = strings.TrimSpace(text)
+	text = NormalizeForEmbed(text)
 	if text == "" {
 		text = " "
 	}

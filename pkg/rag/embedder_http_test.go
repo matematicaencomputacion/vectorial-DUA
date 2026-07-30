@@ -56,7 +56,7 @@ func TestHTTPEmbedderSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vec, err := emb.Embed(context.Background(), "hola mundo")
+	vec, err := emb.Embed(context.Background(), "  HÓÓLA MUNDO  ")
 	if err != nil {
 		t.Fatal(err)
 	}
