@@ -191,12 +191,22 @@ func TestGenerateLogsAndFallsBackWhenSynthesizerFails(t *testing.T) {
 }
 
 func TestGenerateWithConfiguredLLMIntegration(t *testing.T) {
+	// TestMain clears AVLP_* for hermetic CI; opt in with a non-AVLP flag.
+	if os.Getenv("RUN_LLM_INTEGRATION") == "" {
+		t.Skip("set RUN_LLM_INTEGRATION=1 to exercise a local Chat Completions backend")
+	}
 	if os.Getenv("AVLP_LLM_URL") == "" {
-		t.Skip("set AVLP_LLM_URL to run the local LLM integration")
+		t.Setenv("AVLP_LLM_URL", "http://localhost:11434/v1")
+	}
+	if os.Getenv("AVLP_LLM_MODEL") == "" {
+		t.Setenv("AVLP_LLM_MODEL", "qwen3:4b-instruct")
 	}
 	synthesizer, err := rogerian.NewHTTPSynthesizerFromEnv()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if synthesizer == nil {
+		t.Fatal("expected configured synthesizer")
 	}
 	_, file, _, _ := runtime.Caller(0)
 	kb := filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "data", "knowledge_base"))

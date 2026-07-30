@@ -185,6 +185,9 @@ ollama pull qwen3:4b-instruct
 export AVLP_LLM_URL=http://localhost:11434/v1
 export AVLP_LLM_MODEL=qwen3:4b-instruct
 go run ./cmd/router
+
+# Verificación opcional (fuera de CI; TestMain limpia AVLP_*):
+RUN_LLM_INTEGRATION=1 go test ./pkg/livestation -run GenerateWithConfiguredLLMIntegration -v
 ```
 
 Recomendación base: [`qwen3:4b-instruct`](https://ollama.com/library/qwen3/tags)
