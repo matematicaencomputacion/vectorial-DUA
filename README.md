@@ -130,19 +130,49 @@ Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, apar
 
 El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**). La simmatrix query×chunk documenta el compromiso de cada embedder: con hash normalizado, el caso on-topic más débil queda ~0.36 y el control off-topic «qué es un bit» ~0.24 (piso sugerido ~0.30). Sin hits queda el camino honesto («No encontré material verificado…»); con embedders densos el piso debe recalibrarse con datos.
 
+## Ciclo docente
+
+Cuando una estación live sale bien, el docente puede adoptarla como currículo:
+
+```text
+generar (miss → estación live) → revisar (contenido + fuentes) → promover
+```
+
+```bash
+# La estación quedó ready (poll o UI). Promoción:
+curl -X POST http://127.0.0.1:8080/api/stations/{tracking_ulid}/promote
+# → seed data/nodes/interactive/promoted-{tracking_ulid}.json (idempotente)
+```
+
+El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado y sobrevive reinicios. TTL live (`AVLP_LIVE_NODE_TTL`) no afecta a los promovidos.
+
+## Configuración (`AVLP_*`)
+
+| Variable | Default | Rol |
+|----------|---------|-----|
+| `AVLP_SIMILARITY_THRESHOLD` | — (ver abajo) | Override del umbral coseno estático (0–1] |
+| `AVLP_CONFIG_PATH` | `data/avlp.json` en el router | Archivo JSON de umbral (`calibrate --apply`) |
+| `AVLP_EMBEDDING_URL` | vacío → hash offline | Base OpenAI-compatible (`…/v1`) |
+| `AVLP_EMBEDDING_MODEL` | `text-embedding-3-small` | Modelo remoto |
+| `AVLP_EMBEDDING_API_KEY` | vacío | Bearer opcional |
+| `AVLP_EMBEDDING_DIMS` | descubrimiento | Dims fijas del cliente HTTP |
+| `AVLP_EMBEDDING_TIMEOUT` | `10s` | Timeout HTTP del embedder |
+| `AVLP_RAG_MIN_SIMILARITY` | `0.30` | Piso coseno de hits RAG |
+| `AVLP_RAG_ENABLED` | `true` | Materializar estaciones live vía RAG |
+| `AVLP_KB_ROOT` | `data/knowledge_base` | Raíz de la base documental |
+| `AVLP_STATION_TTL` | `24h` | TTL del ledger de estaciones pendientes |
+| `AVLP_LIVE_NODE_TTL` | `24h` | TTL de nodos live en el índice k-NN |
+| `AVLP_INTERACTIVE_NODES` | `true` | Carga de seeds Stage/botonera |
+| `AVLP_INTERACTIVE_NODES_DIR` | `data/nodes/interactive` | Directorio de seeds (incluye promovidos) |
+| `AVLP_PROFILE_STORE_PATH` | vacío → memoria | Snapshot JSON de perfiles $V_e$ |
+| `AVLP_ROUTER_ADDR` | `:50051` | Bind gRPC del router / dial del gateway |
+| `AVLP_WEB_ADDR` | `127.0.0.1:8080` | Bind HTTP de `master-web` |
+
+**Precedencia del umbral estático:** request gRPC válido > `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` / `data/avlp.json`) > `0.85`. El router loguea valor y origen al arrancar.
+
 ## Embeddings
 
 Por defecto el router y el harness usan `HashEmbedder` offline (64 dims, léxico). Con URL remota se activa un cliente HTTP OpenAI-compatible (`POST …/embeddings`) sin fallback silencioso a hash.
-
-| Variable | Rol |
-|----------|-----|
-| `AVLP_EMBEDDING_URL` | Base del endpoint (p. ej. `http://localhost:11434/v1`); si está vacía → modo offline |
-| `AVLP_EMBEDDING_MODEL` | Modelo (default `text-embedding-3-small`) |
-| `AVLP_EMBEDDING_API_KEY` | Bearer opcional |
-| `AVLP_EMBEDDING_DIMS` | Dims fijas; si se omite, se descubren en el primer call |
-| `AVLP_EMBEDDING_TIMEOUT` | Timeout HTTP (default `10s`) |
-| `AVLP_SIMILARITY_THRESHOLD` | Umbral coseno (0–1) cuando el request no trae umbral; default `0.85` |
-| `AVLP_CONFIG_PATH` | Archivo JSON de umbral; el router usa `data/avlp.json` si se omite |
 
 `0.85` está calibrado para hash/plumbing. Con **bge-m3** (Ollama, 1024 dims) la calibración con `simmatrix` cerró en umbral **`0.55`**:
 
@@ -162,44 +192,36 @@ go run ./cmd/harness -suite calibrate -embedder env --apply
 go run ./cmd/harness -suite evals -embedder env
 ```
 
-`calibrate` sugiere umbral = punto medio entre la peor similitud correcta y la mejor incorrecta (margen a cada lado; aviso si margen &lt; 0.05). `--apply` lo escribe atómicamente en `data/avlp.json` (o `-config <ruta>`). Al arrancar, el router registra el valor y origen efectivos con precedencia `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` o la ruta default) > `0.85`. Un umbral válido enviado en el request conserva máxima prioridad. El índice usa las dims del embedder activo. Evals CI usan hash.
+`calibrate` sugiere umbral = punto medio entre la peor similitud correcta y la mejor incorrecta (margen a cada lado; aviso si margen &lt; 0.05). `--apply` lo escribe atómicamente en `data/avlp.json` (o `-config <ruta>`).
 
 Antes de embeber, tanto queries como descriptores de seeds y chunks pasan por la misma normalización: minúsculas, eliminación de diacríticos y colapso de letras consecutivas repetidas. El embedder hash también descarta palabras funcionales frecuentes para que no inflen similitudes off-topic. Esto mantiene simétrico el espacio de búsqueda; el caso real «variables y escopes» forma parte de la matriz y de los tests de ruteo/RAG.
 
 ## Perfiles del estudiante ($V_e$)
 
-Por defecto el router guarda $V_e$ en memoria. Para persistir entre reinicios:
-
-| Variable | Rol |
-|----------|-----|
-| `AVLP_PROFILE_STORE_PATH` | Ruta al snapshot JSON (p. ej. `data/profiles.json`); vacía → in-memory |
-
-El snapshot es versionado (`version`, `ve_dims`, `profiles`). Escritura atómica con flush debounced (~1s); `Close()` al shutdown hace flush final. Misismatch de `ve_dims` o JSON corrupto se descartan con log (arranque vacío, sin crash).
+Por defecto el router guarda $V_e$ en memoria. Con `AVLP_PROFILE_STORE_PATH` (p. ej. `data/profiles.json`) el snapshot es versionado (`version`, `ve_dims`, `profiles`), con escritura atómica y flush debounced (~1s); `Close()` al shutdown hace flush final. Misismatch de `ve_dims` o JSON corrupto se descartan con log (arranque vacío, sin crash).
 
 ## Árbol del repositorio
 
 ```text
 vectorial-DUA/
 ├── cmd/{router,router-client,harness,master-web}
+├── internal/{routerserver,testenv}
 ├── pkg/{vector,rag,livestation,dua,rogerian,webgateway}
 ├── data/knowledge_base/
 ├── data/nodes/interactive/
 ├── proto/ + gen/
-├── harness/
-├── openspec/changes/
-│   ├── init-adaptive-vector-router/
-│   ├── init-harness-and-vector-router/
-│   ├── add-rag-knowledge-retriever/
-│   ├── add-interactive-video-node/
-│   ├── add-dua-botonera-schemas/
-│   ├── add-hierarchical-subtopic-node/
-│   ├── add-ola2-adaptive-debt/   (deuda Ola 2, saldada)
-│   ├── add-ola3-station-ledger/  (Ola 3.a / C2 cerrada — tag v0.3.0-ola3a)
-│   ├── add-ola4-live-node-policy/ (deuda Ola 4: TTL y promoción de nodos live)
-│   ├── add-ola4-quality-audit/ (Ola 4.b: auditoría thermo-nuclear — solo plan)
-│   ├── archive/2026-07-29-add-ola3-master-web/ (Ola 3.b / C1 — tag v0.3.1-ola3b)
-│   └── archive/2026-07-29-add-ola3-subtopic-progress/ (Ola 3.c / C4 — tag v0.3.2-ola3c)
-└── scripts/
+├── harness/{evals,sandbox,load,telemetry}
+├── .github/workflows/ci.yml
+├── scripts/{test-clean.sh,gen-proto.sh}
+└── openspec/
+    ├── specs/{routing,routing-robustness,rag,interactive_node,
+    │         live-node-lifecycle,harness}/
+    └── changes/archive/
+        ├── 2026-07-29-add-ola3-master-web/          (v0.3.1-ola3b)
+        ├── 2026-07-29-add-ola3-subtopic-progress/   (v0.3.2-ola3c)
+        ├── 2026-07-30-add-ola4-quality-audit/       (Ola 4.b)
+        ├── 2026-07-30-add-ola4-live-node-policy/    (Ola 4.c)
+        └── 2026-07-30-add-ola4-routing-robustness/  (Ola 4.d — tag v0.4.0)
 ```
 
 ## Guía de ejecución
