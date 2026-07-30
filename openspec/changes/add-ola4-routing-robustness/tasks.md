@@ -19,5 +19,5 @@
 ## 4. Documentación y cierre
 
 - [x] 4.1 Documentar flags, precedencia, normalización y lectura del solapamiento hash
-- [ ] 4.2 Ejecutar gofmt, build, vet, OpenSpec estricto y `scripts/test-clean.sh`
+- [x] 4.2 Ejecutar gofmt, build, vet, OpenSpec estricto y `scripts/test-clean.sh`
 - [ ] 4.3 Publicar PR 8.6 y confirmar CI verde
