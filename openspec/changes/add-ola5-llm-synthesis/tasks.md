@@ -21,6 +21,6 @@
 ## 4. Configuración y verificación
 
 - [x] 4.1 Actualizar tabla `AVLP_*` y setup Ollama con recomendación de modelo
-- [ ] 4.2 Validar OpenSpec, gofmt, build, vet y `scripts/test-clean.sh`
-- [ ] 4.3 Verificar localmente síntesis real con Ollama sin convertirla en requisito CI
+- [x] 4.2 Validar OpenSpec, gofmt, build, vet y `scripts/test-clean.sh`
+- [x] 4.3 Verificar localmente síntesis real con Ollama sin convertirla en requisito CI
 - [ ] 4.4 Publicar PR 9.1 y confirmar CI verde
