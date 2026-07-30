@@ -29,6 +29,15 @@ type HashEmbedder struct {
 	dims int
 }
 
+var hashStopwords = map[string]struct{}{
+	"al": {}, "como": {}, "con": {}, "de": {}, "del": {}, "el": {}, "en": {},
+	"es": {}, "esa": {}, "ese": {}, "esta": {}, "este": {}, "la": {}, "las": {},
+	"le": {}, "lo": {}, "los": {}, "me": {}, "mi": {}, "mis": {}, "ni": {},
+	"no": {}, "o": {}, "para": {}, "por": {}, "que": {}, "se": {}, "sin": {},
+	"su": {}, "sus": {}, "te": {}, "tu": {}, "tus": {}, "un": {}, "una": {},
+	"unos": {}, "unas": {}, "y": {},
+}
+
 // NewHashEmbedder returns a HashEmbedder with the given dimensionality.
 func NewHashEmbedder(dims int) *HashEmbedder {
 	if dims <= 0 {
@@ -43,7 +52,7 @@ func (h *HashEmbedder) Dims() int { return h.dims }
 func (h *HashEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
 	_ = ctx
 	vec := make([]float32, h.dims)
-	tokens := Tokenize(text)
+	tokens := hashEmbeddingTokens(text)
 	if len(tokens) == 0 {
 		tokens = []string{"empty"}
 	}
@@ -60,6 +69,17 @@ func (h *HashEmbedder) Embed(ctx context.Context, text string) ([]float32, error
 	}
 	normalize(vec)
 	return vec, nil
+}
+
+func hashEmbeddingTokens(text string) []string {
+	tokens := Tokenize(NormalizeForEmbed(text))
+	filtered := tokens[:0]
+	for _, token := range tokens {
+		if _, stopword := hashStopwords[token]; !stopword {
+			filtered = append(filtered, token)
+		}
+	}
+	return filtered
 }
 
 func fnv64(s string) uint64 {

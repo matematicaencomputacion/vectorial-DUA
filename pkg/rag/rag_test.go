@@ -67,7 +67,7 @@ func TestRetrieveMinSimilarityDropsOffTopic(t *testing.T) {
 	}
 	if len(off) != 0 {
 		t.Fatalf("off-topic should yield zero hits above floor %.2f, got %d: %+v",
-			rag.DefaultMinSimilarity, len(off), rag.Sources(off))
+			ret.MinSimilarity, len(off), rag.Sources(off))
 	}
 
 	on, err := ret.RetrieveText(context.Background(), "variables de entorno archivo .env secretos dotenv Henry")
@@ -82,6 +82,27 @@ func TestRetrieveMinSimilarityDropsOffTopic(t *testing.T) {
 			t.Fatalf("hit below floor: sim=%.4f source=%s", h.Similarity, h.Chunk.Source)
 		}
 	}
+}
+
+func TestRetrieveVariablesYEscopesHitsEnvReference(t *testing.T) {
+	store := rag.NewStore()
+	emb := rag.NewHashEmbedder(64)
+	if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{
+		Root:     kbRoot(t),
+		Embedder: emb,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	hits, err := rag.NewRetriever(store, emb, 3).RetrieveText(context.Background(), "variables y escopes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, hit := range hits {
+		if filepath.Base(hit.Chunk.Source) == "env-variables.md" {
+			return
+		}
+	}
+	t.Fatalf("expected env-variables reference, got %+v", rag.Sources(hits))
 }
 
 func TestHashEmbedderDeterministic(t *testing.T) {

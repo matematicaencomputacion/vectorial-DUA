@@ -22,12 +22,15 @@ import (
 func main() {
 	suite := flag.String("suite", "evals", "evals | simmatrix | calibrate | sandbox | load | all")
 	casesPath := flag.String("cases", "harness/evals/cases/routing_golden.json", "golden evals dataset")
+	ragCasesPath := flag.String("rag-cases", "harness/evals/cases/rag_simmatrix.json", "RAG simmatrix calibration cases")
 	outDir := flag.String("out", "harness/out", "output directory for reports")
 	addr := flag.String("addr", "127.0.0.1:50051", "router address for load suite")
 	concurrency := flag.Int("c", 32, "load concurrency")
 	requests := flag.Int("n", 500, "load total requests")
 	mode := flag.String("mode", "match", "load mode: match | miss")
 	embedderMode := flag.String("embedder", "hash", "evals/simmatrix embedder: hash (CI default) | env (AVLP_EMBEDDING_URL)")
+	applyCalibration := flag.Bool("apply", false, "write calibrated threshold to runtime config (calibrate only)")
+	configPath := flag.String("config", vector.DefaultConfigPath, "runtime config written by calibrate --apply")
 	flag.Parse()
 
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
@@ -110,6 +113,34 @@ func main() {
 		}
 		fmt.Print(evals.FormatSimMatrixTable(report))
 		fmt.Printf("simmatrix → %s\n", path)
+
+		ragCases, err := evals.LoadChunkSimCases(*ragCasesPath)
+		if err != nil {
+			log.Fatalf("load RAG simmatrix cases: %v", err)
+		}
+		store := rag.NewStore()
+		if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{
+			Root:     "data/knowledge_base",
+			Embedder: emb,
+		}); err != nil {
+			log.Fatalf("RAG simmatrix ingest: %v", err)
+		}
+		chunkReport, err := evals.BuildChunkSimMatrix(
+			context.Background(),
+			ragCases,
+			store,
+			emb,
+			*embedderMode,
+		)
+		if err != nil {
+			log.Fatalf("RAG simmatrix: %v", err)
+		}
+		chunkPath := filepath.Join(*outDir, "simmatrix_rag.json")
+		if err := evals.WriteChunkSimMatrixJSON(chunkPath, chunkReport); err != nil {
+			log.Fatalf("write RAG simmatrix: %v", err)
+		}
+		fmt.Print(evals.FormatChunkSimMatrixTable(chunkReport))
+		fmt.Printf("simmatrix RAG → %s\n", chunkPath)
 	}
 
 	runCalibrate := func() {
@@ -138,6 +169,12 @@ func main() {
 		}
 		fmt.Print(evals.FormatCalibrationReport(cal))
 		fmt.Printf("calibration → %s\n", path)
+		if *applyCalibration {
+			if err := vector.WriteThresholdConfig(*configPath, cal.SuggestedThreshold); err != nil {
+				log.Fatalf("apply calibration: %v", err)
+			}
+			fmt.Printf("applied threshold=%.3f → %s\n", cal.SuggestedThreshold, *configPath)
+		}
 	}
 
 	runSandbox := func() {

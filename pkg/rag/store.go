@@ -42,6 +42,19 @@ func (s *Store) Len() int {
 	return len(s.chunks)
 }
 
+// Chunks returns a deep snapshot in insertion order.
+func (s *Store) Chunks() []Chunk {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]Chunk, 0, len(s.order))
+	for _, id := range s.order {
+		chunk := s.chunks[id]
+		chunk.Embedding = append([]float32(nil), chunk.Embedding...)
+		out = append(out, chunk)
+	}
+	return out
+}
+
 // Retrieve returns the top-k chunks by cosine similarity to query.
 func (s *Store) Retrieve(query []float32, k int) []ScoredChunk {
 	if k <= 0 {

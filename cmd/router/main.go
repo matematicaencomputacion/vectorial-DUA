@@ -51,7 +51,24 @@ func main() {
 			evt.StudentID, evt.TrackingULID, evt.BestSimilarity, evt.Threshold)
 	})
 
+	configPath := strings.TrimSpace(os.Getenv("AVLP_CONFIG_PATH"))
+	if configPath == "" {
+		configPath = vector.DefaultConfigPath
+	}
+	threshold := vector.ResolveEffectiveThreshold(configPath)
+	switch threshold.Source {
+	case vector.ThresholdSourceEnv:
+		log.Printf("similarity threshold=%.3f source=env (AVLP_SIMILARITY_THRESHOLD)", threshold.Value)
+	case vector.ThresholdSourceFile:
+		log.Printf("similarity threshold=%.3f source=file path=%s", threshold.Value, threshold.ConfigPath)
+	case vector.ThresholdSourceDefault:
+		log.Printf("similarity threshold=%.3f source=default", threshold.Value)
+	default:
+		log.Printf("similarity threshold=%.3f source=unknown", threshold.Value)
+	}
+
 	router := vector.NewRouter(index, bus)
+	router.DefaultThreshold = threshold.Value
 
 	kb := os.Getenv("AVLP_KB_ROOT")
 	if kb == "" {

@@ -22,3 +22,4 @@ vendor/
 
 # Local runtime state (profile store)
 data/profiles.json
+data/avlp.json

@@ -1,0 +1,31 @@
+[
+  {
+    "case_id": "rag-env-faithful",
+    "query_text": "No entiendo qué es un archivo .env ni las variables de entorno en Henry",
+    "role": "on_topic",
+    "expected_source_substr": "env-variables"
+  },
+  {
+    "case_id": "rag-postgis-faithful",
+    "query_text": "Qué es ST_DWithin en PostGIS y para qué sirve la distancia geográfica",
+    "role": "on_topic",
+    "expected_source_substr": "spatial-basics"
+  },
+  {
+    "case_id": "rag-async-faithful",
+    "query_text": "No entiendo async await en Node.js y cómo manejar errores con try catch",
+    "role": "on_topic",
+    "expected_source_substr": "async-await"
+  },
+  {
+    "case_id": "rag-typo-variables-escopes",
+    "query_text": "variables y escopes",
+    "role": "on_topic",
+    "expected_source_substr": "env-variables"
+  },
+  {
+    "case_id": "rag-off-topic-bit",
+    "query_text": "que es un bit",
+    "role": "off_topic"
+  }
+]

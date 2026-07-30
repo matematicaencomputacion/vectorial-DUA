@@ -55,6 +55,8 @@ type Router struct {
 	Live    LiveGenerator  // optional RAG pipeline
 	Ledger  *StationLedger // pending station registry
 	Enabled bool           // when false, miss stays pending-only
+	// DefaultThreshold is captured at startup; valid request thresholds still win.
+	DefaultThreshold float32
 }
 
 // NewRouter wires an index and event bus with a station ledger.
@@ -63,10 +65,11 @@ func NewRouter(index *Index, bus *EventBus) *Router {
 		bus = NewEventBus()
 	}
 	return &Router{
-		Index:   index,
-		Bus:     bus,
-		Ledger:  NewStationLedger(StationTTLFromEnv()),
-		Enabled: RAGEnabledFromEnv(),
+		Index:            index,
+		Bus:              bus,
+		Ledger:           NewStationLedger(StationTTLFromEnv()),
+		Enabled:          RAGEnabledFromEnv(),
+		DefaultThreshold: EffectiveDefaultThreshold(),
 	}
 }
 
@@ -98,7 +101,13 @@ func (r *Router) QueryNearest(studentID string, query []float32, threshold float
 
 // QueryNearestWithOptions is the full miss→RAG path.
 func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, query []float32, threshold float32, opt QueryOptions) (RouteOutcome, error) {
-	th := ResolveThreshold(threshold)
+	th := threshold
+	if !validThreshold(th) {
+		th = r.DefaultThreshold
+	}
+	if !validThreshold(th) {
+		th = DefaultSimilarityThreshold
+	}
 	fitted, err := FitIndexEmbedding(query, r.Index.Dims())
 	if err != nil {
 		return RouteOutcome{}, fmt.Errorf("query embedding: %w", err)

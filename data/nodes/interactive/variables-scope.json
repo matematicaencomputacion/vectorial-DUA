@@ -4,7 +4,7 @@
   "titulo": "Variables y Scope — Zoom de profundidad",
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/vars/intro.mp4",
-  "embedding_descriptor": "Nodo visual sobre variables y scope: niveles de profundidad desde una mirada express hasta el detalle under the hood, con clips que muestran dónde vive cada variable.",
+  "embedding_descriptor": "Nodo visual sobre variables y scope (también escrito scopes o escopes): niveles de profundidad desde una mirada express hasta el detalle under the hood, con clips que muestran dónde vive cada variable.",
   "embedding": [0.91, 0.12, 0.08, 0.22, 0.18],
   "botonera": [
     {

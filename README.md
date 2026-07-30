@@ -128,7 +128,7 @@ autorización por estudiante y rol docente para promover.
 
 Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
 
-El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**, calibrado con hash contra `data/knowledge_base`: PostGIS on-topic ~0.33, «que es un bit» ≤0.19). Sin hits queda el camino honesto («No encontré material verificado…»). Con embedders densos (bge-m3) conviene subir el piso.
+El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**). La simmatrix query×chunk documenta el compromiso de cada embedder: con hash normalizado, el caso on-topic más débil queda ~0.36 y el control off-topic «qué es un bit» ~0.24 (piso sugerido ~0.30). Sin hits queda el camino honesto («No encontré material verificado…»); con embedders densos el piso debe recalibrarse con datos.
 
 ## Embeddings
 
@@ -142,6 +142,7 @@ Por defecto el router y el harness usan `HashEmbedder` offline (64 dims, léxico
 | `AVLP_EMBEDDING_DIMS` | Dims fijas; si se omite, se descubren en el primer call |
 | `AVLP_EMBEDDING_TIMEOUT` | Timeout HTTP (default `10s`) |
 | `AVLP_SIMILARITY_THRESHOLD` | Umbral coseno (0–1) cuando el request no trae umbral; default `0.85` |
+| `AVLP_CONFIG_PATH` | Archivo JSON de umbral; el router usa `data/avlp.json` si se omite |
 
 `0.85` está calibrado para hash/plumbing. Con **bge-m3** (Ollama, 1024 dims) la calibración con `simmatrix` cerró en umbral **`0.55`**:
 
@@ -156,12 +157,14 @@ La discriminación entre nodos del mismo tema usa *doc-expansion* (preguntas tí
 
 ```bash
 export AVLP_SIMILARITY_THRESHOLD=0.55
-go run ./cmd/harness -suite simmatrix -embedder env    # matriz query×nodo
-go run ./cmd/harness -suite calibrate -embedder env  # → harness/out/calibration.json
+go run ./cmd/harness -suite simmatrix -embedder env  # query×nodo + query×chunk RAG
+go run ./cmd/harness -suite calibrate -embedder env --apply
 go run ./cmd/harness -suite evals -embedder env
 ```
 
-`calibrate` sugiere umbral = punto medio entre la peor similitud correcta y la mejor incorrecta (margen a cada lado; aviso si margen &lt; 0.05). El índice usa las dims del embedder activo. Evals CI usan hash.
+`calibrate` sugiere umbral = punto medio entre la peor similitud correcta y la mejor incorrecta (margen a cada lado; aviso si margen &lt; 0.05). `--apply` lo escribe atómicamente en `data/avlp.json` (o `-config <ruta>`). Al arrancar, el router registra el valor y origen efectivos con precedencia `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` o la ruta default) > `0.85`. Un umbral válido enviado en el request conserva máxima prioridad. El índice usa las dims del embedder activo. Evals CI usan hash.
+
+Antes de embeber, tanto queries como descriptores de seeds y chunks pasan por la misma normalización: minúsculas, eliminación de diacríticos y colapso de letras consecutivas repetidas. El embedder hash también descarta palabras funcionales frecuentes para que no inflen similitudes off-topic. Esto mantiene simétrico el espacio de búsqueda; el caso real «variables y escopes» forma parte de la matriz y de los tests de ruteo/RAG.
 
 ## Perfiles del estudiante ($V_e$)
 
