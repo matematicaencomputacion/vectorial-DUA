@@ -1,4 +1,11 @@
-## ADDED Requirements
+# Spec: Minimal Auth
+
+## Purpose
+
+Sesión HMAC opcional en el gateway, aislamiento IDOR y promoción protegida por
+rol teacher, con el router confiando en metadata gRPC solo en loopback (o mTLS).
+
+## Requirements
 
 ### Requirement: Sesión firmada opcional
 
@@ -56,3 +63,23 @@ en los RPCs sensibles; su ausencia SHALL mapear a `Unauthenticated`.
 - **GIVEN** el router con `AVLP_SESSION_SECRET` configurado
 - **WHEN** un cliente invoca un RPC sensible sin metadata de sesión
 - **THEN** recibe `Unauthenticated`
+
+### Requirement: Router en loopback o mTLS
+
+El router SHALL bindear por defecto en loopback (`127.0.0.1:50051`) porque
+confía en la metadata gRPC inyectada por el gateway (único verificador del
+token). `AVLP_ROUTER_ADDR` MAY abrirlo a otras interfaces; en modo seguro, si
+la dirección efectiva no es loopback, el router SHALL loguear una advertencia
+de riesgo de suplantación sin mTLS.
+
+#### Scenario: Bind por defecto en loopback
+
+- **GIVEN** arranque sin `AVLP_ROUTER_ADDR`
+- **WHEN** el router escucha
+- **THEN** el bind efectivo es `127.0.0.1:50051`
+
+#### Scenario: Advertencia fuera de loopback en modo seguro
+
+- **GIVEN** modo seguro y `AVLP_ROUTER_ADDR=:50051`
+- **WHEN** el router arranca
+- **THEN** loguea que aceptar identidad por metadata fuera de loopback sin mTLS permite suplantación
