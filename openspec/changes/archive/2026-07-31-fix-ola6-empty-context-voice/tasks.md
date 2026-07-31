@@ -1,0 +1,3 @@
+- [x] Prompt vacío + prohibiciones
+- [x] Poda/saneamiento + topics
+- [x] Tests + Playwright estructural
