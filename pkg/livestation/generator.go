@@ -3,6 +3,7 @@ package livestation
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 	"time"
 
@@ -25,13 +26,14 @@ type Result struct {
 
 // Generator turns a routing miss into a persisted live node via RAG + Rogers.
 type Generator struct {
-	Retriever   *rag.Retriever
-	Nodes       *vector.Index
-	Builder     rogerian.PromptBuilder
-	Synthesizer rogerian.Synthesizer
-	Tel         *telemetry.Collector
-	Logf        func(format string, args ...any)
-	TopK        int
+	Retriever       *rag.Retriever
+	Nodes           *vector.Index
+	Builder         rogerian.PromptBuilder
+	Synthesizer     rogerian.Synthesizer
+	AvailableTopics []string // curated titles for empty-context invitations
+	Tel             *telemetry.Collector
+	Logf            func(format string, args ...any)
+	TopK            int
 }
 
 // Request is the miss-path input.
@@ -104,11 +106,12 @@ func (g *Generator) Generate(ctx context.Context, req Request) (Result, error) {
 	}
 
 	prompt := g.Builder.Build(rogerian.BuildInput{
-		DoubtText:   req.DoubtText,
-		Frustration: req.Frustration,
-		Dimension:   req.Dimension,
-		Format:      req.Format,
-		Chunks:      hits,
+		DoubtText:       req.DoubtText,
+		Frustration:     req.Frustration,
+		Dimension:       req.Dimension,
+		Format:          req.Format,
+		Chunks:          hits,
+		AvailableTopics: g.topicHints(),
 	})
 
 	sources := rag.Sources(hits)
@@ -163,6 +166,41 @@ func (g *Generator) Generate(ctx context.Context, req Request) (Result, error) {
 	}, nil
 }
 
+func (g *Generator) topicHints() []string {
+	if len(g.AvailableTopics) > 0 {
+		return append([]string(nil), g.AvailableTopics...)
+	}
+	return curatedLabelsFromIndex(g.Nodes)
+}
+
+func curatedLabelsFromIndex(idx *vector.Index) []string {
+	if idx == nil {
+		return nil
+	}
+	var out []string
+	for _, n := range idx.Nodes() {
+		if n.IsLiveGenerated {
+			continue
+		}
+		if label := humanizeResourceURL(n.ResourceURL); label != "" {
+			out = append(out, label)
+		}
+	}
+	return out
+}
+
+func humanizeResourceURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || strings.HasPrefix(raw, "live://") {
+		return ""
+	}
+	base := path.Base(raw)
+	base = strings.TrimSuffix(base, path.Ext(base))
+	base = strings.ReplaceAll(base, "-", " ")
+	base = strings.ReplaceAll(base, "_", " ")
+	return strings.TrimSpace(base)
+}
+
 func (g *Generator) synthesize(
 	ctx context.Context,
 	p rogerian.PromptBundle,
@@ -172,50 +210,99 @@ func (g *Generator) synthesize(
 	if g.Synthesizer != nil {
 		generated, err := g.Synthesizer.Synthesize(ctx, p)
 		if err == nil {
-			return appendSources(generated, p.Sources), synthesizerModel(g.Synthesizer), nil
+			return finalizeContent(generated, p.Sources), synthesizerModel(g.Synthesizer), nil
 		}
 		synthesisErr = err
 	}
-	return appendSources(synthesizeExtractive(p, hits), p.Sources), model, synthesisErr
+	return finalizeContent(synthesizeExtractive(p, hits, g.topicHints()), p.Sources), model, synthesisErr
 }
 
-func synthesizeExtractive(p rogerian.PromptBundle, hits []rag.ScoredChunk) string {
+func synthesizeExtractive(p rogerian.PromptBundle, hits []rag.ScoredChunk, topics []string) string {
 	var b strings.Builder
 	b.WriteString("# Estación en vivo\n\n")
+	if len(hits) == 0 {
+		b.WriteString("Gracias por tu pregunta.\n\n")
+		b.WriteString("No encontré material verificado en la base de conocimiento para esta duda. ")
+		b.WriteString("Si querés, reformulá la pregunta o pedime algo de lo que sí tengo a mano")
+		if hints := formatTopicList(topics); hints != "" {
+			b.WriteString(": ")
+			b.WriteString(hints)
+			b.WriteString(".")
+		} else {
+			b.WriteString(".")
+		}
+		b.WriteString("\n")
+		return b.String()
+	}
+
 	b.WriteString("## Contención\n")
 	b.WriteString(HintLine(p.Tone))
-	b.WriteString("\n\n## Explicación anclada al contexto\n")
-	if len(hits) == 0 {
-		b.WriteString("No encontré material verificado en la base de conocimiento para esta duda. ")
-		b.WriteString("Sigamos atomizando la pregunta juntos sin inventar detalles.\n")
-	} else {
-		// Use only chunk text — faithfulness by construction.
-		for i, h := range hits {
-			b.WriteString(fmt.Sprintf("### Fuente [%d]: %s\n\n", i+1, h.Chunk.Source))
-			b.WriteString(strings.TrimSpace(h.Chunk.Text))
-			b.WriteString("\n\n")
-		}
+	b.WriteString("\n\n## Explicación anclada al material\n")
+	for i, h := range hits {
+		b.WriteString(fmt.Sprintf("### Fuente [%d]: %s\n\n", i+1, h.Chunk.Source))
+		b.WriteString(strings.TrimSpace(h.Chunk.Text))
+		b.WriteString("\n\n")
 	}
-	b.WriteString("## Micro-ejercicio\n")
+	exercise := ""
 	switch p.Format {
 	case string(dua.Practica):
-		b.WriteString("En una celda del IDE, escribe un ejemplo mínimo relacionado con el contexto anterior y ejecútalo.\n")
+		exercise = "En una celda del IDE, escribe un ejemplo mínimo relacionado con el material anterior y ejecútalo."
 	case string(dua.Visual):
-		b.WriteString("Dibuja un diagrama de flujo de 3 cajas basado solo en las ideas de las fuentes citadas.\n")
+		exercise = "Dibuja un diagrama de flujo de 3 cajas basado solo en las ideas recuperadas."
 	default:
-		b.WriteString("Explica con tus palabras (2–3 frases) la idea principal de la fuente [1], sin agregar datos externos.\n")
+		exercise = "Explica con tus palabras (2–3 frases) la idea principal de la fuente [1], sin agregar datos externos."
+	}
+	if strings.TrimSpace(exercise) != "" {
+		b.WriteString("## Micro-ejercicio\n")
+		b.WriteString(exercise)
+		b.WriteString("\n")
 	}
 	return b.String()
 }
 
-func appendSources(content string, sources []string) string {
-	var b strings.Builder
-	b.WriteString(stripGeneratedSources(content))
-	b.WriteString("\n\n## Fuentes\n")
-	if len(sources) == 0 {
-		b.WriteString("- Sin fuentes recuperadas.\n")
-		return b.String()
+func formatTopicList(topics []string) string {
+	var clean []string
+	seen := map[string]struct{}{}
+	for _, raw := range topics {
+		t := strings.TrimSpace(raw)
+		if t == "" {
+			continue
+		}
+		key := strings.ToLower(t)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		clean = append(clean, t)
+		if len(clean) >= 6 {
+			break
+		}
 	}
+	switch len(clean) {
+	case 0:
+		return ""
+	case 1:
+		return clean[0]
+	case 2:
+		return clean[0] + " o " + clean[1]
+	default:
+		return strings.Join(clean[:len(clean)-1], ", ") + " o " + clean[len(clean)-1]
+	}
+}
+
+func finalizeContent(content string, sources []string) string {
+	body := pruneEmptySections(sanitizeStudentContent(stripGeneratedSources(content)))
+	return appendSources(body, sources)
+}
+
+func appendSources(content string, sources []string) string {
+	content = strings.TrimSpace(content)
+	if len(sources) == 0 {
+		return content
+	}
+	var b strings.Builder
+	b.WriteString(content)
+	b.WriteString("\n\n## Fuentes\n")
 	for i, source := range sources {
 		b.WriteString(fmt.Sprintf("- [%d] %s\n", i+1, source))
 	}
@@ -231,6 +318,77 @@ func stripGeneratedSources(content string) string {
 		}
 	}
 	return strings.TrimSpace(content)
+}
+
+// sanitizeStudentContent trims dangling colon-only tails and collapses blank lines.
+func sanitizeStudentContent(content string) string {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	for strings.Contains(content, "\n\n\n") {
+		content = strings.ReplaceAll(content, "\n\n\n", "\n\n")
+	}
+	lines := strings.Split(strings.TrimSpace(content), "\n")
+	for len(lines) > 0 {
+		last := strings.TrimSpace(lines[len(lines)-1])
+		if last == "" || strings.HasSuffix(last, ":") {
+			lines = lines[:len(lines)-1]
+			continue
+		}
+		break
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
+// pruneEmptySections drops known optional ## sections whose body is empty.
+func pruneEmptySections(content string) string {
+	lines := strings.Split(content, "\n")
+	var out []string
+	i := 0
+	for i < len(lines) {
+		line := lines[i]
+		if name, ok := optionalSectionHeading(line); ok {
+			j := i + 1
+			for j < len(lines) && !isMarkdownHeading(lines[j]) {
+				j++
+			}
+			body := strings.TrimSpace(strings.Join(lines[i+1:j], "\n"))
+			if body != "" {
+				out = append(out, line)
+				out = append(out, lines[i+1:j]...)
+			} else {
+				_ = name
+			}
+			i = j
+			continue
+		}
+		out = append(out, line)
+		i++
+	}
+	for len(out) > 0 && strings.TrimSpace(out[len(out)-1]) == "" {
+		out = out[:len(out)-1]
+	}
+	return strings.TrimSpace(strings.Join(out, "\n"))
+}
+
+func optionalSectionHeading(line string) (string, bool) {
+	trim := strings.TrimSpace(line)
+	if !strings.HasPrefix(trim, "##") || strings.HasPrefix(trim, "###") {
+		return "", false
+	}
+	heading := strings.TrimSpace(strings.TrimLeft(trim, "#"))
+	switch strings.ToLower(heading) {
+	case "fuentes", "micro-ejercicio", "micro ejercicio", "contención", "contencion":
+		return heading, true
+	default:
+		return "", false
+	}
+}
+
+func isMarkdownHeading(line string) bool {
+	trim := strings.TrimSpace(line)
+	if !strings.HasPrefix(trim, "#") {
+		return false
+	}
+	return strings.TrimSpace(strings.TrimLeft(trim, "#")) != ""
 }
 
 func synthesizerModel(synth rogerian.Synthesizer) string {
@@ -268,6 +426,6 @@ func HintLine(t rogerian.Tone) string {
 	case rogerian.ToneReframe:
 		return "Miremos el concepto desde otro ángulo usando solo las fuentes citadas."
 	default:
-		return "Buen ritmo; aquí tienes una estación breve construida a partir del contexto recuperado."
+		return "Buen ritmo; aquí tienes una estación breve construida a partir del material recuperado."
 	}
 }

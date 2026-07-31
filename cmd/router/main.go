@@ -91,6 +91,7 @@ func main() {
 	}
 
 	var store *rag.Store
+	var liveGen *livestation.Generator
 	if router.Enabled {
 		store = rag.NewStore()
 		n, err := rag.IngestWalk(ctx, store, rag.IngestOptions{Root: kb, Embedder: emb})
@@ -98,13 +99,13 @@ func main() {
 			log.Printf("RAG ingest warning: %v (miss path will stay pending)", err)
 		} else {
 			log.Printf("RAG knowledge base indexed: %d chunks from %s", n, kb)
-			gen := &livestation.Generator{
+			liveGen = &livestation.Generator{
 				Retriever:   rag.NewRetriever(store, emb, 3),
 				Nodes:       index,
 				Synthesizer: synthesizer,
 				Logf:        log.Printf,
 			}
-			router.Live = gen
+			router.Live = liveGen
 		}
 	} else {
 		log.Printf("RAG disabled (AVLP_RAG_ENABLED=false)")
@@ -163,6 +164,9 @@ func main() {
 		}
 	} else {
 		log.Printf("interactive nodes disabled (AVLP_INTERACTIVE_NODES=false)")
+	}
+	if liveGen != nil && reg != nil {
+		liveGen.AvailableTopics = reg.TopicTitles()
 	}
 
 	srvImpl := routerserver.New(routerserver.Deps{
