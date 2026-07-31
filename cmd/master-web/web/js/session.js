@@ -42,6 +42,8 @@ export const auth = {
   token: "",
   role: "student",
   secureMode: false,
+  sttEnabled: false,
+  voiceMode: "none",
   ready: null,
 };
 
@@ -69,6 +71,7 @@ export async function ensureSession(teacherKey) {
   auth.token = data.token || "";
   auth.role = data.role || "student";
   auth.secureMode = !!data.secure_mode;
+  auth.sttEnabled = !!data.stt_enabled;
   return data;
 }
 

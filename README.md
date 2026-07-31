@@ -142,7 +142,34 @@ o detrás de mTLS.
 Deuda Ola 6: que el router valide el token él mismo o mTLS gateway↔router;
 además usuarios persistentes, passwords/OAuth y más roles.
 
-Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
+Dictado por voz (mejora progresiva): cascada **STT local** (si `AVLP_STT_URL`) →
+**Web Speech API** → sin botón. Con STT local, `voice.js` graba con MediaRecorder
+y envía a `POST /api/transcribe` (sin auto-enviar; tope 60 s). Atajo **Ctrl+M**
+en el campo principal. El panel de desarrollo muestra `voice: mode=…`.
+Errores de cada camino son visibles en español.
+
+### STT local en Mac (recomendado)
+
+La Web Speech API manda audio a la nube (Google) y en lab falló por red. Para
+dictado **sin nube**, levantá un servidor OpenAI-compatible
+`/v1/audio/transcriptions`. En Apple Silicon conviene **whisper.cpp**
+(`whisper-server`) con modelo **`ggml-small`** (o `base` si priorizás RAM):
+buen equilibrio tamaño/calidad para español, ~500 MB el small.
+
+```bash
+# Ejemplo con binario whisper-server (ajustá rutas a tu build/homebrew):
+./whisper-server -m models/ggml-small.bin --host 127.0.0.1 --port 8081
+
+export AVLP_STT_URL='http://127.0.0.1:8081/v1'
+# opcionales: AVLP_STT_MODEL=whisper-1  AVLP_STT_LANGUAGE=es  AVLP_STT_TIMEOUT=30s
+# AVLP_STT_API_KEY=… si el servidor lo exige
+
+go run ./cmd/router
+go run ./cmd/master-web
+```
+
+Alternativa: `faster-whisper-server` u otro compatible con el mismo path.
+Sin `AVLP_STT_URL`, la UI cae a Web Speech si el navegador lo expone.
 
 El miss path RAG descarta hits con similitud &lt; `AVLP_RAG_MIN_SIMILARITY` (default **0.30**). La simmatrix query×chunk documenta el compromiso de cada embedder: con hash normalizado, el caso on-topic más débil queda ~0.36 y el control off-topic «qué es un bit» ~0.24 (piso sugerido ~0.30). Sin hits queda el camino honesto («No encontré material verificado…»); con embedders densos el piso debe recalibrarse con datos.
 
@@ -192,6 +219,11 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_SESSION_SECRET` | vacío → modo abierto | Secret HMAC de sesión; vacío mantiene el prototipo abierto |
 | `AVLP_SESSION_TTL` | `24h` | Expiración del token de sesión |
 | `AVLP_TEACHER_KEY` | vacío | Clave de instituto para emitir rol `teacher` (solo modo seguro) |
+| `AVLP_STT_URL` | vacío → cascada Web Speech / sin mic | Base OpenAI-compatible del STT (`…/v1`); habilita dictado local |
+| `AVLP_STT_MODEL` | `whisper-1` | Modelo enviado al endpoint de transcripción |
+| `AVLP_STT_API_KEY` | vacío | Bearer opcional del STT |
+| `AVLP_STT_TIMEOUT` | `30s` | Timeout HTTP del transcriber |
+| `AVLP_STT_LANGUAGE` | `es` | Código de idioma para el STT |
 | `AVLP_INTERACTIVE_NODES` | `true` | Carga de seeds Stage/botonera |
 | `AVLP_INTERACTIVE_NODES_DIR` | `data/nodes/interactive` | Directorio de seeds (incluye promovidos) |
 | `AVLP_PROFILE_STORE_PATH` | vacío → memoria | Snapshot JSON de perfiles $V_e$ |
@@ -199,6 +231,8 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_WEB_ADDR` | `127.0.0.1:8080` | Bind HTTP de `master-web` |
 
 **Precedencia del umbral estático:** request gRPC válido > `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` / `data/avlp.json`) > `0.85`. El router loguea valor y origen al arrancar.
+
+La tabla incluye las variables de **sesión** (`AVLP_SESSION_*`, `AVLP_TEACHER_KEY`) y de **STT local** (`AVLP_STT_*`) añadidas en Ola 5. Sin `AVLP_STT_URL` la UI cae a Web Speech o no muestra micrófono; sin `AVLP_SESSION_SECRET` el prototipo permanece en modo abierto.
 
 ## Accesibilidad de medios (DUA — múltiples medios de representación)
 

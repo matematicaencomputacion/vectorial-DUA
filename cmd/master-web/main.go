@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
+	"github.com/vectorial-dua/avlp/pkg/stt"
 	"github.com/vectorial-dua/avlp/pkg/webgateway"
 )
 
@@ -49,11 +50,21 @@ func main() {
 	}
 
 	gw := webgateway.New(vectorv1.NewVectorRouterClient(conn), http.FileServer(http.FS(staticRoot)))
+	transcriber, err := stt.NewHTTPTranscriberFromEnv()
+	if err != nil {
+		log.Fatalf("STT: %v", err)
+	}
+	gw.Transcriber = transcriber
 	if gw.Session.Secure() {
 		log.Printf("session auth: secure mode active (AVLP_SESSION_SECRET set); teacher key %s",
 			map[bool]string{true: "configured", false: "empty — nobody can promote"}[gw.Session.TeacherKey != ""])
 	} else {
 		log.Printf("session auth: open mode (AVLP_SESSION_SECRET empty) — client-declared student_id trusted")
+	}
+	if gw.Transcriber != nil {
+		log.Printf("voice STT: local enabled model=%s", gw.Transcriber.ModelName())
+	} else {
+		log.Printf("voice STT: disabled (AVLP_STT_URL empty) — UI may fall back to Web Speech")
 	}
 	srv := &http.Server{
 		Addr:              webAddr,
