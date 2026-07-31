@@ -5,7 +5,13 @@
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/async/intro.mp4",
   "embedding_descriptor": "Explicación de async/await con distintos estilos cognitivos: analogía animada, live coding, diagrama de promesas y un debate breve sobre cuándo usarlo.",
-  "embedding": [0.2, 0.7, 0.1, 0.3, 0.4],
+  "embedding": [
+    0.2,
+    0.7,
+    0.1,
+    0.3,
+    0.4
+  ],
   "botonera_schema": {
     "kind": "cognitive",
     "topic_title": "Async/Await",
@@ -15,7 +21,16 @@
         "label": "Modo Animación / Analogía",
         "media_url": "https://cdn.example.com/videos/async/analogy.mp4",
         "format_type": "video",
-        "preference_delta": [0.0, 0.4, 0.0, 0.0, 0.0]
+        "preference_delta": [
+          0.0,
+          0.4,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alt_text": "Analogía animada: una cocina donde await es esperar el horno sin dejar de picar verdura.",
+        "transcript": "## Analogía\nImaginá la cocina: ponés el horno (promesa) y mientras tanto cortás verdura. `await` es mirar el horno cuando suena; no es quedarte quieto mirando la puerta desde el minuto cero.",
+        "captions_url": "https://cdn.example.com/videos/async/analogy.vtt"
       },
       {
         "variant_id": "live_coding",
@@ -23,22 +38,47 @@
         "media_url": "https://cdn.example.com/videos/async/live.mp4",
         "cell_code": "async function load() { return await fetch('/api'); }",
         "format_type": "live_code",
-        "preference_delta": [0.2, 0.0, 0.0, 0.1, 0.2]
+        "preference_delta": [
+          0.2,
+          0.0,
+          0.0,
+          0.1,
+          0.2
+        ],
+        "alt_text": "Sesión de live coding mostrando fetch con async/await.",
+        "transcript": "## Live coding\nEscribimos `async function load() { return await fetch('/api'); }`. El `await` suspende solo esa función hasta que llega la respuesta; el resto del programa sigue."
       },
       {
         "variant_id": "diagram",
         "label": "Modo Diagrama / CheatSheet",
         "media_url": "https://cdn.example.com/canvas/async/flow.svg",
         "format_type": "diagram",
-        "preference_delta": [0.0, 0.3, 0.0, 0.2, 0.0]
+        "preference_delta": [
+          0.0,
+          0.3,
+          0.0,
+          0.2,
+          0.0
+        ],
+        "alt_text": "Diagrama de flujo: llamada async, microtareas y resolución de la promesa."
       },
       {
         "variant_id": "debate",
         "label": "Modo Debate / Entrevista",
         "media_url": "https://cdn.example.com/audio/async/debate.mp3",
         "format_type": "audio_debate",
-        "preference_delta": [0.0, 0.2, 0.0, 0.0, 0.1]
+        "preference_delta": [
+          0.0,
+          0.2,
+          0.0,
+          0.0,
+          0.1
+        ],
+        "alt_text": "Audio de debate breve: cuándo preferir async/await frente a entoncesables encadenados.",
+        "transcript": "## Debate\nAsync/await gana claridad en secuencias. Los `.then` siguen útiles para pipelines cortos. El criterio: ¿se lee más fácil como historia lineal o como cadena de transformaciones?"
       }
     ]
-  }
+  },
+  "alt_text": "Introducción visual a async/await y por qué no bloquea el hilo principal.",
+  "transcript": "## Intro async/await\nAsync marca una función que puede pausarse. Await espera una promesa sin congelar toda la app: el evento loop sigue atendiendo otras tareas."
 }

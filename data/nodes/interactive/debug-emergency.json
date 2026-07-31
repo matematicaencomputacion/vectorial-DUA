@@ -5,7 +5,13 @@
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/debug/stage.mp4",
   "embedding_descriptor": "Modo emergencia para depurar variables indefinidas: errores frecuentes, pista rogeriana y casos de prueba para desbloquear al estudiante sin inventar causas.",
-  "embedding": [0.3, 0.2, 0.8, 0.2, 0.3],
+  "embedding": [
+    0.3,
+    0.2,
+    0.8,
+    0.2,
+    0.3
+  ],
   "botonera_schema": {
     "kind": "emergency",
     "topic_title": "Bloqueo: Undefined variable",
@@ -15,14 +21,29 @@
         "label": "¿Por qué me da error?",
         "media_url": "https://cdn.example.com/videos/debug/top3-errors.mp4",
         "format_type": "video",
-        "preference_delta": [0.1, 0.0, -0.2, 0.0, 0.1]
+        "preference_delta": [
+          0.1,
+          0.0,
+          -0.2,
+          0.0,
+          0.1
+        ],
+        "alt_text": "Video con los tres errores más frecuentes al declarar variables.",
+        "transcript": "## Errores frecuentes\n1) Usar antes de declarar. 2) Declara en un bloque y leés afuera. 3) Typo en el nombre. Revisá esos tres antes de cambiar el algoritmo.",
+        "captions_url": "https://cdn.example.com/videos/debug/top3-errors.vtt"
       },
       {
         "variant_id": "hint",
         "label": "Ver la pista (Hint)",
         "hint_text": "Es normal trabarse aquí. ¿La variable que usás fue declarada en el mismo scope donde la leés?",
         "format_type": "text_hint",
-        "preference_delta": [0.0, 0.0, -0.3, 0.0, 0.2]
+        "preference_delta": [
+          0.0,
+          0.0,
+          -0.3,
+          0.0,
+          0.2
+        ]
       },
       {
         "variant_id": "test_cases",
@@ -30,8 +51,19 @@
         "media_url": "https://cdn.example.com/videos/debug/walkthrough.mp4",
         "walkthrough_url": "https://cdn.example.com/videos/debug/walkthrough.mp4",
         "format_type": "video",
-        "preference_delta": [0.2, 0.0, -0.1, 0.0, 0.1]
+        "preference_delta": [
+          0.2,
+          0.0,
+          -0.1,
+          0.0,
+          0.1
+        ],
+        "alt_text": "Walkthrough en video de casos de prueba que revelan el scope incorrecto.",
+        "transcript": "## Casos de prueba\nCaso A: variable solo adentro del `if`. Caso B: parámetro que tapa un global. Caso C: typo `total` vs `tota1`. Cada caso falla de forma distinta y te orienta.",
+        "captions_url": "https://cdn.example.com/videos/debug/walkthrough.vtt"
       }
     ]
-  }
+  },
+  "alt_text": "Escenario de depuración: el Stage muestra un programa con variable indefinida.",
+  "transcript": "## Stage debug\nPartimos de un error `undefined`/`NameError`. El objetivo no es adivinar: es contrastar declaración y uso en el mismo scope."
 }

@@ -18,14 +18,18 @@ const (
 
 // SubtopicNode is a recursive optional branch in the accordion navigator.
 type SubtopicNode struct {
-	SubtopicID      string             `json:"subtopic_id"`
-	Title           string             `json:"title"`
-	DepthLevel      SubtopicDepthLevel `json:"depth_level"`
-	IsOptional      bool               `json:"is_optional"`
-	MediaURL        string             `json:"media_url,omitempty"`
-	DurationSeconds int32              `json:"duration_seconds,omitempty"`
-	OrbitDelta      []float32          `json:"orbit_delta,omitempty"`
-	ChildSubtopics  []SubtopicNode     `json:"child_subtopics,omitempty"`
+	SubtopicID          string             `json:"subtopic_id"`
+	Title               string             `json:"title"`
+	DepthLevel          SubtopicDepthLevel `json:"depth_level"`
+	IsOptional          bool               `json:"is_optional"`
+	MediaURL            string             `json:"media_url,omitempty"`
+	DurationSeconds     int32              `json:"duration_seconds,omitempty"`
+	OrbitDelta          []float32          `json:"orbit_delta,omitempty"`
+	ChildSubtopics      []SubtopicNode     `json:"child_subtopics,omitempty"`
+	CaptionsURL         string             `json:"captions_url,omitempty"`
+	Transcript          string             `json:"transcript,omitempty"`
+	AltText             string             `json:"alt_text,omitempty"`
+	AudioDescriptionURL string             `json:"audio_description_url,omitempty"`
 }
 
 // DUAHierarchicalTree is the optional fractal navigator under a root node.

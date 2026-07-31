@@ -17,6 +17,7 @@ import (
 type Registry struct {
 	mu    sync.RWMutex
 	nodes map[string]*InteractiveVideoNode
+	Logf  Logf // optional; used for gradual a11y warnings on LoadDir
 }
 
 // NewRegistry creates an empty registry.
@@ -27,6 +28,9 @@ func NewRegistry() *Registry {
 // Put validates and stores a node (replace by node_id).
 func (r *Registry) Put(n *InteractiveVideoNode) error {
 	if err := n.Validate(); err != nil {
+		return err
+	}
+	if err := EnforceAccessibility(n); err != nil {
 		return err
 	}
 	r.mu.Lock()
@@ -113,6 +117,9 @@ func (r *Registry) LoadDir(dir string) (int, error) {
 		}
 		if err := r.Put(&node); err != nil {
 			return count, fmt.Errorf("%s: %w", path, err)
+		}
+		if rep := AccessibilityReport(&node); rep.HasGaps() {
+			r.Logf.printf("media a11y gaps node=%s file=%s: %s", node.NodeID, e.Name(), rep.Summary())
 		}
 		count++
 	}

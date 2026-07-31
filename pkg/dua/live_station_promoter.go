@@ -131,6 +131,8 @@ func buildPromotedNode(rec *vector.StationRecord) (*InteractiveVideoNode, error)
 			ActionType: ActionAskAgent,
 		}},
 		StageMarkdownDefault:     rec.Result.Content,
+		Transcript:               rec.Result.Content,
+		AltText:                  "Estación promovida: " + title,
 		RetrievedSources:         append([]string(nil), rec.Result.Sources...),
 		PromotedFromTrackingULID: rec.TrackingULID,
 	}

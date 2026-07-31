@@ -374,6 +374,32 @@ for (const [field, clear] of [["#doubt", "#doubt-clear"], ["#ask-doubt", "#ask-d
 await shot(page, "flow-02-boton-limpieza.png");
 console.log("OK botón de limpieza en ambos campos → flow-02-boton-limpieza.png");
 
+// 2b) Toggle de transcripción en un nodo interactivo con transcript.
+{
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  const chipBtn = page.locator(".hints button", { hasText: "Ejemplo: variables y scope" });
+  await chipBtn.click();
+  const waitQuery = page.waitForResponse(
+    (r) => r.url().endsWith("/api/query") && r.request().method() === "POST",
+    { timeout: 45000 }
+  );
+  await page.click("#btn-query");
+  await waitQuery;
+  await page.waitForSelector("#ask-box:not([hidden])", { timeout: 15000 });
+  const toggle = page.locator(".transcript-toggle");
+  assert((await toggle.count()) === 1, "debe existir el toggle Ver transcripción");
+  assert((await toggle.getAttribute("aria-expanded")) === "false", "toggle inicia cerrado");
+  assert(/Ver transcripción/i.test(await toggle.innerText()), "toggle debe tener texto, no solo ícono");
+  await toggle.click();
+  assert((await toggle.getAttribute("aria-expanded")) === "true", "toggle abierto");
+  const panel = page.locator("#stage-transcript-panel");
+  assert(await panel.isVisible(), "panel de transcripción visible");
+  const panelText = await panel.innerText();
+  assert(/scope|variable/i.test(panelText), `transcript vacío o incorrecto: ${panelText.slice(0, 120)}`);
+  await shot(page, "flow-08-transcript-toggle.png");
+  console.log("OK toggle Ver transcripción → flow-08-transcript-toggle.png");
+}
+
 // 3) Los 7 chips van al nodo que anuncia su etiqueta.
 for (let i = 0; i < CHIPS.length; i++) {
   await runChip(CHIPS[i], i);

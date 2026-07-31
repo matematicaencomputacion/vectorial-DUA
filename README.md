@@ -169,6 +169,7 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_KB_ROOT` | `data/knowledge_base` | Raíz de la base documental |
 | `AVLP_STATION_TTL` | `24h` | TTL del ledger de estaciones pendientes |
 | `AVLP_LIVE_NODE_TTL` | `24h` | TTL de nodos live en el índice k-NN |
+| `AVLP_REQUIRE_MEDIA_A11Y` | `false` | Si `true`, rechaza seeds con huecos de accesibilidad de medios |
 | `AVLP_INTERACTIVE_NODES` | `true` | Carga de seeds Stage/botonera |
 | `AVLP_INTERACTIVE_NODES_DIR` | `data/nodes/interactive` | Directorio de seeds (incluye promovidos) |
 | `AVLP_PROFILE_STORE_PATH` | vacío → memoria | Snapshot JSON de perfiles $V_e$ |
@@ -176,6 +177,28 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_WEB_ADDR` | `127.0.0.1:8080` | Bind HTTP de `master-web` |
 
 **Precedencia del umbral estático:** request gRPC válido > `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` / `data/avlp.json`) > `0.85`. El router loguea valor y origen al arrancar.
+
+## Accesibilidad de medios (DUA — múltiples medios de representación)
+
+El contrato interactivo admite alternativas opcionales en el nodo raíz y en cada
+variante/subtema:
+
+| Campo | Rol |
+|-------|-----|
+| `alt_text` | Descripción breve para lectores de pantalla |
+| `transcript` | Texto plano o Markdown equivalente al clip |
+| `captions_url` | WebVTT de subtítulos |
+| `audio_description_url` | Pista narrada opcional |
+
+`Validate()` **no** exige estos campos (curriculum y promovidos siguen cargando).
+`AccessibilityReport` lista huecos en video/audio sin alternativa textual; al
+cargar seeds, `Registry.LoadDir` los loguea. Con `AVLP_REQUIRE_MEDIA_A11Y=true`
+esos huecos fallan la carga — para institutos que ya puedan exigir el estándar.
+
+En el Stage: se muestra el `alt_text`; si hay `transcript`, un control «Ver
+transcripción» (símbolo + texto, `aria-expanded`, teclado); si el medio es
+`<video>` y hay `captions_url`, se agrega `<track kind="captions">`. Al promover
+una estación live, el markdown pasa a `transcript` del nodo curado.
 
 ## Síntesis LLM local (Ollama)
 

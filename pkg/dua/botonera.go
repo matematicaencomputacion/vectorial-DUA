@@ -27,43 +27,59 @@ const (
 
 // DepthVariant is a zoom level in the thematic depth botonera.
 type DepthVariant struct {
-	VariantID       string          `json:"variant_id"`
-	Label           string          `json:"label"`
-	MediaURL        string          `json:"media_url"`
-	DurationSeconds int32           `json:"duration_seconds"`
-	FormatType      MediaFormatType `json:"format_type"`
-	PreferenceDelta []float32       `json:"preference_delta,omitempty"`
+	VariantID            string          `json:"variant_id"`
+	Label                string          `json:"label"`
+	MediaURL             string          `json:"media_url"`
+	DurationSeconds      int32           `json:"duration_seconds"`
+	FormatType           MediaFormatType `json:"format_type"`
+	PreferenceDelta      []float32       `json:"preference_delta,omitempty"`
+	CaptionsURL          string          `json:"captions_url,omitempty"`
+	Transcript           string          `json:"transcript,omitempty"`
+	AltText              string          `json:"alt_text,omitempty"`
+	AudioDescriptionURL  string          `json:"audio_description_url,omitempty"`
 }
 
 // CognitiveVariant presents the same concept in a different learning modality.
 type CognitiveVariant struct {
-	VariantID       string          `json:"variant_id"`
-	Label           string          `json:"label"`
-	MediaURL        string          `json:"media_url,omitempty"`
-	CellCode        string          `json:"cell_code,omitempty"`
-	FormatType      MediaFormatType `json:"format_type"`
-	PreferenceDelta []float32       `json:"preference_delta,omitempty"`
+	VariantID           string          `json:"variant_id"`
+	Label               string          `json:"label"`
+	MediaURL            string          `json:"media_url,omitempty"`
+	CellCode            string          `json:"cell_code,omitempty"`
+	FormatType          MediaFormatType `json:"format_type"`
+	PreferenceDelta     []float32       `json:"preference_delta,omitempty"`
+	CaptionsURL         string          `json:"captions_url,omitempty"`
+	Transcript          string          `json:"transcript,omitempty"`
+	AltText             string          `json:"alt_text,omitempty"`
+	AudioDescriptionURL string          `json:"audio_description_url,omitempty"`
 }
 
 // EmergencyVariant supports blockage diagnosis (hints never include full solution).
 type EmergencyVariant struct {
-	VariantID       string          `json:"variant_id"`
-	Label           string          `json:"label"`
-	MediaURL        string          `json:"media_url,omitempty"`
-	HintText        string          `json:"hint_text,omitempty"`
-	WalkthroughURL  string          `json:"walkthrough_url,omitempty"`
-	FormatType      MediaFormatType `json:"format_type"`
-	PreferenceDelta []float32       `json:"preference_delta,omitempty"`
+	VariantID           string          `json:"variant_id"`
+	Label               string          `json:"label"`
+	MediaURL            string          `json:"media_url,omitempty"`
+	HintText            string          `json:"hint_text,omitempty"`
+	WalkthroughURL      string          `json:"walkthrough_url,omitempty"`
+	FormatType          MediaFormatType `json:"format_type"`
+	PreferenceDelta     []float32       `json:"preference_delta,omitempty"`
+	CaptionsURL         string          `json:"captions_url,omitempty"`
+	Transcript          string          `json:"transcript,omitempty"`
+	AltText             string          `json:"alt_text,omitempty"`
+	AudioDescriptionURL string          `json:"audio_description_url,omitempty"`
 }
 
 // CombinedCell is one cell in the depth × format matrix.
 type CombinedCell struct {
-	DepthID         string          `json:"depth_id"`
-	FormatID        string          `json:"format_id"`
-	MediaURL        string          `json:"media_url,omitempty"`
-	CellCode        string          `json:"cell_code,omitempty"`
-	DurationSeconds int32           `json:"duration_seconds,omitempty"`
-	FormatType      MediaFormatType `json:"format_type"`
+	DepthID             string          `json:"depth_id"`
+	FormatID            string          `json:"format_id"`
+	MediaURL            string          `json:"media_url,omitempty"`
+	CellCode            string          `json:"cell_code,omitempty"`
+	DurationSeconds     int32           `json:"duration_seconds,omitempty"`
+	FormatType          MediaFormatType `json:"format_type"`
+	CaptionsURL         string          `json:"captions_url,omitempty"`
+	Transcript          string          `json:"transcript,omitempty"`
+	AltText             string          `json:"alt_text,omitempty"`
+	AudioDescriptionURL string          `json:"audio_description_url,omitempty"`
 }
 
 // DUANodeBotonera is a reusable structural botonera attached to a node.

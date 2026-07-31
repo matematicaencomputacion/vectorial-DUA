@@ -124,6 +124,7 @@ func main() {
 
 	if dua.EnabledFromEnv() {
 		reg = dua.NewRegistry()
+		reg.Logf = log.Printf
 		n, err := reg.LoadDir(nodesDir)
 		if err != nil {
 			log.Printf("interactive nodes load warning: %v", err)

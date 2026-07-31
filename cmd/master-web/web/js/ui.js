@@ -153,6 +153,53 @@ function showStageContent(title, meta, contentHtml) {
   el.stageTitle.textContent = title || "Stage";
   el.stageMeta.textContent = meta || "";
   el.stageMedia.innerHTML = contentHtml;
+  wireTranscriptToggle(el.stageMedia);
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/"/g, "&quot;");
+}
+
+function looksLikeVideo(url) {
+  const u = String(url || "");
+  return /\.(mp4|webm|ogg)(\?|$)/i.test(u) || /\/videos\//i.test(u);
+}
+
+function transcriptBlock(transcript) {
+  return (
+    '<div class="transcript-block">' +
+    '<button type="button" class="transcript-toggle" aria-expanded="false" aria-controls="stage-transcript-panel">' +
+    '<span aria-hidden="true">📄</span> Ver transcripción</button>' +
+    '<div id="stage-transcript-panel" class="transcript-panel md" hidden>' +
+    simpleMarkdown(transcript) +
+    "</div></div>"
+  );
+}
+
+function a11yFooter(opts) {
+  let html = "";
+  if (opts.altText) {
+    html +=
+      '<p class="media-alt">' + escapeHtml(opts.altText) + "</p>";
+  }
+  if (opts.transcript) {
+    html += transcriptBlock(opts.transcript);
+  }
+  return html;
+}
+
+function wireTranscriptToggle(root) {
+  const btn = root.querySelector(".transcript-toggle");
+  const panel = root.querySelector(".transcript-panel");
+  if (!btn || !panel) return;
+  btn.addEventListener("click", function () {
+    const open = btn.getAttribute("aria-expanded") === "true";
+    btn.setAttribute("aria-expanded", open ? "false" : "true");
+    panel.hidden = open;
+    btn.innerHTML = open
+      ? '<span aria-hidden="true">📄</span> Ver transcripción'
+      : '<span aria-hidden="true">📄</span> Ocultar transcripción';
+  });
 }
 
 function mediaPlaceholder(title, mediaUrl, extraHtml) {
@@ -166,6 +213,41 @@ function mediaPlaceholder(title, mediaUrl, extraHtml) {
   );
 }
 
+function mediaVideo(opts) {
+  const track = opts.captionsUrl
+    ? '<track kind="captions" srclang="es" label="Español" src="' +
+      escapeAttr(opts.captionsUrl) +
+      '" default>'
+    : "";
+  const label = opts.altText
+    ? ' aria-label="' + escapeAttr(opts.altText) + '"'
+    : "";
+  return (
+    "<div>" +
+    '<video class="stage-video" controls' +
+    label +
+    ">" +
+    '<source src="' +
+    escapeAttr(opts.mediaUrl) +
+    '">' +
+    track +
+    "Tu navegador no reproduce este video.</video>" +
+    a11yFooter(opts) +
+    '<p class="media-url" style="margin-top:0.75rem">Vista prototipo: el <code>&lt;video&gt;</code> respeta captions del contrato aunque el CDN de ejemplo no sirva bytes.</p>' +
+    "</div>"
+  );
+}
+
+export function mediaA11yFrom(src) {
+  if (!src) return {};
+  return {
+    altText: src.alt_text || "",
+    transcript: src.transcript || "",
+    captionsUrl: src.captions_url || "",
+    audioDescriptionUrl: src.audio_description_url || "",
+  };
+}
+
 export function setStageFromMedia(opts) {
   const title = opts.title || (state.currentNode && state.currentNode.titulo) || "Stage";
   const meta = opts.meta || "";
@@ -174,12 +256,35 @@ export function setStageFromMedia(opts) {
     return;
   }
   if (opts.cellCode) {
-    showStageContent(title, meta, "<pre><code>" + escapeHtml(opts.cellCode) + "</code></pre>");
+    showStageContent(
+      title,
+      meta,
+      "<pre><code>" + escapeHtml(opts.cellCode) + "</code></pre>" + a11yFooter(opts)
+    );
     return;
   }
   if (opts.markdown) {
-    showStageContent(title, meta, '<div class="md">' + simpleMarkdown(opts.markdown) + "</div>");
+    showStageContent(
+      title,
+      meta,
+      '<div class="md">' +
+        simpleMarkdown(opts.markdown) +
+        "</div>" +
+        a11yFooter({
+          altText: opts.altText,
+          // Si el markdown del Stage ya es el transcript (p. ej. estación promovida), no duplicar.
+          transcript: opts.transcript && opts.transcript !== opts.markdown ? opts.transcript : "",
+        })
+    );
     return;
   }
-  showStageContent(title, meta, mediaPlaceholder(opts.clipTitle || title, opts.mediaUrl));
+  if (looksLikeVideo(opts.mediaUrl)) {
+    showStageContent(title, meta, mediaVideo(opts));
+    return;
+  }
+  showStageContent(
+    title,
+    meta,
+    mediaPlaceholder(opts.clipTitle || title, opts.mediaUrl, a11yFooter(opts))
+  );
 }

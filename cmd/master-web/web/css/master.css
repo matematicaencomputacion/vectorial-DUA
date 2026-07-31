@@ -317,6 +317,41 @@
       opacity: 0.75;
       text-align: center;
     }
+    .stage-media .media-alt {
+      margin: 0.75rem 0 0;
+      font-size: 0.92rem;
+      line-height: 1.4;
+      text-align: left;
+      max-width: 40rem;
+    }
+    .stage-media .stage-video {
+      width: min(100%, 36rem);
+      max-height: 16rem;
+      background: #000;
+      border-radius: var(--radius);
+    }
+    .stage-media .transcript-block {
+      width: min(100%, 40rem);
+      margin-top: 0.85rem;
+      text-align: left;
+    }
+    .stage-media .transcript-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font: inherit;
+      cursor: pointer;
+      border: 1px solid color-mix(in srgb, var(--stage-fg) 40%, transparent);
+      background: color-mix(in srgb, var(--stage-fg) 12%, transparent);
+      color: inherit;
+      border-radius: var(--radius);
+      padding: 0.35rem 0.7rem;
+    }
+    .stage-media .transcript-panel {
+      margin-top: 0.55rem;
+      max-height: 12rem;
+      overflow: auto;
+    }
     .stage-media pre, .stage-media .md, .stage-media .hint {
       width: 100%;
       max-height: 18rem;
