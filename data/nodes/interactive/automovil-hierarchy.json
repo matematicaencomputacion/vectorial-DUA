@@ -5,13 +5,25 @@
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/auto/macro-45s.mp4",
   "embedding_descriptor": "Exploración jerárquica de qué es un automóvil: visión macro y subtemas opcionales como caja central y ruedas, sin forzar un recorrido lineal.",
-  "embedding": [0.5, 0.4, 0.1, 0.2, 0.3],
+  "embedding": [
+    0.5,
+    0.4,
+    0.1,
+    0.2,
+    0.3
+  ],
   "botonera": [
     {
       "id_btn": "ask_different",
       "label": "+ Tengo una duda diferente",
       "action_type": "ask_agent",
-      "vector_delta": [0.0, 0.0, 0.2, 0.0, 0.2]
+      "vector_delta": [
+        0.0,
+        0.0,
+        0.2,
+        0.0,
+        0.2
+      ]
     }
   ],
   "hierarchy": {
@@ -25,7 +37,13 @@
         "is_optional": true,
         "media_url": "https://cdn.example.com/videos/auto/caja-overview.mp4",
         "duration_seconds": 40,
-        "orbit_delta": [0.05, 0.0, 0.0, 0.0, 0.0],
+        "orbit_delta": [
+          0.05,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
         "child_subtopics": [
           {
             "subtopic_id": "sub_asientos",
@@ -34,7 +52,16 @@
             "is_optional": true,
             "media_url": "https://cdn.example.com/videos/auto/asientos-30s.mp4",
             "duration_seconds": 30,
-            "orbit_delta": [0.02, 0.05, 0.0, 0.0, 0.0]
+            "orbit_delta": [
+              0.02,
+              0.05,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "alt_text": "Detalle de asientos: soporte, anclaje y confort básico.",
+            "transcript": "## Asientos\nSostienen el cuerpo, se anclan al piso de la caja y definen posturas de manejo y acompañante.",
+            "captions_url": "https://cdn.example.com/videos/auto/asientos-30s.vtt"
           },
           {
             "subtopic_id": "sub_volante",
@@ -43,7 +70,16 @@
             "is_optional": true,
             "media_url": "https://cdn.example.com/videos/auto/volante-45s.mp4",
             "duration_seconds": 45,
-            "orbit_delta": [0.02, 0.0, 0.05, 0.0, 0.0]
+            "orbit_delta": [
+              0.02,
+              0.0,
+              0.05,
+              0.0,
+              0.0
+            ],
+            "alt_text": "Volante: interfaz de dirección entre conductor y tren delantero.",
+            "transcript": "## Volante\nTraduce el giro de tus manos en ángulo de las ruedas delanteras. Es el control primario de dirección.",
+            "captions_url": "https://cdn.example.com/videos/auto/volante-45s.vtt"
           },
           {
             "subtopic_id": "sub_motor",
@@ -52,9 +88,21 @@
             "is_optional": true,
             "media_url": "https://cdn.example.com/videos/auto/motor-60s.mp4",
             "duration_seconds": 60,
-            "orbit_delta": [0.08, 0.0, 0.0, 0.05, 0.0]
+            "orbit_delta": [
+              0.08,
+              0.0,
+              0.0,
+              0.05,
+              0.0
+            ],
+            "alt_text": "Motor: convierte energía en movimiento para las ruedas.",
+            "transcript": "## Motor\nGenera el torque que, vía transmisión, llega a las ruedas. En este nivel solo ubicamos su rol en el sistema.",
+            "captions_url": "https://cdn.example.com/videos/auto/motor-60s.vtt"
           }
-        ]
+        ],
+        "alt_text": "Overview de la caja central: habitáculo, asientos, volante y vano motor.",
+        "transcript": "## Caja central\nLa caja concentra el espacio de personas y los controles. Desde aquí cuelgan asientos, volante y, adelante, el motor.",
+        "captions_url": "https://cdn.example.com/videos/auto/caja-overview.vtt"
       },
       {
         "subtopic_id": "sub_4_ruedas",
@@ -63,8 +111,20 @@
         "is_optional": true,
         "media_url": "https://cdn.example.com/videos/auto/ruedas-macro.mp4",
         "duration_seconds": 35,
-        "orbit_delta": [0.0, 0.06, 0.0, 0.0, 0.0]
+        "orbit_delta": [
+          0.0,
+          0.06,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alt_text": "Plano de las cuatro ruedas y su rol de apoyo y tracción.",
+        "transcript": "## Cuatro ruedas\nLas ruedas sostienen el peso, permiten girar y transmiten la tracción. Sin ellas el resto del sistema no se mueve.",
+        "captions_url": "https://cdn.example.com/videos/auto/ruedas-macro.vtt"
       }
     ]
-  }
+  },
+  "alt_text": "Vista macro de un automóvil: carrocería, habitáculo y ruedas en un plano general.",
+  "transcript": "## Macro automóvil\nUn automóvil es un sistema: caja central (habitáculo y controles) más cuatro ruedas que lo conectan al suelo. Explorá los subtemas en el orden que prefieras.",
+  "captions_url": "https://cdn.example.com/videos/auto/macro-45s.vtt"
 }

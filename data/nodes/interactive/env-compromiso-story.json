@@ -14,22 +14,49 @@
         "label": "Conversación guiada: riesgos y buenas prácticas",
         "media_url": "https://cdn.example.com/audio/env/why-debate.mp3",
         "format_type": "audio_debate",
-        "preference_delta": [0.05, 0.1, -0.1, 0.0, 0.25]
+        "preference_delta": [
+          0.05,
+          0.1,
+          -0.1,
+          0.0,
+          0.25
+        ],
+        "alt_text": "Audio guiado sobre riesgos de exponer credenciales y buenas prácticas de .env.",
+        "transcript": "## Conversación\n¿Qué pasa si el `.env` se commitea? Rotación de claves, `.gitignore`, y secretos distintos por ambiente (dev/stage/prod). La pregunta útil: ¿este valor es código o es configuración sensible?"
       },
       {
         "variant_id": "animation",
         "label": "Analogía visual de secretos y configuración",
         "media_url": "https://cdn.example.com/videos/env/secret-analogy.mp4",
         "format_type": "video",
-        "preference_delta": [0.05, 0.3, -0.05, 0.0, 0.15]
+        "preference_delta": [
+          0.05,
+          0.3,
+          -0.05,
+          0.0,
+          0.15
+        ],
+        "alt_text": "Analogía visual: llaves en un llavero etiquetado fuera del cuaderno de notas.",
+        "transcript": "## Analogía\nEl código es el cuaderno; las claves viven en el llavero (entorno). Prestás el cuaderno sin regalar las llaves de casa.",
+        "captions_url": "https://cdn.example.com/videos/env/secret-analogy.vtt"
       },
       {
         "variant_id": "live_coding",
         "label": "Micro-reto: verificar impacto en ejecución",
         "cell_code": "console.log(process.env.API_URL ?? '(sin configurar)')",
         "format_type": "live_code",
-        "preference_delta": [0.15, 0.0, -0.1, 0.1, 0.3]
+        "preference_delta": [
+          0.15,
+          0.0,
+          -0.1,
+          0.1,
+          0.3
+        ],
+        "alt_text": "Micro-reto en código: imprimir API_URL desde process.env.",
+        "transcript": "## Micro-reto\nEjecutá `console.log(process.env.API_URL ?? '(sin configurar)')`. Si sale vacío, el entorno no cargó el valor: revisá el archivo `.env` y cómo lo inyecta tu runtime."
       }
     ]
-  }
+  },
+  "alt_text": "Historia motivacional: por qué separar secretos del código con variables de entorno.",
+  "transcript": "## Por qué .env\nSi subís una API key al repo, cualquiera con acceso la puede usar. Las variables de entorno separan configuración de código y reducen ese riesgo."
 }

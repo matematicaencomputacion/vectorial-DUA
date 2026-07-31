@@ -25,6 +25,8 @@ func TestLiveStationPromoterCreatesAndReplaysCuratedSeed(t *testing.T) {
 	}
 	stored, ok := promoter.Registry.Get(liveNode.ID)
 	if !ok || stored.StageMarkdownDefault == "" ||
+		stored.Transcript != stored.StageMarkdownDefault ||
+		stored.AltText == "" ||
 		stored.PromotedFromTrackingULID != tracking ||
 		len(stored.RetrievedSources) != 1 {
 		t.Fatalf("stored node=%+v ok=%v", stored, ok)

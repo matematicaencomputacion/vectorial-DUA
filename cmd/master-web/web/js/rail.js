@@ -1,6 +1,6 @@
 import { recordBotonera, recordSubtopic, updateHierarchyProgress } from "./interactions.js";
 import { el, setAskMode, state } from "./state.js";
-import { actionIsAsk, schemaKind, setStageFromMedia } from "./ui.js";
+import { actionIsAsk, mediaA11yFrom, schemaKind, setStageFromMedia } from "./ui.js";
 
 function renderLegacyButtons(buttons, mount) {
   const list = document.createElement("div");
@@ -17,13 +17,13 @@ function renderLegacyButtons(buttons, mount) {
     b.addEventListener("click", async function () {
       list.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
       b.setAttribute("aria-pressed", "true");
-      setStageFromMedia({
+      setStageFromMedia(Object.assign({
         title: state.currentNode.titulo,
         meta: btn.is_live_generated ? "Generado en vivo" : "Botón legacy",
         mediaUrl: btn.media_url,
         cellCode: btn.cell_code,
         clipTitle: btn.label,
-      });
+      }, mediaA11yFrom(btn)));
       // Legacy flat: RecordBotonera with variant_id = id_btn
       await recordBotonera(btn.id_btn, "", btn.vector_delta, "BOTONERA_SCHEMA_FLAT");
     });
@@ -49,14 +49,14 @@ function renderSchemaTabs(options, kind, mount) {
     tab.textContent = opt.label || opt.variant_id;
     tab.addEventListener("click", async function () {
       activateTab(idx);
-      setStageFromMedia({
+      setStageFromMedia(Object.assign({
         title: state.currentNode.titulo,
         meta: kind,
         mediaUrl: opt.media_url || opt.walkthrough_url,
         cellCode: opt.cell_code,
         hintText: opt.hint_text,
         clipTitle: opt.label,
-      });
+      }, mediaA11yFrom(opt)));
       await recordBotonera(opt.variant_id, "", opt.preference_delta, state.currentNode.botonera_schema.kind);
     });
     tab.addEventListener("keydown", function (ev) {
@@ -127,13 +127,13 @@ function renderCombinedMatrix(schema, mount) {
         btn.addEventListener("click", async function () {
           grid.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
           btn.setAttribute("aria-pressed", "true");
-          setStageFromMedia({
+          setStageFromMedia(Object.assign({
             title: state.currentNode.titulo,
             meta: "combined · " + d + " × " + f,
             mediaUrl: cell.media_url,
             cellCode: cell.cell_code,
             clipTitle: d + " / " + f,
-          });
+          }, mediaA11yFrom(cell)));
           await recordBotonera(d, f, cell.preference_delta || [], schema.kind);
         });
       }
@@ -166,12 +166,12 @@ function renderHierarchy(tree, mount) {
   macro.className = "subtopic-select";
   macro.textContent = "Vista macro: " + (tree.main_topic_title || "tema");
   macro.addEventListener("click", function () {
-    setStageFromMedia({
+    setStageFromMedia(Object.assign({
       title: state.currentNode.titulo,
       meta: "Jerarquía · macro",
       mediaUrl: tree.macro_media_url || state.currentNode.stage_media_default,
       clipTitle: tree.main_topic_title,
-    });
+    }, mediaA11yFrom(state.currentNode)));
   });
   mount.appendChild(macro);
 
@@ -215,12 +215,12 @@ function renderHierarchy(tree, mount) {
       select.textContent = "Abrir en Stage: " + node.title;
       select.addEventListener("click", async function () {
         const nextPath = path.concat(node.subtopic_id);
-        setStageFromMedia({
+        setStageFromMedia(Object.assign({
           title: state.currentNode.titulo,
           meta: "Subtema · " + node.title,
           mediaUrl: node.media_url,
           clipTitle: node.title,
-        });
+        }, mediaA11yFrom(node)));
         await recordSubtopic(node.subtopic_id, nextPath, node.orbit_delta);
       });
       panel.appendChild(select);

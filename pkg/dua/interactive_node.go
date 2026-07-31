@@ -42,6 +42,10 @@ type InteractiveVideoNode struct {
 	StageMarkdownDefault     string               `json:"stage_markdown_default,omitempty"`
 	RetrievedSources         []string             `json:"retrieved_sources,omitempty"`
 	PromotedFromTrackingULID string               `json:"promoted_from_tracking_ulid,omitempty"`
+	CaptionsURL              string               `json:"captions_url,omitempty"`
+	Transcript               string               `json:"transcript,omitempty"`
+	AltText                  string               `json:"alt_text,omitempty"`
+	AudioDescriptionURL      string               `json:"audio_description_url,omitempty"`
 }
 
 // Validate checks structural integrity of an interactive node.

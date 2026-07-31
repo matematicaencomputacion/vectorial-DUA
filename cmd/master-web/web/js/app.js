@@ -1,7 +1,7 @@
 import { renderRail } from "./rail.js";
 import { requestGeneration, studentId } from "./session.js";
 import { el, renderDev, setAskMode, state } from "./state.js";
-import { api, reportError, setStageFromMedia, setStatus, setTextareaValue, showWaiting } from "./ui.js";
+import { api, mediaA11yFrom, reportError, setStageFromMedia, setStatus, setTextareaValue, showWaiting } from "./ui.js";
 import "./voice.js";
 
 let pollTimer = null;
@@ -48,13 +48,13 @@ async function loadInteractiveNode(nodeId, token) {
   await loadProgressForNode(node, token);
   if (!requestGeneration.isCurrent(token)) return;
   renderRail(node);
-  setStageFromMedia({
+  setStageFromMedia(Object.assign({
     title: node.titulo,
     meta: (node.dimension_dua || "") + " · interactivo",
     mediaUrl: node.stage_media_default || (node.hierarchy && node.hierarchy.macro_media_url),
     markdown: node.stage_markdown_default,
     clipTitle: node.titulo,
-  });
+  }, mediaA11yFrom(node)));
   renderDev();
   setStatus("Nodo interactivo cargado.", "ok");
 }

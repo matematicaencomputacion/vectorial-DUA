@@ -5,13 +5,25 @@
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/vars/intro.mp4",
   "embedding_descriptor": "Nodo visual sobre variables y scope (también escrito scopes o escopes): niveles de profundidad desde una mirada express hasta el detalle under the hood, con clips que muestran dónde vive cada variable.",
-  "embedding": [0.91, 0.12, 0.08, 0.22, 0.18],
+  "embedding": [
+    0.91,
+    0.12,
+    0.08,
+    0.22,
+    0.18
+  ],
   "botonera": [
     {
       "id_btn": "ask_different",
       "label": "+ Tengo una duda diferente",
       "action_type": "ask_agent",
-      "vector_delta": [0.0, 0.0, 0.2, 0.0, 0.3]
+      "vector_delta": [
+        0.0,
+        0.0,
+        0.2,
+        0.0,
+        0.3
+      ]
     }
   ],
   "botonera_schema": {
@@ -24,7 +36,16 @@
         "media_url": "https://cdn.example.com/videos/vars/express.mp4",
         "duration_seconds": 40,
         "format_type": "video",
-        "preference_delta": [0.0, 0.0, 0.0, 0.3, 0.0]
+        "preference_delta": [
+          0.0,
+          0.0,
+          0.0,
+          0.3,
+          0.0
+        ],
+        "alt_text": "Resumen express de variables y scope en menos de un minuto.",
+        "transcript": "## Express\nUna variable es un nombre ligado a un valor. El scope dice desde qué líneas ese nombre es visible. Si no la encontrás, mirá el bloque donde la declaraste.",
+        "captions_url": "https://cdn.example.com/videos/vars/express.vtt"
       },
       {
         "variant_id": "core",
@@ -32,7 +53,16 @@
         "media_url": "https://cdn.example.com/videos/vars/core.mp4",
         "duration_seconds": 150,
         "format_type": "video",
-        "preference_delta": [0.1, 0.1, 0.0, 0.0, 0.0]
+        "preference_delta": [
+          0.1,
+          0.1,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alt_text": "Explicación core de scopes globales, locales y de bloque con ejemplos cortos.",
+        "transcript": "## Core\nDeclarás en un scope y leés dentro de ese mismo alcance. Global: visible en el módulo. Función: solo adentro. Bloque (`{}` o indentación): solo en ese bloque. Shadowing: un nombre interno tapa al externo.",
+        "captions_url": "https://cdn.example.com/videos/vars/core.vtt"
       },
       {
         "variant_id": "deep_dive",
@@ -40,7 +70,16 @@
         "media_url": "https://cdn.example.com/videos/vars/deep.mp4",
         "duration_seconds": 360,
         "format_type": "video",
-        "preference_delta": [0.2, 0.0, 0.0, -0.2, 0.1]
+        "preference_delta": [
+          0.2,
+          0.0,
+          0.0,
+          -0.2,
+          0.1
+        ],
+        "alt_text": "Deep dive sobre closures y cómo capturan variables del scope exterior.",
+        "transcript": "## Deep dive\nUna closure recuerda las variables del scope donde nació. Por eso un callback puede usar `count` aunque la función exterior ya terminó: la referencia sigue viva mientras el closure exista.",
+        "captions_url": "https://cdn.example.com/videos/vars/deep.vtt"
       },
       {
         "variant_id": "under_the_hood",
@@ -48,8 +87,20 @@
         "media_url": "https://cdn.example.com/videos/vars/internals.mp4",
         "duration_seconds": 720,
         "format_type": "video",
-        "preference_delta": [0.3, 0.0, 0.0, -0.3, 0.2]
+        "preference_delta": [
+          0.3,
+          0.0,
+          0.0,
+          -0.3,
+          0.2
+        ],
+        "alt_text": "Recorrido interno de entornos léxicos y la cadena de scopes en el runtime.",
+        "transcript": "## Under the hood\nEl runtime arma un entorno léxico por frame. Al resolver un nombre, camina la cadena de entornos hacia afuera. Por eso el orden de declaración y el hoist importan según el lenguaje.",
+        "captions_url": "https://cdn.example.com/videos/vars/internals.vtt"
       }
     ]
-  }
+  },
+  "alt_text": "Clip introductorio: mapa visual de dónde vive cada variable en un programa.",
+  "transcript": "## Intro\nEn este clip vemos el mapa de scopes: global, de función y de bloque. La idea es ubicar *dónde* existe cada nombre antes de usarlo.",
+  "captions_url": "https://cdn.example.com/videos/vars/intro.vtt"
 }

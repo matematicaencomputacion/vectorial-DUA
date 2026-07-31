@@ -21,6 +21,10 @@ func ToProto(n *InteractiveVideoNode) *vectorv1.InteractiveVideoNode {
 		StageMarkdownDefault:     n.StageMarkdownDefault,
 		RetrievedSources:         append([]string(nil), n.RetrievedSources...),
 		PromotedFromTrackingUlid: n.PromotedFromTrackingULID,
+		CaptionsUrl:              n.CaptionsURL,
+		Transcript:               n.Transcript,
+		AltText:                  n.AltText,
+		AudioDescriptionUrl:      n.AudioDescriptionURL,
 	}
 	for _, b := range n.Botonera {
 		out.Botonera = append(out.Botonera, buttonToProto(b))
@@ -44,13 +48,17 @@ func hierarchyToProto(t *DUAHierarchicalTree) *vectorv1.DUAHierarchicalTree {
 
 func subtopicToProto(s SubtopicNode) *vectorv1.SubtopicNode {
 	out := &vectorv1.SubtopicNode{
-		SubtopicId:      s.SubtopicID,
-		Title:           s.Title,
-		DepthLevel:      depthToProto(s.DepthLevel),
-		IsOptional:      s.IsOptional,
-		MediaUrl:        s.MediaURL,
-		DurationSeconds: s.DurationSeconds,
-		OrbitDelta:      append([]float32(nil), s.OrbitDelta...),
+		SubtopicId:           s.SubtopicID,
+		Title:                s.Title,
+		DepthLevel:           depthToProto(s.DepthLevel),
+		IsOptional:           s.IsOptional,
+		MediaUrl:             s.MediaURL,
+		DurationSeconds:      s.DurationSeconds,
+		OrbitDelta:           append([]float32(nil), s.OrbitDelta...),
+		CaptionsUrl:          s.CaptionsURL,
+		Transcript:           s.Transcript,
+		AltText:              s.AltText,
+		AudioDescriptionUrl:  s.AudioDescriptionURL,
 	}
 	for _, c := range s.ChildSubtopics {
 		out.ChildSubtopics = append(out.ChildSubtopics, subtopicToProto(c))
@@ -114,43 +122,59 @@ func botoneraSchemaToProto(b *DUANodeBotonera) *vectorv1.DUANodeBotonera {
 	}
 	for _, d := range b.DepthOptions {
 		out.DepthOptions = append(out.DepthOptions, &vectorv1.DepthVariant{
-			VariantId:       d.VariantID,
-			Label:           d.Label,
-			MediaUrl:        d.MediaURL,
-			DurationSeconds: d.DurationSeconds,
-			FormatType:      mediaFormatToProto(d.FormatType),
-			PreferenceDelta: append([]float32(nil), d.PreferenceDelta...),
+			VariantId:            d.VariantID,
+			Label:                d.Label,
+			MediaUrl:             d.MediaURL,
+			DurationSeconds:      d.DurationSeconds,
+			FormatType:           mediaFormatToProto(d.FormatType),
+			PreferenceDelta:      append([]float32(nil), d.PreferenceDelta...),
+			CaptionsUrl:          d.CaptionsURL,
+			Transcript:           d.Transcript,
+			AltText:              d.AltText,
+			AudioDescriptionUrl:  d.AudioDescriptionURL,
 		})
 	}
 	for _, c := range b.CognitiveOptions {
 		out.CognitiveOptions = append(out.CognitiveOptions, &vectorv1.CognitiveVariant{
-			VariantId:       c.VariantID,
-			Label:           c.Label,
-			MediaUrl:        c.MediaURL,
-			CellCode:        c.CellCode,
-			FormatType:      mediaFormatToProto(c.FormatType),
-			PreferenceDelta: append([]float32(nil), c.PreferenceDelta...),
+			VariantId:            c.VariantID,
+			Label:                c.Label,
+			MediaUrl:             c.MediaURL,
+			CellCode:             c.CellCode,
+			FormatType:           mediaFormatToProto(c.FormatType),
+			PreferenceDelta:      append([]float32(nil), c.PreferenceDelta...),
+			CaptionsUrl:          c.CaptionsURL,
+			Transcript:           c.Transcript,
+			AltText:              c.AltText,
+			AudioDescriptionUrl:  c.AudioDescriptionURL,
 		})
 	}
 	for _, e := range b.EmergencyOptions {
 		out.EmergencyOptions = append(out.EmergencyOptions, &vectorv1.EmergencyVariant{
-			VariantId:       e.VariantID,
-			Label:           e.Label,
-			MediaUrl:        e.MediaURL,
-			HintText:        e.HintText,
-			WalkthroughUrl:  e.WalkthroughURL,
-			FormatType:      mediaFormatToProto(e.FormatType),
-			PreferenceDelta: append([]float32(nil), e.PreferenceDelta...),
+			VariantId:            e.VariantID,
+			Label:                e.Label,
+			MediaUrl:             e.MediaURL,
+			HintText:             e.HintText,
+			WalkthroughUrl:       e.WalkthroughURL,
+			FormatType:           mediaFormatToProto(e.FormatType),
+			PreferenceDelta:      append([]float32(nil), e.PreferenceDelta...),
+			CaptionsUrl:          e.CaptionsURL,
+			Transcript:           e.Transcript,
+			AltText:              e.AltText,
+			AudioDescriptionUrl:  e.AudioDescriptionURL,
 		})
 	}
 	for _, cell := range b.MatrixCells {
 		out.MatrixCells = append(out.MatrixCells, &vectorv1.CombinedCell{
-			DepthId:         cell.DepthID,
-			FormatId:        cell.FormatID,
-			MediaUrl:        cell.MediaURL,
-			CellCode:        cell.CellCode,
-			DurationSeconds: cell.DurationSeconds,
-			FormatType:      mediaFormatToProto(cell.FormatType),
+			DepthId:              cell.DepthID,
+			FormatId:             cell.FormatID,
+			MediaUrl:             cell.MediaURL,
+			CellCode:             cell.CellCode,
+			DurationSeconds:      cell.DurationSeconds,
+			FormatType:           mediaFormatToProto(cell.FormatType),
+			CaptionsUrl:          cell.CaptionsURL,
+			Transcript:           cell.Transcript,
+			AltText:              cell.AltText,
+			AudioDescriptionUrl:  cell.AudioDescriptionURL,
 		})
 	}
 	return out

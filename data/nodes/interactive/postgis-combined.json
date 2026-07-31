@@ -5,32 +5,53 @@
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/postgis/intro.mp4",
   "embedding_descriptor": "Matriz DUA sobre PostGIS ST_DWithin: combinar profundidad (express a deep) con formatos video, live code y diagrama para consultar geometrías dentro de un radio.",
-  "embedding": [0.15, 0.55, 0.1, 0.25, 0.35],
+  "embedding": [
+    0.15,
+    0.55,
+    0.1,
+    0.25,
+    0.35
+  ],
   "botonera_schema": {
     "kind": "combined",
     "topic_title": "ST_DWithin",
-    "depth_axis": ["express", "standard", "deep"],
-    "format_axis": ["video", "live_code", "diagram"],
+    "depth_axis": [
+      "express",
+      "standard",
+      "deep"
+    ],
+    "format_axis": [
+      "video",
+      "live_code",
+      "diagram"
+    ],
     "matrix_cells": [
       {
         "depth_id": "express",
         "format_id": "video",
         "media_url": "https://cdn.example.com/videos/postgis/express.mp4",
         "duration_seconds": 35,
-        "format_type": "video"
+        "format_type": "video",
+        "alt_text": "Video express: idea de radio alrededor de un punto.",
+        "transcript": "## Express\nDibujá un círculo de radio R alrededor del punto de interés. ST_DWithin es la pregunta: ¿hay geometrías dentro de ese círculo?",
+        "captions_url": "https://cdn.example.com/videos/postgis/express.vtt"
       },
       {
         "depth_id": "express",
         "format_id": "diagram",
         "media_url": "https://cdn.example.com/canvas/postgis/express.svg",
-        "format_type": "diagram"
+        "format_type": "diagram",
+        "alt_text": "Diagrama: punto central, círculo de radio R y geometrías dentro/fuera."
       },
       {
         "depth_id": "standard",
         "format_id": "video",
         "media_url": "https://cdn.example.com/videos/postgis/standard.mp4",
         "duration_seconds": 180,
-        "format_type": "video"
+        "format_type": "video",
+        "alt_text": "Video estándar: consulta ST_DWithin con geography y metros.",
+        "transcript": "## Standard\nUsamos `geography` para medir en metros. Ejemplo: cafés a 500 m de una esquina. Cuidado con SRID y con el caste a geography.",
+        "captions_url": "https://cdn.example.com/videos/postgis/standard.vtt"
       },
       {
         "depth_id": "standard",
@@ -43,14 +64,20 @@
         "format_id": "video",
         "media_url": "https://cdn.example.com/videos/postgis/deep.mp4",
         "duration_seconds": 480,
-        "format_type": "video"
+        "format_type": "video",
+        "alt_text": "Video deep: índices GiST y costos de ST_DWithin a escala.",
+        "transcript": "## Deep\nSin índice espacial la consulta barre la tabla. Con GiST, el plan usa el bounding box primero. Revisá `EXPLAIN` cuando el radio crece.",
+        "captions_url": "https://cdn.example.com/videos/postgis/deep.vtt"
       },
       {
         "depth_id": "deep",
         "format_id": "diagram",
         "media_url": "https://cdn.example.com/canvas/postgis/deep-index.svg",
-        "format_type": "diagram"
+        "format_type": "diagram",
+        "alt_text": "Diagrama del índice GiST y el filtrado por bounding box antes del test exacto."
       }
     ]
-  }
+  },
+  "alt_text": "Introducción a ST_DWithin: puntos dentro de un radio sobre un mapa.",
+  "transcript": "## Intro ST_DWithin\nST_DWithin pregunta si dos geometrías están a lo sumo a una distancia. Ideal para «cafés a 500 m»."
 }
