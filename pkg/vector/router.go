@@ -86,6 +86,38 @@ func RAGEnabledFromEnv() bool {
 	return b
 }
 
+const (
+	liveStationURLPrefix     = "live://stations/"
+	defaultLLMSyncDeadline   = 2 * time.Second
+)
+
+// LLMSyncDeadlineFromEnv reads AVLP_LLM_SYNC_DEADLINE (Go duration, default 2s).
+// Zero means return pending immediately and finish generation in the background.
+// Invalid or negative values fall back to the default.
+func LLMSyncDeadlineFromEnv() time.Duration {
+	v := strings.TrimSpace(os.Getenv("AVLP_LLM_SYNC_DEADLINE"))
+	if v == "" {
+		return defaultLLMSyncDeadline
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d < 0 {
+		return defaultLLMSyncDeadline
+	}
+	return d
+}
+
+// TrackingULIDFromLiveResourceURL extracts the ledger key from a live station URL.
+func TrackingULIDFromLiveResourceURL(resourceURL string) string {
+	if !strings.HasPrefix(resourceURL, liveStationURLPrefix) {
+		return ""
+	}
+	id := strings.TrimPrefix(resourceURL, liveStationURLPrefix)
+	if id == "" || strings.Contains(id, "/") {
+		return ""
+	}
+	return id
+}
+
 // QueryOptions carries optional text/session hints for RAG.
 type QueryOptions struct {
 	DoubtText   string
@@ -115,11 +147,7 @@ func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, 
 	match := r.Index.Nearest(fitted)
 
 	if match.Found && match.Similarity >= th {
-		return RouteOutcome{
-			Matched:    true,
-			Node:       match.Node,
-			Similarity: match.Similarity,
-		}, nil
+		return r.hydrateLiveMatch(match.Node, match.Similarity), nil
 	}
 
 	tracking, err := NewTrackingULID()
@@ -165,57 +193,111 @@ func (r *Router) QueryNearestWithOptions(ctx context.Context, studentID string, 
 		// do not start a second generation for the same ULID.
 		if r.Ledger != nil {
 			if _, should, _ := r.Ledger.TryBeginRetry(tracking); !should {
-				status := StationInProgress
-				if rec := r.Ledger.Get(tracking); rec != nil {
-					status = rec.Status
-				}
-				return RouteOutcome{
-					Matched:           false,
-					Similarity:        best,
-					TrackingULID:      tracking,
-					LiveStatus:        status,
-					LiveMessage:       pendingStudentMessage(status),
-					NodeNotFoundEvent: &evt,
-				}, nil
+				return r.pendingOutcome(best, tracking, &evt), nil
 			}
 		}
-		live, err := r.Live.GenerateLive(ctx, liveReq)
+		return r.generateLiveWithDeadline(ctx, liveReq, best, tracking, &evt), nil
+	}
+
+	return r.pendingOutcome(best, tracking, &evt), nil
+}
+
+func (r *Router) hydrateLiveMatch(node Node, similarity float32) RouteOutcome {
+	out := RouteOutcome{
+		Matched:    true,
+		Node:       node,
+		Similarity: similarity,
+	}
+	if !node.IsLiveGenerated {
+		return out
+	}
+	out.IsLiveGenerated = true
+	tracking := TrackingULIDFromLiveResourceURL(node.ResourceURL)
+	if tracking == "" || r.Ledger == nil {
+		return out
+	}
+	rec := r.Ledger.Get(tracking)
+	if rec == nil || rec.Status != StationReady || rec.Result == nil {
+		return out
+	}
+	out.TrackingULID = tracking
+	out.LiveContent = rec.Result.Content
+	out.RetrievedSources = append([]string(nil), rec.Result.Sources...)
+	return out
+}
+
+func (r *Router) generateLiveWithDeadline(
+	ctx context.Context,
+	liveReq LiveRequest,
+	best float32,
+	tracking string,
+	evt *NodeNotFoundEvent,
+) RouteOutcome {
+	type genOut struct {
+		live LiveResult
+		err  error
+	}
+	ch := make(chan genOut, 1)
+	genCtx := context.WithoutCancel(ctx)
+	go func() {
+		live, err := r.Live.GenerateLive(genCtx, liveReq)
 		if err == nil {
 			if r.Ledger != nil {
 				r.Ledger.MarkReady(tracking, live)
 			}
+		} else if r.Ledger != nil {
+			r.Ledger.MarkFailed(tracking, err.Error())
+		}
+		ch <- genOut{live: live, err: err}
+	}()
+
+	deadline := LLMSyncDeadlineFromEnv()
+	if deadline == 0 {
+		// Always async: background work already started.
+		return r.pendingOutcome(best, tracking, evt)
+	}
+
+	timer := time.NewTimer(deadline)
+	defer timer.Stop()
+
+	select {
+	case out := <-ch:
+		if out.err == nil {
 			return RouteOutcome{
 				Matched:           true,
 				IsLiveGenerated:   true,
-				Node:              live.Node,
+				Node:              out.live.Node,
 				Similarity:        best,
-				TrackingULID:      live.TrackingULID,
-				LiveContent:       live.Content,
-				RetrievedSources:  append([]string(nil), live.Sources...),
-				NodeNotFoundEvent: &evt,
-			}, nil
+				TrackingULID:      out.live.TrackingULID,
+				LiveContent:       out.live.Content,
+				RetrievedSources:  append([]string(nil), out.live.Sources...),
+				NodeNotFoundEvent: evt,
+			}
 		}
-		if r.Ledger != nil {
-			r.Ledger.MarkFailed(tracking, err.Error())
-		}
-		// fall through to pending on RAG failure
+		return r.pendingOutcome(best, tracking, evt)
+	case <-timer.C:
+		// Generation continues in the background; poll GetLiveStation for ready.
+		return r.pendingOutcome(best, tracking, evt)
+	case <-ctx.Done():
+		return r.pendingOutcome(best, tracking, evt)
 	}
+}
 
+func (r *Router) pendingOutcome(best float32, tracking string, evt *NodeNotFoundEvent) RouteOutcome {
 	status := StationInProgress
 	if r.Ledger != nil {
 		if rec := r.Ledger.Get(tracking); rec != nil {
 			status = rec.Status
 		}
 	}
-
 	return RouteOutcome{
 		Matched:           false,
 		Similarity:        best,
 		TrackingULID:      tracking,
 		LiveStatus:        status,
 		LiveMessage:       pendingStudentMessage(status),
-		NodeNotFoundEvent: &evt,
-	}, nil
+		NodeNotFoundEvent: evt,
+	}
 }
 
 func pendingStudentMessage(status string) string {
