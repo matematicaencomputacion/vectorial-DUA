@@ -163,7 +163,7 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_LLM_MODEL` | `qwen3:4b-instruct` | Modelo de síntesis generativa |
 | `AVLP_LLM_API_KEY` | vacío | Bearer opcional del backend LLM |
 | `AVLP_LLM_TIMEOUT` | `30s` | Timeout total de síntesis |
-| `AVLP_LLM_SYNC_DEADLINE` | `2s` | Ventana sync del miss; al vencer → pending + poll (`0` = siempre async) |
+| `AVLP_LLM_SYNC_DEADLINE` | `2s` | Ventana sync del miss path; al vencer → `pending` + poll. `0` = siempre asíncrono. Con modelos locales (p. ej. Ollama) conviene un valor alto (`30s`–`60s`) o `0` |
 | `AVLP_RAG_MIN_SIMILARITY` | `0.30` | Piso coseno de hits RAG |
 | `AVLP_RAG_ENABLED` | `true` | Materializar estaciones live vía RAG |
 | `AVLP_KB_ROOT` | `data/knowledge_base` | Raíz de la base documental |
@@ -187,6 +187,9 @@ ollama pull qwen3:4b-instruct
 
 export AVLP_LLM_URL=http://localhost:11434/v1
 export AVLP_LLM_MODEL=qwen3:4b-instruct
+# Con modelos locales la síntesis suele superar el default 2s:
+#   AVLP_LLM_SYNC_DEADLINE=0     → pending inmediato + poll (recomendado en lab)
+#   AVLP_LLM_SYNC_DEADLINE=45s   → esperar más antes de cortar a async
 go run ./cmd/router
 
 # Verificación opcional (fuera de CI; TestMain limpia AVLP_*):
