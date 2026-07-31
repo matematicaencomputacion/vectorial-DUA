@@ -77,7 +77,11 @@ func TestGenerateOffTopicYieldsHonestEmptySources(t *testing.T) {
 	idx := vector.NewIndex()
 	ret := rag.NewRetriever(store, emb, 5)
 	ret.MinSimilarity = rag.DefaultMinSimilarity
-	gen := &livestation.Generator{Retriever: ret, Nodes: idx}
+	gen := &livestation.Generator{
+		Retriever:       ret,
+		Nodes:           idx,
+		AvailableTopics: []string{"Variables y Scope", "async/await"},
+	}
 	res, err := gen.Generate(context.Background(), livestation.Request{
 		StudentID:   "s-bit",
 		DoubtText:   "que es un bit",
@@ -96,6 +100,78 @@ func TestGenerateOffTopicYieldsHonestEmptySources(t *testing.T) {
 	}
 	if !strings.Contains(res.Content, "No encontré material verificado") {
 		t.Fatalf("expected honest empty-KB copy, got %q", res.Content)
+	}
+	if strings.Contains(res.Content, "## Fuentes") || strings.Contains(res.Content, "## Micro-ejercicio") {
+		t.Fatalf("empty context must not emit empty sections:\n%s", res.Content)
+	}
+	if !strings.Contains(res.Content, "Variables y Scope") {
+		t.Fatalf("expected topic invitation:\n%s", res.Content)
+	}
+	assertStudentSafeContent(t, res.Content)
+	if !res.Prompt.EmptyContext {
+		t.Fatal("expected EmptyContext prompt")
+	}
+}
+
+func TestGenerateEmptyContextSynthesizerOutputIsSanitized(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	kb := filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "data", "knowledge_base"))
+	store := rag.NewStore()
+	emb := rag.NewHashEmbedder(64)
+	if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: kb, Embedder: emb}); err != nil {
+		t.Fatal(err)
+	}
+	ret := rag.NewRetriever(store, emb, 5)
+	ret.MinSimilarity = rag.DefaultMinSimilarity
+	synth := &stubSynthesizer{
+		content: "Tu pregunta sobre quarks es interesante. Ese tema no está en el material que tengo ahora; si querés podemos mirar Variables y Scope.\n\n" +
+			"Prueba el siguiente micro-desafío a tu ritmo:\n",
+	}
+	gen := &livestation.Generator{
+		Retriever:       ret,
+		Nodes:           vector.NewIndex(),
+		Synthesizer:     synth,
+		AvailableTopics: []string{"Variables y Scope"},
+	}
+	res, err := gen.Generate(context.Background(), livestation.Request{
+		StudentID:   "s-meta",
+		DoubtText:   "que es un bit",
+		Frustration: 0.1,
+		Dimension:   "Representacion",
+		Format:      "conceptual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !synth.bundle.EmptyContext {
+		t.Fatal("synthesizer should receive empty-context bundle")
+	}
+	assertStudentSafeContent(t, res.Content)
+	if strings.Contains(res.Content, "micro-desafío a tu ritmo:") {
+		t.Fatalf("dangling invite survived:\n%s", res.Content)
+	}
+	if strings.HasSuffix(strings.TrimSpace(res.Content), ":") {
+		t.Fatalf("dangling colon survived:\n%s", res.Content)
+	}
+}
+
+func assertStudentSafeContent(t *testing.T, content string) {
+	t.Helper()
+	lower := strings.ToLower(content)
+	for _, bad := range []string{
+		"dimensión dua", "dimension dua", "micro-ejercicio", "rogeriano",
+		"andamiaje", "no es posible validar", "citar fuentes",
+	} {
+		if strings.Contains(lower, bad) {
+			t.Fatalf("student content leaked %q:\n%s", bad, content)
+		}
+	}
+	if strings.Contains(content, "## Fuentes") && !strings.Contains(content, "- [") {
+		t.Fatalf("empty Fuentes section:\n%s", content)
+	}
+	trim := strings.TrimSpace(content)
+	if trim == "" || strings.HasSuffix(trim, ":") {
+		t.Fatalf("bad ending:\n%s", content)
 	}
 }
 
@@ -173,7 +249,7 @@ func TestGenerateLogsAndFallsBackWhenSynthesizerFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(res.Content, "Explicación anclada al contexto") ||
+	if !strings.Contains(res.Content, "Explicación anclada al material") ||
 		!strings.Contains(res.Content, "## Fuentes") {
 		t.Fatalf("expected extractive fallback:\n%s", res.Content)
 	}

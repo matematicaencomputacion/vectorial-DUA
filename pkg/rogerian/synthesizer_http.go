@@ -113,13 +113,16 @@ func (h *HTTPSynthesizer) Synthesize(ctx context.Context, bundle PromptBundle) (
 	if strings.TrimSpace(bundle.FullPrompt) == "" {
 		return "", fmt.Errorf("PromptBundle.FullPrompt is required")
 	}
-	system := strings.TrimSpace(bundle.SystemStyle) + " " + strings.Join([]string{
-		"Usa EXCLUSIVAMENTE el contexto verificado incluido en el mensaje.",
-		"No completes vacíos con conocimiento externo ni inventes hechos.",
-		"Si el contexto no alcanza, dilo explícitamente.",
-		"Cita afirmaciones usando [#].",
-		"No generes una sección Fuentes: la aplicación la agrega.",
-	}, " ")
+	system := strings.TrimSpace(bundle.SystemStyle)
+	if !bundle.EmptyContext {
+		system = strings.TrimSpace(system + " " + strings.Join([]string{
+			"Usa EXCLUSIVAMENTE el contexto verificado incluido en el mensaje.",
+			"No completes vacíos con conocimiento externo ni inventes hechos.",
+			"Si el contexto no alcanza, dilo explícitamente.",
+			"Cita afirmaciones usando [#].",
+			"No generes una sección Fuentes: la aplicación la agrega.",
+		}, " "))
+	}
 	body, err := json.Marshal(chatRequest{
 		Model: h.model,
 		Messages: []chatMessage{

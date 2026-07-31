@@ -135,6 +135,42 @@ func (r *Registry) ForEach(fn func(*InteractiveVideoNode)) {
 	}
 }
 
+// TopicTitles returns short curated titles for empty-context invitations.
+func (r *Registry) TopicTitles() []string {
+	if r == nil {
+		return nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var out []string
+	seen := map[string]struct{}{}
+	add := func(raw string) {
+		t := strings.TrimSpace(raw)
+		if t == "" {
+			return
+		}
+		key := strings.ToLower(t)
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		out = append(out, t)
+	}
+	for _, n := range r.nodes {
+		if n == nil {
+			continue
+		}
+		if n.BotoneraSchema != nil {
+			add(n.BotoneraSchema.TopicTitle)
+		}
+		if n.Hierarchy != nil {
+			add(n.Hierarchy.MainTopicTitle)
+		}
+		add(n.Titulo)
+	}
+	return out
+}
+
 // EnabledFromEnv reads AVLP_INTERACTIVE_NODES (default true).
 func EnabledFromEnv() bool {
 	v := strings.TrimSpace(os.Getenv("AVLP_INTERACTIVE_NODES"))

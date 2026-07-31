@@ -18,10 +18,11 @@ go run ./cmd/master-web
 - [ ] «+ Tengo una duda diferente» → aparece botón LIVE en la botonera
 - [ ] Ejemplo «fuera de tema (honesto)» → estación **ready** con contenido no vacío
   y **sin** fuentes espurias (p. ej. no citar `env-variables.md` en una duda de
-  física de partículas). Playwright solo verifica esa estructura estable; **el
-  juicio sobre la calidad de la redacción generativa es humano** (no
-  automatizable con substring). Con `AVLP_LLM_URL` vacío el copy extractivo sí
-  es determinista («No encontré material verificado…») y sirve de referencia.
+  física de partículas); sin jerga interna (DUA, micro-ejercicio, rogeriano) ni
+  encabezados colgando (`…:`). Playwright verifica esa estructura. Con
+  `AVLP_LLM_URL` vacío el copy extractivo es determinista («No encontré material
+  verificado…» + invitación a temas curados). **El juicio sobre la calidad de la
+  redacción generativa es humano**, no automatizable con substring.
 - [ ] Nodo estático / estación live: **no** muestra «+ Tengo una duda diferente»; sí el hint «Para una duda nueva…»
 - [ ] Error de API (p. ej. mutación inválida) aparece en la franja de estado con `aria-live="assertive"`
 - [ ] Label «Probá con:» + chips «Ejemplo: …»; al tocar un chip, el status indica que hay que pulsar «Buscar estación»

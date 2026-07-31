@@ -10,6 +10,12 @@
  * Modos (AVLP_ONLY): "chips" solo el mapeo de chips, "progress" solo el
  * acordeón que recuerda, "routerdown" solo el chequeo de router caído
  * (levantar master-web sin router). Sin valor corre todo.
+ *
+ * Estación «fuera de tema (honesto)»: asertos estructurales (contenido,
+ * sin fuentes espurias, sin jerga interna, sin cola «…:»). Para el copy
+ * extractivo determinista («No encontré material verificado…»), corré el
+ * router sin AVLP_LLM_URL. La calidad de redacción generativa es checklist
+ * humana (MANUAL_CHECKLIST.md), no substring de LLM.
  */
 import { chromium } from "playwright";
 import fs from "node:fs";
@@ -97,6 +103,17 @@ async function runChip(chip, i) {
           !/env-variables\.md/.test(srcBlob),
           `${where}: fuente espuria env-variables.md en duda fuera de dominio`
         );
+        assert(!/:\s*$/.test(text), `${where}: no debe terminar en encabezado colgando (…:)`);
+        for (const bad of [
+          "dimensión dua",
+          "dimension dua",
+          "micro-ejercicio",
+          "rogeriano",
+          "andamiaje",
+          "no es posible validar",
+        ]) {
+          assert(!srcBlob.includes(bad), `${where}: filtró jerga interna «${bad}»`);
+        }
       }
 
       let honestContent = "";
