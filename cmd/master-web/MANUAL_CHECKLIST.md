@@ -16,7 +16,12 @@ go run ./cmd/master-web
 - [ ] Toque de opción de profundidad actualiza el Stage (título / media_url) y el panel de desarrollo refleja cambio en $V_e$
 - [ ] Ejemplo «async/await» → botonera cognitiva; «PostGIS» → matriz combined; «automóvil» → acordeón (abrir Motor sin pasar por Asientos)
 - [ ] «+ Tengo una duda diferente» → aparece botón LIVE en la botonera
-- [ ] Ejemplo «fuera de tema (honesto)» → estación sin fuentes espurias; Stage con «No encontré material verificado…»
+- [ ] Ejemplo «fuera de tema (honesto)» → estación **ready** con contenido no vacío
+  y **sin** fuentes espurias (p. ej. no citar `env-variables.md` en una duda de
+  física de partículas). Playwright solo verifica esa estructura estable; **el
+  juicio sobre la calidad de la redacción generativa es humano** (no
+  automatizable con substring). Con `AVLP_LLM_URL` vacío el copy extractivo sí
+  es determinista («No encontré material verificado…») y sirve de referencia.
 - [ ] Nodo estático / estación live: **no** muestra «+ Tengo una duda diferente»; sí el hint «Para una duda nueva…»
 - [ ] Error de API (p. ej. mutación inválida) aparece en la franja de estado con `aria-live="assertive"`
 - [ ] Label «Probá con:» + chips «Ejemplo: …»; al tocar un chip, el status indica que hay que pulsar «Buscar estación»

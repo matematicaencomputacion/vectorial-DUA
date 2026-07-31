@@ -232,6 +232,8 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 
 **Precedencia del umbral estático:** request gRPC válido > `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` / `data/avlp.json`) > `0.85`. El router loguea valor y origen al arrancar.
 
+La tabla incluye las variables de **sesión** (`AVLP_SESSION_*`, `AVLP_TEACHER_KEY`) y de **STT local** (`AVLP_STT_*`) añadidas en Ola 5. Sin `AVLP_STT_URL` la UI cae a Web Speech o no muestra micrófono; sin `AVLP_SESSION_SECRET` el prototipo permanece en modo abierto.
+
 ## Accesibilidad de medios (DUA — múltiples medios de representación)
 
 El contrato interactivo admite alternativas opcionales en el nodo raíz y en cada
