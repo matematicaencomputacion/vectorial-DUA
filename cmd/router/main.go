@@ -20,10 +20,11 @@ import (
 	"github.com/vectorial-dua/avlp/pkg/livestation"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/rogerian"
+	"github.com/vectorial-dua/avlp/pkg/session"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
-const defaultAddr = ":50051"
+const defaultAddr = "127.0.0.1:50051"
 
 func main() {
 	addr := defaultAddr
@@ -189,6 +190,14 @@ func main() {
 	}
 
 	go func() {
+		if session.SecureModeFromEnv() {
+			log.Printf("session auth: secure mode active (AVLP_SESSION_SECRET set)")
+			if !isLoopbackListenAddr(addr) {
+				log.Printf("WARNING: el router acepta identidad por metadata; exponerlo fuera de loopback sin mTLS permite suplantación (AVLP_ROUTER_ADDR=%s)", addr)
+			}
+		} else {
+			log.Printf("session auth: open mode (AVLP_SESSION_SECRET empty) — metadata optional")
+		}
 		log.Printf("AVLP vector router listening on %s (%d nodes indexed)", addr, index.Len())
 		if err := srv.Serve(lis); err != nil {
 			log.Fatalf("serve: %v", err)
@@ -240,4 +249,22 @@ func formatFromNodeID(nodeID string) string {
 		return "visual"
 	}
 	return parts.Format
+}
+
+// isLoopbackListenAddr reports whether addr is a TCP listen target bound only to
+// loopback (127.0.0.0/8, ::1, or hostname "localhost"). Empty host (":port")
+// and non-loopback IPs are not loopback — the router trusts gRPC metadata for
+// identity, so exposing it beyond loopback without mTLS enables impersonation.
+func isLoopbackListenAddr(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	if host == "" {
+		return false
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return strings.EqualFold(host, "localhost")
 }

@@ -88,6 +88,18 @@
 
     <p class="status-line" id="status" role="status" aria-live="polite"></p>
 
+    <div class="teacher-bar">
+      <button type="button" id="btn-promote" class="secondary" hidden>⬆ Promover estación al currículo</button>
+      <details id="teacher-details" hidden>
+        <summary>Soy docente</summary>
+        <label for="teacher-key">Clave de instituto</label>
+        <div class="teacher-row">
+          <input id="teacher-key" type="password" autocomplete="off" placeholder="AVLP_TEACHER_KEY" />
+          <button type="button" id="btn-teacher" class="secondary">Activar rol docente</button>
+        </div>
+      </details>
+    </div>
+
     <details class="dev">
       <summary>Panel de desarrollo (plegado)</summary>
       <pre id="dev-panel" aria-label="Estado de desarrollo"></pre>

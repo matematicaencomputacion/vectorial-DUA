@@ -101,7 +101,7 @@ go run ./cmd/router-client -mode poll -student demo-student
 UI Master de laboratorio (Stage ~70% + botonera ~30%) sobre el gateway HTTP/JSON. No es producción: es fiel al contrato interactivo y al camino de estaciones pendientes.
 
 ```bash
-go run ./cmd/router                 # gRPC :50051
+go run ./cmd/router                 # gRPC 127.0.0.1:50051 (loopback por defecto)
 go run ./cmd/master-web             # http://127.0.0.1:8080  (AVLP_WEB_ADDR / AVLP_ROUTER_ADDR)
 ```
 
@@ -122,11 +122,25 @@ Flujo esperado en texto:
 
 Checklist manual (teclado + lector de pantalla + voz): `cmd/master-web/MANUAL_CHECKLIST.md`.
 
-**Trust model del prototipo.** Los RPCs y el gateway confían en el `student_id`
-declarado por el cliente — igual que `RecordSubtopicInteraction` /
-`RecordBotoneraInteraction` y `GetSubtopicProgress`. La promoción confía en la
-posesión del `tracking_ulid`; una fase multi-usuario requiere autenticación,
-autorización por estudiante y rol docente para promover.
+**Sesión y confianza.** Con `AVLP_SESSION_SECRET` vacío el prototipo sigue en
+**modo abierto** (el cliente declara `student_id`; se loguea al arrancar). Con
+secret configurado el **gateway es el único punto de verificación**: emite un
+token HMAC (`POST /api/session`), las APIs HTTP exigen `Authorization: Bearer`,
+y propaga identidad por metadata gRPC (`avlp-student-id`, `avlp-role`). El
+**router confía en esa metadata** (no revalida el token). Precedencia: el
+`student_id` del token gana sobre body/query; si difieren → `NotFound` (sin
+filtrar existencia). `PromoteLiveStation` en modo seguro exige rol `teacher`,
+obtenido solo si `AVLP_TEACHER_KEY` coincide al pedir sesión. Sin esa clave,
+nadie puede promover en modo seguro.
+
+Por eso el router bindea por defecto en **loopback** (`127.0.0.1:50051`).
+`AVLP_ROUTER_ADDR` puede abrirlo a otras interfaces a propósito; en modo seguro
+se loguea una advertencia si no es loopback (sin mTLS, un cliente gRPC directo
+puede fabricar metadata y suplantar rol). El router debe permanecer en loopback
+o detrás de mTLS.
+
+Deuda Ola 6: que el router valide el token él mismo o mTLS gateway↔router;
+además usuarios persistentes, passwords/OAuth y más roles.
 
 Dictado por voz (mejora progresiva): si el navegador expone Web Speech API, aparece un micrófono junto a «Tu duda» y a «+ Tengo una duda diferente» (`lang: es-AR`, sin auto-enviar). Atajo **Ctrl+M** en el campo principal. Soportado en Chrome/Edge (probado en Chrome); si no hay API, el botón no se renderiza.
 
@@ -141,8 +155,13 @@ generar (miss → estación live) → revisar (contenido + fuentes) → promover
 ```
 
 ```bash
-# La estación quedó ready (poll o UI). Promoción:
-curl -X POST http://127.0.0.1:8080/api/stations/{tracking_ulid}/promote
+# Modo seguro (gateway + router con el mismo secret):
+export AVLP_SESSION_SECRET='cambia-esto-por-un-secreto-largo'
+export AVLP_TEACHER_KEY='clave-instituto'
+# UI: plegado «Soy docente» → re-emite token teacher → botón promover
+
+# La estación quedó ready (poll o UI). Promoción (requiere teacher en modo seguro):
+curl -H "Authorization: Bearer $TOKEN" -X POST http://127.0.0.1:8080/api/stations/{tracking_ulid}/promote
 # → seed data/nodes/interactive/promoted-{tracking_ulid}.json (idempotente)
 ```
 
@@ -170,10 +189,13 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_STATION_TTL` | `24h` | TTL del ledger de estaciones pendientes |
 | `AVLP_LIVE_NODE_TTL` | `24h` | TTL de nodos live en el índice k-NN |
 | `AVLP_REQUIRE_MEDIA_A11Y` | `false` | Si `true`, rechaza seeds con huecos de accesibilidad de medios |
+| `AVLP_SESSION_SECRET` | vacío → modo abierto | Secret HMAC de sesión; vacío mantiene el prototipo abierto |
+| `AVLP_SESSION_TTL` | `24h` | Expiración del token de sesión |
+| `AVLP_TEACHER_KEY` | vacío | Clave de instituto para emitir rol `teacher` (solo modo seguro) |
 | `AVLP_INTERACTIVE_NODES` | `true` | Carga de seeds Stage/botonera |
 | `AVLP_INTERACTIVE_NODES_DIR` | `data/nodes/interactive` | Directorio de seeds (incluye promovidos) |
 | `AVLP_PROFILE_STORE_PATH` | vacío → memoria | Snapshot JSON de perfiles $V_e$ |
-| `AVLP_ROUTER_ADDR` | `:50051` | Bind gRPC del router / dial del gateway |
+| `AVLP_ROUTER_ADDR` | `127.0.0.1:50051` | Bind gRPC del router (loopback) / dial del gateway; override explícito para otras interfaces |
 | `AVLP_WEB_ADDR` | `127.0.0.1:8080` | Bind HTTP de `master-web` |
 
 **Precedencia del umbral estático:** request gRPC válido > `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` / `data/avlp.json`) > `0.85`. El router loguea valor y origen al arrancar.

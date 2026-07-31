@@ -49,6 +49,12 @@ func main() {
 	}
 
 	gw := webgateway.New(vectorv1.NewVectorRouterClient(conn), http.FileServer(http.FS(staticRoot)))
+	if gw.Session.Secure() {
+		log.Printf("session auth: secure mode active (AVLP_SESSION_SECRET set); teacher key %s",
+			map[bool]string{true: "configured", false: "empty — nobody can promote"}[gw.Session.TeacherKey != ""])
+	} else {
+		log.Printf("session auth: open mode (AVLP_SESSION_SECRET empty) — client-declared student_id trusted")
+	}
 	srv := &http.Server{
 		Addr:              webAddr,
 		Handler:           gw.Handler(),

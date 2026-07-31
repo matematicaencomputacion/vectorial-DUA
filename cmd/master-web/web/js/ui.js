@@ -1,4 +1,5 @@
 import { el, setAskMode, state } from "./state.js";
+import { auth } from "./session.js";
 
 function syncClearButton(textarea, btn) {
   if (!textarea || !btn) return;
@@ -112,9 +113,19 @@ export function actionIsAsk(btn) {
 }
 
 export async function api(path, opts) {
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers || {});
+  try {
+    await auth.ready;
+  } catch (_) {
+    /* ensureSession errors surface on first call */
+  }
+  if (auth.secureMode && auth.token) {
+    headers.Authorization = "Bearer " + auth.token;
+  }
   var res;
   try {
-    res = await fetch(path, opts);
+    res = await fetch(path, Object.assign({}, opts, { headers: headers }));
   } catch (netErr) {
     reportError(netErr, "No pude contactar al servidor. Revisá que el router y master-web estén en marcha.");
     throw netErr;

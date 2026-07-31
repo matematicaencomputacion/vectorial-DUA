@@ -1,5 +1,5 @@
 import { renderRail } from "./rail.js";
-import { requestGeneration, studentId } from "./session.js";
+import { auth, ensureSession, requestGeneration, studentId } from "./session.js";
 import { el, renderDev, setAskMode, state } from "./state.js";
 import { api, mediaA11yFrom, reportError, setStageFromMedia, setStatus, setTextareaValue, showWaiting } from "./ui.js";
 import "./voice.js";
@@ -129,9 +129,7 @@ async function pollStation(trackingUlid, token) {
           // If the live node also has an interactive seed (rare), upgrade the rail.
           if (st.node_id) {
             try {
-              const node = await fetch("/api/nodes/" + encodeURIComponent(st.node_id)).then(function (r) {
-                return r.ok ? r.json() : null;
-              });
+              const node = await api("/api/nodes/" + encodeURIComponent(st.node_id));
               if (!requestGeneration.isCurrent(token)) return;
               if (node && node.node_id) {
                 state.currentNode = node;
@@ -212,8 +210,12 @@ el.form.addEventListener("submit", async function (ev) {
     });
     if (!requestGeneration.isCurrent(token)) return;
     if (route.matched) {
+      if (route.matched.is_live_generated && String(route.matched.resource_url || "").startsWith("live://stations/")) {
+        state.lastTrackingUlid = String(route.matched.resource_url).slice("live://stations/".length);
+      }
       await handleMatched(route.matched, token);
     } else if (route.pending) {
+      state.lastTrackingUlid = route.pending.tracking_ulid || null;
       state.currentNode = null;
       state.rawProgress = null;
       state.currentProgress = null;
@@ -290,5 +292,54 @@ document.querySelectorAll(".hints [data-hint]").forEach(function (btn) {
   });
 });
 
+const btnTeacher = document.getElementById("btn-teacher");
+const teacherKey = document.getElementById("teacher-key");
+const teacherDetails = document.getElementById("teacher-details");
+const btnPromote = document.getElementById("btn-promote");
+
+if (btnTeacher) {
+  btnTeacher.addEventListener("click", async function () {
+    try {
+      await ensureSession(teacherKey && teacherKey.value);
+      if (teacherKey) teacherKey.value = "";
+      setStatus(auth.role === "teacher" ? "Rol docente activo." : "Sesión renovada como estudiante.", "ok");
+      renderDev();
+    } catch (e) {
+      reportError(e, "No pude renovar la sesión docente.");
+    }
+  });
+}
+
+if (btnPromote) {
+  btnPromote.addEventListener("click", async function () {
+    if (!state.lastTrackingUlid) return;
+    btnPromote.disabled = true;
+    try {
+      const res = await api("/api/stations/" + encodeURIComponent(state.lastTrackingUlid) + "/promote", {
+        method: "POST",
+      });
+      setStatus(
+        res.created
+          ? "Estación promovida al currículo (" + (res.node_id || "") + ")."
+          : "Estación ya estaba promovida (" + (res.node_id || "") + ").",
+        "ok"
+      );
+      renderDev();
+    } catch (e) {
+      // reportError inside api
+    } finally {
+      btnPromote.disabled = false;
+    }
+  });
+}
+
 setAskMode(false);
-renderDev();
+auth.ready
+  .then(function () {
+    if (teacherDetails) teacherDetails.hidden = !auth.secureMode;
+    renderDev();
+  })
+  .catch(function (e) {
+    reportError(e, "No pude iniciar la sesión.");
+    renderDev();
+  });

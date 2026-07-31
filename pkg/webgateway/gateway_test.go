@@ -22,6 +22,7 @@ import (
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
 	"github.com/vectorial-dua/avlp/internal/routerserver"
 	"github.com/vectorial-dua/avlp/pkg/dua"
+	"github.com/vectorial-dua/avlp/pkg/session"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 	"github.com/vectorial-dua/avlp/pkg/webgateway"
 )
@@ -476,5 +477,156 @@ func TestGatewayBotoneraRecord(t *testing.T) {
 	ve := impl.profiles.Get("stu-ve")
 	if ve[0] < 0.1 {
 		t.Fatalf("expected V_e updated, got %v", ve)
+	}
+}
+
+func startSecureGateway(t *testing.T, teacherKey string) (*webgateway.Gateway, *testBackend, func()) {
+	t.Helper()
+	t.Setenv("AVLP_SESSION_SECRET", "test-session-secret-32chars-min!!")
+	if teacherKey != "" {
+		t.Setenv("AVLP_TEACHER_KEY", teacherKey)
+	} else {
+		t.Setenv("AVLP_TEACHER_KEY", "")
+	}
+	gw, backend, cleanup := startTestGateway(t)
+	gw.Session = session.FromEnv()
+	return gw, backend, cleanup
+}
+
+func sessionToken(t *testing.T, gw *webgateway.Gateway, studentID, teacherKey string) string {
+	t.Helper()
+	body := map[string]string{"student_id": studentID}
+	if teacherKey != "" {
+		body["teacher_key"] = teacherKey
+	}
+	raw, _ := json.Marshal(body)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/session", bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("session status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var out map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	tok, _ := out["token"].(string)
+	if tok == "" || out["secure_mode"] != true {
+		t.Fatalf("session response: %v", out)
+	}
+	return tok
+}
+
+func TestGatewaySecureIDORStationNotFound(t *testing.T) {
+	gw, backend, cleanup := startSecureGateway(t, "")
+	defer cleanup()
+	backend.live.fail = true
+
+	tokA := sessionToken(t, gw, "stu-a", "")
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/query",
+		strings.NewReader(`{"student_id":"stu-a","query_text":"duda novel auth"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+tokA)
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("query status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var route map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &route)
+	pending, _ := route["pending"].(map[string]any)
+	ulid, _ := pending["tracking_ulid"].(string)
+	if ulid == "" {
+		t.Fatalf("expected pending tracking, got %s", rr.Body.String())
+	}
+
+	backend.live.fail = false
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet,
+		"/api/stations/"+ulid+"?student_id=stu-a", nil)
+	req.Header.Set("Authorization", "Bearer "+tokA)
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("owner poll status=%d body=%s", rr.Code, rr.Body.String())
+	}
+
+	tokB := sessionToken(t, gw, "stu-b", "")
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet,
+		"/api/stations/"+ulid+"?student_id=stu-a", nil)
+	req.Header.Set("Authorization", "Bearer "+tokB)
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("IDOR want 404, got %d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestGatewaySecurePromoteRequiresTeacher(t *testing.T) {
+	gw, backend, cleanup := startSecureGateway(t, "institute-key")
+	defer cleanup()
+	backend.live.fail = true
+
+	tokStudent := sessionToken(t, gw, "stu-p", "")
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/query",
+		strings.NewReader(`{"student_id":"stu-p","query_text":"promover auth"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+tokStudent)
+	gw.Handler().ServeHTTP(rr, req)
+	var route map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &route)
+	pending, _ := route["pending"].(map[string]any)
+	ulid, _ := pending["tracking_ulid"].(string)
+	if ulid == "" {
+		t.Fatalf("no tracking: %s", rr.Body.String())
+	}
+
+	backend.live.fail = false
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet,
+		"/api/stations/"+ulid+"?student_id=stu-p", nil)
+	req.Header.Set("Authorization", "Bearer "+tokStudent)
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("poll ready status=%d body=%s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/stations/"+ulid+"/promote", nil)
+	req.Header.Set("Authorization", "Bearer "+tokStudent)
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("student promote want 403, got %d body=%s", rr.Code, rr.Body.String())
+	}
+
+	tokTeacher := sessionToken(t, gw, "stu-p", "institute-key")
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/stations/"+ulid+"/promote", nil)
+	req.Header.Set("Authorization", "Bearer "+tokTeacher)
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("teacher promote status=%d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestGatewayOpenModeSession(t *testing.T) {
+	t.Setenv("AVLP_SESSION_SECRET", "")
+	gw, _, cleanup := startTestGateway(t)
+	defer cleanup()
+	gw.Session = session.FromEnv()
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/session",
+		strings.NewReader(`{"student_id":"stu-open"}`))
+	req.Header.Set("Content-Type", "application/json")
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var out map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &out)
+	if out["secure_mode"] != false {
+		t.Fatalf("expected open mode: %v", out)
 	}
 }

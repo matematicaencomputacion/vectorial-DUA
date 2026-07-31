@@ -12,6 +12,7 @@ import (
 	"github.com/vectorial-dua/avlp/pkg/dua"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/rogerian"
+	"github.com/vectorial-dua/avlp/pkg/session"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
@@ -52,12 +53,17 @@ func New(deps Deps) *Server {
 }
 
 const ackRecorded = "recorded"
+const promoteDeniedMessage = "No tenés permiso para esta acción."
 
 func neutralAck() *vectorv1.Ack {
 	return &vectorv1.Ack{Ok: true, Message: ackRecorded}
 }
 
 func (s *Server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery) (*vectorv1.RouteResult, error) {
+	id, err := session.RequireSecureIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
 	studentID := ""
 	var dims []float32
 	preferredDimension := ""
@@ -76,6 +82,13 @@ func (s *Server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 				frustrationProvided = true
 			}
 		}
+	}
+	studentID, err = session.ResolveStudentID(id, studentID)
+	if err != nil {
+		return nil, err
+	}
+	if st := req.GetStudentState(); st != nil {
+		st.StudentId = studentID
 	}
 
 	// Ola 1 merge rule (no blend): request dimensions win; otherwise profile store.
@@ -143,14 +156,22 @@ func (s *Server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 }
 
 func (s *Server) GetLiveStation(ctx context.Context, req *vectorv1.LiveStationQuery) (*vectorv1.LiveStationStatus, error) {
+	id, err := session.RequireSecureIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if s.router == nil || s.router.Ledger == nil {
 		return nil, status.Error(codes.FailedPrecondition, "station ledger unavailable")
 	}
-	if req.GetTrackingUlid() == "" || req.GetStudentId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "tracking_ulid and student_id are required")
+	if req.GetTrackingUlid() == "" {
+		return nil, status.Error(codes.InvalidArgument, "tracking_ulid is required")
+	}
+	studentID, err := session.ResolveStudentID(id, req.GetStudentId())
+	if err != nil {
+		return nil, err
 	}
 
-	rec, err := s.router.LookupStation(ctx, req.GetTrackingUlid(), req.GetStudentId())
+	rec, err := s.router.LookupStation(ctx, req.GetTrackingUlid(), studentID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "lookup station: %v", err)
 	}
@@ -176,7 +197,13 @@ func (s *Server) PromoteLiveStation(
 	ctx context.Context,
 	req *vectorv1.PromoteLiveStationRequest,
 ) (*vectorv1.PromoteLiveStationResponse, error) {
-	_ = ctx
+	id, err := session.RequireSecureIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if id.Secure && id.Role != session.RoleTeacher {
+		return nil, status.Error(codes.PermissionDenied, promoteDeniedMessage)
+	}
 	if req.GetTrackingUlid() == "" {
 		return nil, status.Error(codes.InvalidArgument, "tracking_ulid is required")
 	}
@@ -209,7 +236,9 @@ func (s *Server) PromoteLiveStation(
 }
 
 func (s *Server) GetInteractiveNode(ctx context.Context, req *vectorv1.NodeIdRequest) (*vectorv1.InteractiveVideoNode, error) {
-	_ = ctx
+	if _, err := session.RequireSecureIdentity(ctx); err != nil {
+		return nil, err
+	}
 	if s.reg == nil {
 		return nil, status.Error(codes.FailedPrecondition, "interactive nodes disabled")
 	}
@@ -221,12 +250,20 @@ func (s *Server) GetInteractiveNode(ctx context.Context, req *vectorv1.NodeIdReq
 }
 
 func (s *Server) MutateInteractiveNode(ctx context.Context, req *vectorv1.MutateInteractiveRequest) (*vectorv1.MutateInteractiveResponse, error) {
+	id, err := session.RequireSecureIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
+	studentID, err := session.ResolveStudentID(id, req.GetStudentId())
+	if err != nil {
+		return nil, err
+	}
 	if s.mutator == nil {
 		return nil, status.Error(codes.FailedPrecondition, "interactive mutation disabled")
 	}
 	res, err := s.mutator.Mutate(ctx, dua.MutateRequest{
 		NodeID:         req.GetNodeId(),
-		StudentID:      req.GetStudentId(),
+		StudentID:      studentID,
 		DoubtText:      req.GetDoubtText(),
 		QueryEmbedding: req.GetQueryEmbedding(),
 		Frustration:    req.GetFrustration(),
@@ -241,7 +278,15 @@ func (s *Server) MutateInteractiveNode(ctx context.Context, req *vectorv1.Mutate
 }
 
 func (s *Server) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.BotoneraInteraction) (*vectorv1.Ack, error) {
-	_ = ctx
+	id, err := session.RequireSecureIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
+	studentID, err := session.ResolveStudentID(id, req.GetStudentId())
+	if err != nil {
+		return nil, err
+	}
+	req.StudentId = studentID
 	if s.profiles == nil {
 		return nil, status.Error(codes.FailedPrecondition, "profile store disabled")
 	}
@@ -272,7 +317,15 @@ func (s *Server) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.Bo
 }
 
 func (s *Server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.SubtopicInteraction) (*vectorv1.Ack, error) {
-	_ = ctx
+	id, err := session.RequireSecureIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
+	studentID, err := session.ResolveStudentID(id, req.GetStudentId())
+	if err != nil {
+		return nil, err
+	}
+	req.StudentId = studentID
 	if s.profiles == nil {
 		return nil, status.Error(codes.FailedPrecondition, "profile store disabled")
 	}
@@ -303,12 +356,16 @@ func (s *Server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.Su
 }
 
 func (s *Server) GetSubtopicProgress(ctx context.Context, req *vectorv1.SubtopicProgressQuery) (*vectorv1.SubtopicProgress, error) {
-	// Trust model (prototype): the client-declared student_id is trusted, same
-	// as RecordSubtopicInteraction / RecordBotoneraInteraction. A multi-user
-	// phase needs authentication and per-student authorization (Ola 4 debt).
-	_ = ctx
-	if req.GetStudentId() == "" || req.GetParentNodeId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "student_id and parent_node_id are required")
+	id, err := session.RequireSecureIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
+	studentID, err := session.ResolveStudentID(id, req.GetStudentId())
+	if err != nil {
+		return nil, err
+	}
+	if req.GetParentNodeId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "parent_node_id is required")
 	}
 	if s.interactions == nil {
 		return nil, status.Error(codes.FailedPrecondition, "subtopic interactions disabled")
@@ -325,7 +382,7 @@ func (s *Server) GetSubtopicProgress(ctx context.Context, req *vectorv1.Subtopic
 		return nil, status.Errorf(codes.NotFound, "node %q has no hierarchy", req.GetParentNodeId())
 	}
 
-	opened := s.interactions.OpenedList(req.GetStudentId(), req.GetParentNodeId())
+	opened := s.interactions.OpenedList(studentID, req.GetParentNodeId())
 	openedSet := make(map[string]struct{}, len(opened))
 	for _, id := range opened {
 		openedSet[id] = struct{}{}
@@ -333,7 +390,7 @@ func (s *Server) GetSubtopicProgress(ctx context.Context, req *vectorv1.Subtopic
 	progress := dua.ProgressForTree(node.Hierarchy, openedSet)
 
 	out := &vectorv1.SubtopicProgress{
-		StudentId:         req.GetStudentId(),
+		StudentId:         studentID,
 		ParentNodeId:      req.GetParentNodeId(),
 		OpenedSubtopicIds: progress.OpenedSubtopicIDs,
 		TotalSubtopics:    int32(progress.TotalSubtopics),

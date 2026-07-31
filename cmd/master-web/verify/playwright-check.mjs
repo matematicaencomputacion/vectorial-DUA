@@ -343,6 +343,25 @@ const cacheControl = (resp.headers()["cache-control"] || "").toLowerCase();
 assert(cacheControl.includes("no-cache"), `index.html debe ir con no-cache, got: ${cacheControl || "(vacío)"}`);
 console.log(`OK Cache-Control: ${cacheControl}`);
 
+// Auth: modo abierto por defecto — sesión sin Bearer obligatorio; «Soy docente» oculto.
+{
+  const sess = await page.evaluate(async () => {
+    const r = await fetch("/api/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: "stu-verify-open" }),
+    });
+    return { status: r.status, body: await r.json() };
+  });
+  assert(sess.status === 200, `POST /api/session falló: ${sess.status}`);
+  assert(sess.body.secure_mode === false, "lab por defecto debe ser modo abierto");
+  const teacherDetails = page.locator("#teacher-details");
+  assert((await teacherDetails.count()) === 1, "debe existir el bloque Soy docente");
+  assert(await teacherDetails.isHidden(), "Soy docente oculto en modo abierto");
+  assert(await page.locator("#btn-promote").isHidden(), "promover oculto sin rol teacher");
+  console.log("OK auth modo abierto (secure_mode=false, UI docente oculta)");
+}
+
 const askBox = page.locator("#ask-box");
 assert((await askBox.count()) === 1, "ask-box debe existir en el DOM");
 assert(!(await askBox.isVisible()), "ask-box no debe ser visible sin nodo interactivo");
