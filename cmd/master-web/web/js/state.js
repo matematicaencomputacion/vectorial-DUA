@@ -1,4 +1,4 @@
-import { studentId } from "./session.js";
+import { auth, studentId } from "./session.js";
 
 const VE_LABELS = ["Dominio", "Sensorial", "Frustración", "Ritmo", "Autonomía"];
 let stopVoice = function () {};
@@ -12,6 +12,7 @@ export const state = {
   hierarchyUI: null,
   interactiveSession: false,
   activeTabId: null,
+  lastTrackingUlid: null,
 };
 
 export const el = {
@@ -63,14 +64,20 @@ export function applyDelta(delta) {
 export function renderDev() {
   const lines = [
     "student_id (sesión del navegador): " + studentId,
+    "auth: secure_mode=" + auth.secureMode + " role=" + auth.role + " token=" + (auth.token ? "sí (memoria)" : "no"),
     "V_e estimado (sesión; se actualiza con preference_delta de Record*):",
     state.ve.map((v, i) => "  [" + i + "] " + VE_LABELS[i] + " = " + v.toFixed(3)).join("\n"),
     "última similitud de ruteo: " + (state.lastSimilarity == null ? "—" : Number(state.lastSimilarity).toFixed(4)),
     "nodo actual: " + (state.currentNode && state.currentNode.node_id ? state.currentNode.node_id : "—"),
+    "última estación (tracking): " + (state.lastTrackingUlid || "—"),
     "progreso crudo de subtemas (API):",
     state.rawProgress ? JSON.stringify(state.rawProgress, null, 2) : "—",
     "progreso local (incluye actualización optimista):",
     state.currentProgress ? JSON.stringify(state.currentProgress, null, 2) : "—",
   ];
   el.dev.textContent = lines.join("\n");
+  const promote = document.getElementById("btn-promote");
+  if (promote) {
+    promote.hidden = !(auth.role === "teacher" && state.lastTrackingUlid);
+  }
 }

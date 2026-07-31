@@ -36,3 +36,40 @@ export class RequestGeneration {
 
 export const studentId = resolveStudentId();
 export const requestGeneration = new RequestGeneration();
+
+/** Session token kept in memory only (never localStorage). */
+export const auth = {
+  token: "",
+  role: "student",
+  secureMode: false,
+  ready: null,
+};
+
+export async function ensureSession(teacherKey) {
+  const body = { student_id: studentId };
+  if (teacherKey) body.teacher_key = teacherKey;
+  const res = await fetch("/api/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (_) {
+    data = { message: text };
+  }
+  if (!res.ok) {
+    const err = new Error((data && (data.student_message || data.message)) || res.statusText);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  auth.token = data.token || "";
+  auth.role = data.role || "student";
+  auth.secureMode = !!data.secure_mode;
+  return data;
+}
+
+auth.ready = ensureSession();

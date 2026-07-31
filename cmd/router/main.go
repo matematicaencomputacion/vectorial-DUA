@@ -20,6 +20,7 @@ import (
 	"github.com/vectorial-dua/avlp/pkg/livestation"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/rogerian"
+	"github.com/vectorial-dua/avlp/pkg/session"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 )
 
@@ -189,6 +190,11 @@ func main() {
 	}
 
 	go func() {
+		if session.SecureModeFromEnv() {
+			log.Printf("session auth: secure mode active (AVLP_SESSION_SECRET set)")
+		} else {
+			log.Printf("session auth: open mode (AVLP_SESSION_SECRET empty) — metadata optional")
+		}
 		log.Printf("AVLP vector router listening on %s (%d nodes indexed)", addr, index.Len())
 		if err := srv.Serve(lis); err != nil {
 			log.Fatalf("serve: %v", err)

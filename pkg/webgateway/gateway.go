@@ -2,11 +2,14 @@
 package webgateway
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,10 +17,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
+	"github.com/vectorial-dua/avlp/pkg/session"
 )
 
 // StudentUnavailableMessage is the person-centered copy for transport / 5xx failures.
 const StudentUnavailableMessage = "No pudimos conectar con el tutor en este momento; probá de nuevo en un instante"
+
+const promoteDeniedMessage = "No tenés permiso para esta acción."
 
 var (
 	marshalOpts = protojson.MarshalOptions{
@@ -31,18 +37,26 @@ var (
 
 // Gateway maps REST/JSON routes onto a VectorRouterClient.
 type Gateway struct {
-	Client vectorv1.VectorRouterClient
-	Static http.Handler // optional; served for non-/api/ paths
+	Client  vectorv1.VectorRouterClient
+	Static  http.Handler // optional; served for non-/api/ paths
+	Session session.Config
+	Now     func() time.Time
 }
 
-// New returns a gateway. Static may be nil.
+// New returns a gateway. Static may be nil. Session defaults to env when zero.
 func New(client vectorv1.VectorRouterClient, static http.Handler) *Gateway {
-	return &Gateway{Client: client, Static: static}
+	return &Gateway{
+		Client:  client,
+		Static:  static,
+		Session: session.FromEnv(),
+		Now:     func() time.Time { return time.Now().UTC() },
+	}
 }
 
 // Handler returns the root HTTP handler.
 func (g *Gateway) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/session", g.handleSession)
 	mux.HandleFunc("POST /api/query", g.handleQuery)
 	mux.HandleFunc("GET /api/nodes/{id}", g.handleGetNode)
 	mux.HandleFunc("GET /api/nodes/{id}/progress", g.handleSubtopicProgress)
@@ -58,13 +72,44 @@ func (g *Gateway) Handler() http.Handler {
 			return
 		}
 		if g.Static != nil {
-			// El shell y su grafo de módulos deben revalidarse juntos para evitar
-			// mezclar archivos de despliegues distintos.
 			w.Header().Set("Cache-Control", "no-cache")
 			g.Static.ServeHTTP(w, r)
 			return
 		}
 		http.NotFound(w, r)
+	})
+}
+
+type sessionRequest struct {
+	StudentID  string `json:"student_id"`
+	TeacherKey string `json:"teacher_key"`
+}
+
+type sessionResponse struct {
+	StudentID  string `json:"student_id"`
+	Token      string `json:"token"`
+	Role       string `json:"role"`
+	SecureMode bool   `json:"secure_mode"`
+	ExpiresAt  int64  `json:"expires_at,omitempty"`
+}
+
+func (g *Gateway) handleSession(w http.ResponseWriter, r *http.Request) {
+	var body sessionRequest
+	if err := decodeJSON(r, &body); err != nil {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", err.Error(), "")
+		return
+	}
+	token, claims, err := g.Session.Issue(body.StudentID, body.TeacherKey, g.now())
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", err.Error(), "")
+		return
+	}
+	writeJSON(w, http.StatusOK, sessionResponse{
+		StudentID:  claims.StudentID,
+		Token:      token,
+		Role:       claims.Role,
+		SecureMode: g.Session.Secure(),
+		ExpiresAt:  claims.Exp,
 	})
 }
 
@@ -80,20 +125,30 @@ func (g *Gateway) handleQuery(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, "invalid_argument", err.Error(), "")
 		return
 	}
-	if body.StudentID == "" || strings.TrimSpace(body.QueryText) == "" {
-		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "student_id and query_text are required", "")
+	ctx, id, err := g.authedContext(r, body.StudentID)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	studentID, err := session.ResolveStudentID(id, body.StudentID)
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	if strings.TrimSpace(body.QueryText) == "" {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "query_text is required", "")
 		return
 	}
 
 	st := &vectorv1.StudentVector{
-		StudentId: body.StudentID,
+		StudentId: studentID,
 		Session:   &vectorv1.StudentSessionMeta{},
 	}
 	if body.Frustration != nil {
 		st.Session.FrustrationSignal = body.Frustration
 	}
 
-	res, err := g.Client.QueryNearestNode(r.Context(), &vectorv1.VectorQuery{
+	res, err := g.Client.QueryNearestNode(ctx, &vectorv1.VectorQuery{
 		StudentState: st,
 		QueryText:    body.QueryText,
 	})
@@ -110,7 +165,12 @@ func (g *Gateway) handleGetNode(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "node id is required", "")
 		return
 	}
-	res, err := g.Client.GetInteractiveNode(r.Context(), &vectorv1.NodeIdRequest{NodeId: id})
+	ctx, _, err := g.authedContext(r, "")
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	res, err := g.Client.GetInteractiveNode(ctx, &vectorv1.NodeIdRequest{NodeId: id})
 	if err != nil {
 		writeGRPCError(w, err)
 		return
@@ -120,12 +180,22 @@ func (g *Gateway) handleGetNode(w http.ResponseWriter, r *http.Request) {
 
 func (g *Gateway) handleSubtopicProgress(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	studentID := r.URL.Query().Get("student_id")
-	if id == "" || studentID == "" {
-		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "node id and student_id are required", "")
+	requested := r.URL.Query().Get("student_id")
+	if id == "" {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "node id is required", "")
 		return
 	}
-	res, err := g.Client.GetSubtopicProgress(r.Context(), &vectorv1.SubtopicProgressQuery{
+	ctx, identity, err := g.authedContext(r, requested)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	studentID, err := session.ResolveStudentID(identity, requested)
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	res, err := g.Client.GetSubtopicProgress(ctx, &vectorv1.SubtopicProgressQuery{
 		StudentId:    studentID,
 		ParentNodeId: id,
 	})
@@ -149,13 +219,23 @@ func (g *Gateway) handleMutate(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, "invalid_argument", err.Error(), "")
 		return
 	}
-	if id == "" || body.StudentID == "" || strings.TrimSpace(body.DoubtText) == "" {
-		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "node id, student_id, and doubt_text are required", "")
+	ctx, identity, err := g.authedContext(r, body.StudentID)
+	if err != nil {
+		writeAuthError(w, err)
 		return
 	}
-	res, err := g.Client.MutateInteractiveNode(r.Context(), &vectorv1.MutateInteractiveRequest{
+	studentID, err := session.ResolveStudentID(identity, body.StudentID)
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	if id == "" || strings.TrimSpace(body.DoubtText) == "" {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "node id and doubt_text are required", "")
+		return
+	}
+	res, err := g.Client.MutateInteractiveNode(ctx, &vectorv1.MutateInteractiveRequest{
 		NodeId:      id,
-		StudentId:   body.StudentID,
+		StudentId:   studentID,
 		DoubtText:   body.DoubtText,
 		Frustration: body.Frustration,
 	})
@@ -172,7 +252,18 @@ func (g *Gateway) handleBotonera(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, "invalid_argument", err.Error(), "")
 		return
 	}
-	res, err := g.Client.RecordBotoneraInteraction(r.Context(), &req)
+	ctx, identity, err := g.authedContext(r, req.GetStudentId())
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	studentID, err := session.ResolveStudentID(identity, req.GetStudentId())
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	req.StudentId = studentID
+	res, err := g.Client.RecordBotoneraInteraction(ctx, &req)
 	if err != nil {
 		writeGRPCError(w, err)
 		return
@@ -186,7 +277,18 @@ func (g *Gateway) handleSubtopic(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, "invalid_argument", err.Error(), "")
 		return
 	}
-	res, err := g.Client.RecordSubtopicInteraction(r.Context(), &req)
+	ctx, identity, err := g.authedContext(r, req.GetStudentId())
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	studentID, err := session.ResolveStudentID(identity, req.GetStudentId())
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	req.StudentId = studentID
+	res, err := g.Client.RecordSubtopicInteraction(ctx, &req)
 	if err != nil {
 		writeGRPCError(w, err)
 		return
@@ -196,12 +298,22 @@ func (g *Gateway) handleSubtopic(w http.ResponseWriter, r *http.Request) {
 
 func (g *Gateway) handleStation(w http.ResponseWriter, r *http.Request) {
 	ulid := r.PathValue("tracking_ulid")
-	studentID := r.URL.Query().Get("student_id")
-	if ulid == "" || studentID == "" {
-		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "tracking_ulid and student_id are required", "")
+	requested := r.URL.Query().Get("student_id")
+	if ulid == "" {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "tracking_ulid is required", "")
 		return
 	}
-	res, err := g.Client.GetLiveStation(r.Context(), &vectorv1.LiveStationQuery{
+	ctx, identity, err := g.authedContext(r, requested)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	studentID, err := session.ResolveStudentID(identity, requested)
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	res, err := g.Client.GetLiveStation(ctx, &vectorv1.LiveStationQuery{
 		TrackingUlid: ulid,
 		StudentId:    studentID,
 	})
@@ -218,7 +330,16 @@ func (g *Gateway) handlePromoteStation(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "tracking_ulid is required", "")
 		return
 	}
-	res, err := g.Client.PromoteLiveStation(r.Context(), &vectorv1.PromoteLiveStationRequest{
+	ctx, identity, err := g.authedContext(r, "")
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if identity.Secure && identity.Role != session.RoleTeacher {
+		writeAPIError(w, http.StatusForbidden, "permission_denied", promoteDeniedMessage, promoteDeniedMessage)
+		return
+	}
+	res, err := g.Client.PromoteLiveStation(ctx, &vectorv1.PromoteLiveStationRequest{
 		TrackingUlid: ulid,
 	})
 	if err != nil {
@@ -226,6 +347,48 @@ func (g *Gateway) handlePromoteStation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeProto(w, http.StatusOK, res)
+}
+
+func (g *Gateway) now() time.Time {
+	if g.Now != nil {
+		return g.Now()
+	}
+	return time.Now().UTC()
+}
+
+// authedContext validates Bearer when secure and attaches outgoing gRPC metadata.
+// requestedStudentID is optional hint used only when issuing open-mode identity.
+func (g *Gateway) authedContext(r *http.Request, requestedStudentID string) (context.Context, session.Identity, error) {
+	if !g.Session.Secure() {
+		id := session.Identity{
+			StudentID: strings.TrimSpace(requestedStudentID),
+			Role:      session.RoleStudent,
+			Secure:    false,
+		}
+		return session.AppendOutgoingMetadata(r.Context(), id), id, nil
+	}
+	raw := strings.TrimSpace(r.Header.Get("Authorization"))
+	if raw == "" || !strings.HasPrefix(strings.ToLower(raw), "bearer ") {
+		return nil, session.Identity{}, status.Error(codes.Unauthenticated, "authentication required")
+	}
+	token := strings.TrimSpace(raw[len("Bearer "):])
+	claims, err := g.Session.Verify(token, g.now())
+	if err != nil {
+		if errors.Is(err, session.ErrExpiredToken) {
+			return nil, session.Identity{}, status.Error(codes.Unauthenticated, "session expired")
+		}
+		return nil, session.Identity{}, status.Error(codes.Unauthenticated, "authentication required")
+	}
+	id := session.Identity{
+		StudentID: claims.StudentID,
+		Role:      claims.Role,
+		Secure:    true,
+	}
+	return session.AppendOutgoingMetadata(r.Context(), id), id, nil
+}
+
+func writeAuthError(w http.ResponseWriter, err error) {
+	writeGRPCError(w, err)
 }
 
 func decodeJSON(r *http.Request, dst any) error {
@@ -241,6 +404,12 @@ func decodeProtoJSON(r *http.Request, msg proto.Message) error {
 		return err
 	}
 	return unmarshalOpts.Unmarshal(b, msg)
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func writeProto(w http.ResponseWriter, code int, msg proto.Message) {
@@ -284,6 +453,10 @@ func studentFacingGRPCMessage(code codes.Code, raw string) string {
 	switch code {
 	case codes.Unavailable, codes.Internal, codes.DeadlineExceeded, codes.Unknown:
 		return StudentUnavailableMessage
+	case codes.PermissionDenied:
+		return promoteDeniedMessage
+	case codes.Unauthenticated:
+		return "Necesitás una sesión activa para continuar."
 	}
 	if isTechnicalTransportMessage(raw) {
 		return StudentUnavailableMessage
@@ -305,11 +478,18 @@ func writeGRPCError(w http.ResponseWriter, err error) {
 		log.Printf("webgateway grpc %s (hidden from student): %v", st.Code(), err)
 	}
 	studentMsg := ""
-	if st.Code() == codes.NotFound {
-		studentMsg = raw // rogerian / NotFound copy is already student-facing
+	switch st.Code() {
+	case codes.NotFound:
+		studentMsg = raw
 		msg = raw
-	} else if msg == StudentUnavailableMessage {
+	case codes.PermissionDenied, codes.Unauthenticated:
+		studentMsg = msg
+	case codes.Unavailable, codes.Internal, codes.DeadlineExceeded, codes.Unknown:
 		studentMsg = StudentUnavailableMessage
+	default:
+		if msg == StudentUnavailableMessage {
+			studentMsg = StudentUnavailableMessage
+		}
 	}
 	writeAPIError(w, httpCode, code, msg, studentMsg)
 }
@@ -330,6 +510,8 @@ func mapGRPCCode(c codes.Code) (httpCode int, code string) {
 		return http.StatusGatewayTimeout, "deadline_exceeded"
 	case codes.PermissionDenied:
 		return http.StatusForbidden, "permission_denied"
+	case codes.Unauthenticated:
+		return http.StatusUnauthorized, "unauthenticated"
 	case codes.Internal:
 		return http.StatusInternalServerError, "internal"
 	default:
