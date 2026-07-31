@@ -24,7 +24,8 @@ arrastrada desde Ola 3.c y el prerequisito mínimo de multi-usuario.
 
 ### Fuera de alcance
 
-- Base de usuarios, passwords, OAuth, recuperación de claves, roles extra
+- Base de usuarios, passwords, OAuth, recuperación de claves, roles extra;
+  validación del token HMAC dentro del router o mTLS gateway↔router
   (deuda Ola 6).
 
 ### Rollback

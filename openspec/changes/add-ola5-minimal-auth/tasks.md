@@ -13,3 +13,9 @@
 
 - [x] 3.1 Sesión al cargar, token en memoria, Soy docente, botón promover
 - [x] 3.2 Tests + Playwright abierto/seguro + README; PR con freno
+
+## 4. Frontera de confianza (corrección pre-merge)
+
+- [x] 4.1 Bind por defecto `127.0.0.1:50051`; warning en modo seguro si no es loopback
+- [x] 4.2 Documentar modelo gateway-verifica / router-confía (README + design); deuda Ola 6 (token en router o mTLS)
+
