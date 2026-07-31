@@ -60,7 +60,9 @@ Las estaciones en vivo quedan indexadas (quien repite una duda novel vuelve a su
 
 ## Ciclo de vida de estaciones pendientes
 
-Cuando el miss no puede materializar la estación al instante (RAG off/fallo), `QueryNearestNode` devuelve `LiveStationPending` con `tracking_ulid` y un **mensaje rogeriano en español** (no diagnóstico técnico). El router registra la solicitud en `StationLedger` (`in_progress` | `ready` | `failed`, TTL `AVLP_STATION_TTL`, default 24h).
+Cuando el miss no puede materializar la estación al instante (RAG off/fallo), o cuando la generación supera `AVLP_LLM_SYNC_DEADLINE` (default **2s**), `QueryNearestNode` devuelve `LiveStationPending` con `tracking_ulid` y un **mensaje rogeriano en español** (no diagnóstico técnico). El router registra la solicitud en `StationLedger` (`in_progress` | `ready` | `failed`, TTL `AVLP_STATION_TTL`, default 24h) y sigue generando en segundo plano.
+
+Si el mismo embedding vuelve a matchear un nodo `live://stations/{ulid}` ya listo, la respuesta matched rehidrata `live_content` y fuentes desde el ledger (el Stage no debería mostrar solo la URL).
 
 El camino de retorno es `GetLiveStation(tracking_ulid, student_id)`:
 
@@ -161,6 +163,7 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_LLM_MODEL` | `qwen3:4b-instruct` | Modelo de síntesis generativa |
 | `AVLP_LLM_API_KEY` | vacío | Bearer opcional del backend LLM |
 | `AVLP_LLM_TIMEOUT` | `30s` | Timeout total de síntesis |
+| `AVLP_LLM_SYNC_DEADLINE` | `2s` | Ventana sync del miss; al vencer → pending + poll (`0` = siempre async) |
 | `AVLP_RAG_MIN_SIMILARITY` | `0.30` | Piso coseno de hits RAG |
 | `AVLP_RAG_ENABLED` | `true` | Materializar estaciones live vía RAG |
 | `AVLP_KB_ROOT` | `data/knowledge_base` | Raíz de la base documental |

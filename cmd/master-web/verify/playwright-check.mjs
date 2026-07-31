@@ -73,20 +73,66 @@ async function runChip(chip, i) {
       );
       assert(!route.matched.has_interactive_payload, "una estación live no trae payload interactivo");
       dest = route.matched.resource_url;
-      // El chip «fuera de tema» se materializa por primera vez aquí: el contenido
-      // honesto vive en la respuesta del miss, no en un re-match posterior.
-      if (/honesto/i.test(chip.label)) {
+    } else {
+      dest = `pending ${route.pending.tracking_ulid}`;
+      // Miss async (p. ej. LLM > AVLP_LLM_SYNC_DEADLINE): la UI ya hace poll.
+      await page.waitForFunction(
+        () => {
+          const title = document.getElementById("stage-title")?.textContent || "";
+          const status = document.getElementById("status")?.textContent || "";
+          return /Estación lista/i.test(title) || /La estación está lista/i.test(status);
+        },
+        { timeout: 120000 }
+      );
+    }
+
+    if (/honesto/i.test(chip.label)) {
+      if (route.matched) {
         const content = String(route.matched.live_content || "");
         assert(
           /no encontré material verificado|sin inventar/i.test(content),
           `estación honesta debía decir que no sabe, got: ${content.slice(0, 200)}`
         );
-        await page.waitForTimeout(400);
-        await shot(page, "flow-05-live-honesto.png");
-        console.log("OK estación en vivo honesta → flow-05-live-honesto.png");
+      } else {
+        const stageText = await page.locator("#stage").innerText();
+        assert(
+          /no encontré material verificado|sin inventar/i.test(stageText),
+          `Stage honesto (vía poll) debía decir que no sabe, got: ${stageText.slice(0, 200)}`
+        );
       }
-    } else {
-      dest = `pending ${route.pending.tracking_ulid}`;
+      await page.waitForTimeout(400);
+      await shot(page, "flow-05-live-honesto.png");
+      console.log("OK estación en vivo honesta → flow-05-live-honesto.png");
+
+      // Rematch: misma duda → nodo live:// + live_content rehidratado del ledger.
+      const waitRematch = page.waitForResponse(
+        (r) => r.url().includes("/api/query") && r.request().method() === "POST",
+        { timeout: 45000 }
+      );
+      await page.click("#btn-query");
+      const rematch = await (await waitRematch).json();
+      assert(rematch.matched, `rematch honesto sin match: ${JSON.stringify(rematch)}`);
+      assert(
+        String(rematch.matched.resource_url).startsWith("live://stations/"),
+        `rematch debía ir a live://, fue ${rematch.matched.resource_url}`
+      );
+      const rematchContent = String(rematch.matched.live_content || "");
+      assert(
+        rematchContent.length > 0,
+        "rematch de estación live debe traer live_content del ledger"
+      );
+      assert(
+        /no encontré material verificado|sin inventar/i.test(rematchContent),
+        `rematch debía conservar el contenido honesto, got: ${rematchContent.slice(0, 200)}`
+      );
+      await page.waitForTimeout(400);
+      const stageText = await page.locator("#stage").innerText();
+      assert(
+        !/live:\/\/stations\//i.test(stageText),
+        `Stage no debe mostrar la URL cruda tras rematch, got: ${stageText.slice(0, 200)}`
+      );
+      await shot(page, "flow-07-live-rematch.png");
+      console.log("OK rematch live con contenido → flow-07-live-rematch.png");
     }
     await page.waitForTimeout(600);
   } else {
@@ -392,9 +438,7 @@ await page.waitForFunction(
 await shot(page, "flow-04-mutate-live.png");
 console.log(`OK botón live en la botonera: «${liveLabel}» → flow-04-mutate-live.png`);
 
-// 5) La estación honesta se verificó al ejercitar el chip «fuera de tema»
-// (contenido del miss path). Re-matchear un nodo live no reexpone live_content:
-// eso queda anotado como deuda Ola 4.
+// 5) Rematch con live_content se verificó al re-preguntar el chip «fuera de tema».
 
 // 6) Higiene de repo: el estado local del profile store no se versiona.
 const gitignore = fs.readFileSync(path.join(__dirname, "../../../.gitignore"), "utf8");

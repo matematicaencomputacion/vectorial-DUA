@@ -213,7 +213,11 @@ func (s *registeringLive) GenerateLive(ctx context.Context, req vector.LiveReque
 	}
 	emb := make([]float32, s.idx.Dims())
 	emb[0] = 1
-	node, err := s.idx.RegisterLiveNode("Representacion", "adaptativo", "conceptual", "live://race", emb)
+	url := "live://stations/" + req.TrackingULID
+	if req.TrackingULID == "" {
+		url = "live://race"
+	}
+	node, err := s.idx.RegisterLiveNode("Representacion", "adaptativo", "conceptual", url, emb)
 	if err != nil {
 		return vector.LiveResult{}, err
 	}
@@ -223,4 +227,125 @@ func (s *registeringLive) GenerateLive(ctx context.Context, req vector.LiveReque
 		Sources:      []string{"kb/one.md"},
 		TrackingULID: req.TrackingULID,
 	}, nil
+}
+
+func TestLiveRematchHydratesContentFromLedger(t *testing.T) {
+	idx := vector.NewIndex()
+	r := vector.NewRouter(idx, vector.NewEventBus())
+	r.Enabled = false
+
+	emb := make([]float32, idx.Dims())
+	emb[0] = 1
+	tracking := "01TESTREMATCHULID0000000000"
+	node, err := idx.RegisterLiveNode(
+		"Representacion", "adaptativo", "conceptual",
+		"live://stations/"+tracking, emb,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Ledger.MarkReady(tracking, vector.LiveResult{
+		Node:         node,
+		Content:      "contenido rehidratado del ledger",
+		Sources:      []string{"kb/rematch.md"},
+		TrackingULID: tracking,
+	})
+
+	out, err := r.QueryNearestWithOptions(context.Background(), "stu-rematch", emb, 0.5, vector.QueryOptions{
+		DoubtText: "misma duda otra vez",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out.Matched || !out.IsLiveGenerated {
+		t.Fatalf("expected live rematch, got %+v", out)
+	}
+	if out.LiveContent != "contenido rehidratado del ledger" {
+		t.Fatalf("live_content not hydrated: %q", out.LiveContent)
+	}
+	if out.TrackingULID != tracking {
+		t.Fatalf("tracking: got %q want %q", out.TrackingULID, tracking)
+	}
+	if len(out.RetrievedSources) != 1 || out.RetrievedSources[0] != "kb/rematch.md" {
+		t.Fatalf("sources: %+v", out.RetrievedSources)
+	}
+}
+
+func TestLiveRematchWithoutLedgerLeavesContentEmpty(t *testing.T) {
+	idx := vector.NewIndex()
+	r := vector.NewRouter(idx, vector.NewEventBus())
+	r.Enabled = false
+
+	emb := make([]float32, idx.Dims())
+	emb[0] = 1
+	if _, err := idx.RegisterLiveNode(
+		"Representacion", "adaptativo", "conceptual",
+		"live://stations/01ORPHANLIVE00000000000000", emb,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := r.QueryNearestWithOptions(context.Background(), "stu", emb, 0.5, vector.QueryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out.Matched || !out.IsLiveGenerated {
+		t.Fatalf("expected live match, got %+v", out)
+	}
+	if out.LiveContent != "" {
+		t.Fatalf("must not invent content, got %q", out.LiveContent)
+	}
+}
+
+func TestLiveMissReturnsPendingWhenSyncDeadlineExceeded(t *testing.T) {
+	t.Setenv("AVLP_LLM_SYNC_DEADLINE", "25ms")
+	idx := vector.NewIndex()
+	r := vector.NewRouter(idx, vector.NewEventBus())
+	r.Enabled = true
+	r.Live = &registeringLive{idx: idx, delay: 200 * time.Millisecond}
+
+	out, err := r.QueryNearestWithOptions(context.Background(), "stu-async", novelQuery(idx.Dims()), 0.85, vector.QueryOptions{
+		DoubtText: "generación lenta",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Matched {
+		t.Fatalf("expected pending under sync deadline, got matched %+v", out)
+	}
+	if out.TrackingULID == "" || out.LiveStatus != vector.StationInProgress {
+		t.Fatalf("expected in_progress pending, got %+v", out)
+	}
+
+	deadline := time.After(2 * time.Second)
+	for {
+		rec := r.Ledger.Get(out.TrackingULID)
+		if rec != nil && rec.Status == vector.StationReady && rec.Result != nil {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("generation did not become ready; last=%+v", rec)
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+
+	got, err := r.LookupStation(context.Background(), out.TrackingULID, "stu-async")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.Status != vector.StationReady || got.Result == nil || got.Result.Content == "" {
+		t.Fatalf("expected ready content after async, got %+v", got)
+	}
+
+	liveEmb := append([]float32(nil), got.Result.Node.Embedding...)
+	rematch, err := r.QueryNearestWithOptions(context.Background(), "stu-async", liveEmb, 0.5, vector.QueryOptions{
+		DoubtText: "generación lenta",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rematch.Matched || rematch.LiveContent == "" {
+		t.Fatalf("expected hydrated rematch, got %+v", rematch)
+	}
 }
