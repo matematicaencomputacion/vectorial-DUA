@@ -157,20 +157,26 @@
       color: var(--ink);
     }
     .mic-btn {
-      width: 2.75rem;
+      min-width: 2.75rem;
       min-height: 3.2rem;
-      padding: 0.35rem;
+      padding: 0.35rem 0.55rem;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: 0.35rem;
       background: #fff;
       color: var(--teal-deep);
       border: 2px solid var(--teal-deep);
       border-radius: var(--radius);
       flex-shrink: 0;
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
     }
     .mic-btn:hover { background: var(--sand); }
-    .mic-btn[aria-pressed="true"] {
+    .mic-btn .mic-label { line-height: 1.1; }
+    .mic-btn[aria-pressed="true"],
+    .mic-btn.mic-recording {
       background: var(--teal);
       color: #fff;
       border-color: var(--teal-deep);

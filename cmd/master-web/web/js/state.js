@@ -65,6 +65,7 @@ export function renderDev() {
   const lines = [
     "student_id (sesión del navegador): " + studentId,
     "auth: secure_mode=" + auth.secureMode + " role=" + auth.role + " token=" + (auth.token ? "sí (memoria)" : "no"),
+    "voice: mode=" + (auth.voiceMode || "none") + " stt_enabled=" + !!auth.sttEnabled,
     "V_e estimado (sesión; se actualiza con preference_delta de Record*):",
     state.ve.map((v, i) => "  [" + i + "] " + VE_LABELS[i] + " = " + v.toFixed(3)).join("\n"),
     "última similitud de ruteo: " + (state.lastSimilarity == null ? "—" : Number(state.lastSimilarity).toFixed(4)),

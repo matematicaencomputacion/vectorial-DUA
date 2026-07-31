@@ -44,7 +44,7 @@ const CHIPS = [
 ];
 
 const browser = await chromium.launch({ headless: true, channel: "chrome" });
-const page = await browser.newPage();
+let page = await browser.newPage();
 
 async function runChip(chip, i) {
   await page.goto(baseURL, { waitUntil: "domcontentloaded" });
@@ -355,11 +355,38 @@ console.log(`OK Cache-Control: ${cacheControl}`);
   });
   assert(sess.status === 200, `POST /api/session falló: ${sess.status}`);
   assert(sess.body.secure_mode === false, "lab por defecto debe ser modo abierto");
+  assert(sess.body.stt_enabled === false, "lab por defecto sin AVLP_STT_URL → stt_enabled=false");
   const teacherDetails = page.locator("#teacher-details");
   assert((await teacherDetails.count()) === 1, "debe existir el bloque Soy docente");
   assert(await teacherDetails.isHidden(), "Soy docente oculto en modo abierto");
   assert(await page.locator("#btn-promote").isHidden(), "promover oculto sin rol teacher");
   console.log("OK auth modo abierto (secure_mode=false, UI docente oculta)");
+}
+
+// Voz: sin STT y sin SpeechRecognition → no hay micrófono; panel refleja mode=none.
+{
+  await page.addInitScript(() => {
+    try { delete window.SpeechRecognition; } catch (_) {}
+    try { delete window.webkitSpeechRecognition; } catch (_) {}
+    window.SpeechRecognition = undefined;
+    window.webkitSpeechRecognition = undefined;
+  });
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => {
+    const t = document.getElementById("dev-panel")?.textContent || "";
+    return /voice:\s*mode=/.test(t);
+  }, null, { timeout: 10000 });
+  const micCount = await page.locator(".mic-btn").count();
+  assert(micCount === 0, `sin STT ni SpeechRecognition no debe haber mic, got ${micCount}`);
+  const dev = await page.locator("#dev-panel").evaluate((el) => el.textContent || "");
+  assert(/voice:\s*mode=none/.test(dev), `panel debe mostrar voice mode=none: ${dev.slice(0, 200)}`);
+  assert(/stt_enabled=false/.test(dev), "panel debe mostrar stt_enabled=false");
+  await shot(page, "flow-09-voice-fallback-none.png");
+  console.log("OK voz fallback sin mic → flow-09-voice-fallback-none.png");
+  // Quitar el init script para el resto del flujo: nueva context page.
+  await page.close();
+  page = await browser.newPage();
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
 }
 
 const askBox = page.locator("#ask-box");

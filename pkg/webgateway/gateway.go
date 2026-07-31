@@ -18,6 +18,7 @@ import (
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
 	"github.com/vectorial-dua/avlp/pkg/session"
+	"github.com/vectorial-dua/avlp/pkg/stt"
 )
 
 // StudentUnavailableMessage is the person-centered copy for transport / 5xx failures.
@@ -37,11 +38,19 @@ var (
 
 // Gateway maps REST/JSON routes onto a VectorRouterClient.
 type Gateway struct {
-	Client  vectorv1.VectorRouterClient
-	Static  http.Handler // optional; served for non-/api/ paths
-	Session session.Config
-	Now     func() time.Time
+	Client      vectorv1.VectorRouterClient
+	Static      http.Handler // optional; served for non-/api/ paths
+	Session     session.Config
+	Transcriber *stt.HTTPTranscriber // optional local STT
+	Now         func() time.Time
 }
+
+const (
+	sttUnavailableMessage = "El dictado local no está disponible en este servidor."
+	sttFailedMessage      = "No pude transcribir el audio. Probá de nuevo o escribí la duda."
+	sttTooLargeMessage    = "El audio es demasiado largo. Grabá menos de un minuto o escribí la duda."
+	sttEmptyMessage       = "No recibí audio para transcribir. Probá de nuevo."
+)
 
 // New returns a gateway. Static may be nil. Session defaults to env when zero.
 func New(client vectorv1.VectorRouterClient, static http.Handler) *Gateway {
@@ -57,6 +66,7 @@ func New(client vectorv1.VectorRouterClient, static http.Handler) *Gateway {
 func (g *Gateway) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/session", g.handleSession)
+	mux.HandleFunc("POST /api/transcribe", g.handleTranscribe)
 	mux.HandleFunc("POST /api/query", g.handleQuery)
 	mux.HandleFunc("GET /api/nodes/{id}", g.handleGetNode)
 	mux.HandleFunc("GET /api/nodes/{id}/progress", g.handleSubtopicProgress)
@@ -90,6 +100,7 @@ type sessionResponse struct {
 	Token      string `json:"token"`
 	Role       string `json:"role"`
 	SecureMode bool   `json:"secure_mode"`
+	STTEnabled bool   `json:"stt_enabled"`
 	ExpiresAt  int64  `json:"expires_at,omitempty"`
 }
 
@@ -109,8 +120,66 @@ func (g *Gateway) handleSession(w http.ResponseWriter, r *http.Request) {
 		Token:      token,
 		Role:       claims.Role,
 		SecureMode: g.Session.Secure(),
+		STTEnabled: g.Transcriber != nil,
 		ExpiresAt:  claims.Exp,
 	})
+}
+
+func (g *Gateway) handleTranscribe(w http.ResponseWriter, r *http.Request) {
+	if _, _, err := g.authedContext(r, ""); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if g.Transcriber == nil {
+		writeAPIError(w, http.StatusServiceUnavailable, "unavailable", sttUnavailableMessage, sttUnavailableMessage)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, stt.MaxAudioBytes+1<<20)
+	if err := r.ParseMultipartForm(stt.MaxAudioBytes + 1<<20); err != nil {
+		msg := "No pude leer el audio. Probá de nuevo o escribí la duda."
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) || strings.Contains(strings.ToLower(err.Error()), "too large") {
+			msg = sttTooLargeMessage
+		}
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", msg, msg)
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", sttEmptyMessage, sttEmptyMessage)
+		return
+	}
+	defer file.Close()
+	audio, err := io.ReadAll(io.LimitReader(file, stt.MaxAudioBytes+1))
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", sttFailedMessage, sttFailedMessage)
+		return
+	}
+	if len(audio) == 0 {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", sttEmptyMessage, sttEmptyMessage)
+		return
+	}
+	if len(audio) > stt.MaxAudioBytes {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", sttTooLargeMessage, sttTooLargeMessage)
+		return
+	}
+	filename := "audio.webm"
+	contentType := "application/octet-stream"
+	if header != nil {
+		if name := strings.TrimSpace(header.Filename); name != "" {
+			filename = name
+		}
+		if ct := strings.TrimSpace(header.Header.Get("Content-Type")); ct != "" {
+			contentType = ct
+		}
+	}
+	text, err := g.Transcriber.Transcribe(r.Context(), audio, filename, contentType)
+	if err != nil {
+		log.Printf("webgateway transcribe: %v", err)
+		writeAPIError(w, http.StatusBadGateway, "unavailable", sttFailedMessage, sttFailedMessage)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"text": text})
 }
 
 type queryRequest struct {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -23,6 +24,7 @@ import (
 	"github.com/vectorial-dua/avlp/internal/routerserver"
 	"github.com/vectorial-dua/avlp/pkg/dua"
 	"github.com/vectorial-dua/avlp/pkg/session"
+	"github.com/vectorial-dua/avlp/pkg/stt"
 	"github.com/vectorial-dua/avlp/pkg/vector"
 	"github.com/vectorial-dua/avlp/pkg/webgateway"
 )
@@ -629,4 +631,73 @@ func TestGatewayOpenModeSession(t *testing.T) {
 	if out["secure_mode"] != false {
 		t.Fatalf("expected open mode: %v", out)
 	}
+	if out["stt_enabled"] != false {
+		t.Fatalf("expected stt disabled by default: %v", out)
+	}
 }
+
+func TestGatewayTranscribeUnavailableWithoutSTT(t *testing.T) {
+	gw, _, cleanup := startTestGateway(t)
+	defer cleanup()
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/transcribe", strings.NewReader("not-multipart"))
+	req.Header.Set("Content-Type", "text/plain")
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestGatewayTranscribeSuccess(t *testing.T) {
+	sttSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/audio/transcriptions" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"text":"dictado de prueba"}`))
+	}))
+	t.Cleanup(sttSrv.Close)
+
+	tr, err := stt.NewHTTPTranscriber(stt.HTTPTranscriberConfig{URL: sttSrv.URL + "/v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gw, _, cleanup := startTestGateway(t)
+	defer cleanup()
+	gw.Transcriber = tr
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/session",
+		strings.NewReader(`{"student_id":"stu-stt"}`))
+	req.Header.Set("Content-Type", "application/json")
+	gw.Handler().ServeHTTP(rr, req)
+	var sess map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &sess)
+	if sess["stt_enabled"] != true {
+		t.Fatalf("stt_enabled=%v", sess["stt_enabled"])
+	}
+
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	part, err := w.CreateFormFile("file", "clip.webm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write([]byte("fake-audio-bytes"))
+	_ = w.Close()
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/transcribe", &body)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var out map[string]string
+	_ = json.Unmarshal(rr.Body.Bytes(), &out)
+	if out["text"] != "dictado de prueba" {
+		t.Fatalf("out=%v", out)
+	}
+}
+

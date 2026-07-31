@@ -31,16 +31,35 @@ go run ./cmd/master-web
 - [ ] Reiniciar el router sí borra este progreso: `InteractionStore` continúa siendo en memoria en Ola 3.c
 - [ ] Panel de desarrollo: muestra por separado el payload crudo de progreso devuelto por la API y el estado local optimista
 
-## Voz (Chrome / Edge — Web Speech API)
+## Voz (cascada: STT local → Web Speech → sin botón)
 
-Soportado donde exista `SpeechRecognition` / `webkitSpeechRecognition`. Si no hay API, el botón de micrófono **no aparece** (sin mensaje de error). Probado en Chrome.
+Playwright **no** puede ejercer un micrófono real. Los casos de captura/permiso
+siguen siendo checklist humana. Automatizado: fallback sin SpeechRecognition ni
+STT → no hay `.mic-btn`; `stt_enabled` en sesión; panel `voice: mode=…`.
 
-- [ ] Micrófono junto a «Tu duda»: al tocar (o **Ctrl+M**) pasa a «escuchando» (`aria-pressed="true"`, aviso en estado); el texto aparece en el textarea; al cerrar la frase se detiene **sin** auto-enviar — revisás y pulsás «Buscar estación»
-- [ ] Segundo toque (o Ctrl+M de nuevo) cancela a mitad de dictado; estado visible
-- [ ] Denegar permiso de micrófono → mensaje amable en el área de estado (`aria-live` assertive), nunca silencio
-- [ ] Con nodo interactivo: el mismo micrófono aparece en «+ Tengo una duda diferente»; dictás, revisás y confirmás con «Generar botón en vivo»
-- [ ] Página fresca: el bloque «+ Tengo una duda diferente» **no** es visible (evidencia Playwright: `verify/out/01-fresh-ask-box-hidden.png`)
+### Humano — STT local (`AVLP_STT_URL`)
+
+- [ ] Con STT arriba: micrófono aparece; panel `voice: mode=local`; grabar →
+  «Grabando» (símbolo + texto) → segundo toque → texto en el textarea **sin**
+  auto-enviar; corte automático a ~60 s
+- [ ] Denegar permiso de micrófono → mensaje amable (`aria-live` assertive)
+- [ ] Ctrl+M inicia/detiene en «Tu duda»
+- [ ] Con nodo interactivo: mismo flujo en «+ Tengo una duda diferente»
+
+### Humano — Web Speech (sin `AVLP_STT_URL`, Chrome/Edge)
+
+Soportado donde exista `SpeechRecognition` / `webkitSpeechRecognition`. Si no
+hay API ni STT, el botón **no aparece**.
+
+- [ ] Micrófono junto a «Tu duda»: al tocar (o **Ctrl+M**) pasa a «Grabando»;
+  el texto aparece; al cerrar la frase se detiene **sin** auto-enviar
+- [ ] Segundo toque cancela a mitad de dictado; estado visible
+- [ ] Error de red de Google → mensaje en español que menciona la nube / STT local
+- [ ] Denegar permiso → mensaje amable, nunca silencio
+
+- [ ] Página fresca: el bloque «+ Tengo una duda diferente» **no** es visible (evidencia Playwright: `verify/out/01-fresh-ask-box-hidden.png` / flow-01)
 - [ ] Con router caído: el estado muestra mensaje contenedor en español, **sin** `dial tcp` / transport (evidencia: `verify/out/02-router-down-friendly.png`)
+- [ ] Sin STT ni SpeechRecognition: no hay `.mic-btn` (evidencia: `flow-09-voice-fallback-none.png`)
 
 ## Teclado
 
