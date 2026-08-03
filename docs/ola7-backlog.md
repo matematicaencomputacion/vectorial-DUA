@@ -9,8 +9,9 @@ citado; este archivo es la cola de trabajo.
 
 - [x] **`harness -suite bench`** — benchmarks de `Nearest` / `Retrieve` con
   100 / 1.000 / 10.000 / 100.000 nodos sintéticos; CI corre 100/1K y falla si
-  cruzan el umbral ADR-001 (§4). Ver `feat/bench-pr-12.1` (este PR),
-  `harness/bench`, `go run ./cmd/harness -suite bench`. Criterio:
+  cruzan el umbral ADR-001 (§4). Ver PR [#26](https://github.com/matematicaencomputacion/vectorial-DUA/pull/26)
+  (`feat/bench-pr-12.1`), `harness/bench`, `go run ./cmd/harness -suite bench`.
+  Criterio:
   [ADR-001 §4](adr/adr-001-criterio-lenguajes.md).
 
 ## Pendiente
