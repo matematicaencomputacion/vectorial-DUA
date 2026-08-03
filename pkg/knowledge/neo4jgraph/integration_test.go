@@ -9,9 +9,11 @@ import (
 )
 
 // Real Bolt smoke. Intentionally gated by RUN_NEO4J_INTEGRATION (not AVLP_*)
-// so CI never enables it by ambient config:
+// so CI never enables it by ambient config. Prefer an ephemeral local
+// container — see docs/neo4j-gcp.md (this package is read-only; graph-sync
+// parity tests write and may prune).
 //
-//	RUN_NEO4J_INTEGRATION=1 AVLP_NEO4J_URI=bolt://localhost:7687 \
+//	RUN_NEO4J_INTEGRATION=1 AVLP_NEO4J_URI=bolt://127.0.0.1:17687 \
 //	  AVLP_NEO4J_USER=neo4j AVLP_NEO4J_PASSWORD=... \
 //	  go test ./pkg/knowledge/neo4jgraph/ -run Integration -count=1 -v
 func TestNeo4jIntegrationHealth(t *testing.T) {
