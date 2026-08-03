@@ -8,8 +8,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/vectorial-dua/avlp/harness/bench"
 	"github.com/vectorial-dua/avlp/harness/evals"
 	"github.com/vectorial-dua/avlp/harness/load"
 	"github.com/vectorial-dua/avlp/harness/sandbox"
@@ -20,7 +22,7 @@ import (
 )
 
 func main() {
-	suite := flag.String("suite", "evals", "evals | simmatrix | calibrate | sandbox | load | all")
+	suite := flag.String("suite", "evals", "evals | simmatrix | calibrate | sandbox | load | bench | all")
 	casesPath := flag.String("cases", "harness/evals/cases/routing_golden.json", "golden evals dataset")
 	ragCasesPath := flag.String("rag-cases", "harness/evals/cases/rag_simmatrix.json", "RAG simmatrix calibration cases")
 	outDir := flag.String("out", "harness/out", "output directory for reports")
@@ -31,6 +33,8 @@ func main() {
 	embedderMode := flag.String("embedder", "hash", "evals/simmatrix embedder: hash (CI default) | env (AVLP_EMBEDDING_URL)")
 	applyCalibration := flag.Bool("apply", false, "write calibrated threshold to runtime config (calibrate only)")
 	configPath := flag.String("config", vector.DefaultConfigPath, "runtime config written by calibrate --apply")
+	benchSizes := flag.String("bench-sizes", "", "comma sizes for bench (default: full 100,1000,10000,100000; CI uses 100,1000)")
+	benchDims := flag.String("bench-dims", "", "comma dims for bench (default: 64,1024)")
 	flag.Parse()
 
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
@@ -237,6 +241,35 @@ func main() {
 		}
 	}
 
+	runBench := func() {
+		cfg := bench.Config{Seed: bench.DefaultSeed}
+		if sizes, err := parseIntList(*benchSizes); err != nil {
+			log.Fatalf("bench-sizes: %v", err)
+		} else if len(sizes) > 0 {
+			cfg.Sizes = sizes
+		}
+		if dims, err := parseIntList(*benchDims); err != nil {
+			log.Fatalf("bench-dims: %v", err)
+		} else if len(dims) > 0 {
+			cfg.Dims = dims
+		}
+		rep, err := bench.Run(cfg)
+		if err != nil {
+			log.Fatalf("bench: %v", err)
+		}
+		bench.FormatTable(os.Stdout, rep)
+		path, err := bench.WriteJSON(*outDir, rep)
+		if err != nil {
+			log.Fatalf("bench write: %v", err)
+		}
+		fmt.Printf("bench → %s\n", path)
+		// Fail only when a CI-scale scenario (≤1K) crosses ADR-001 — algorithmic
+		// regression. Large-N crosses are expected at scale and stay informational.
+		if rep.CIGuardFailed {
+			failed = true
+		}
+	}
+
 	switch *suite {
 	case "evals":
 		runEvals()
@@ -248,6 +281,8 @@ func main() {
 		runSandbox()
 	case "load":
 		runLoad()
+	case "bench":
+		runBench()
 	case "all":
 		runEvals()
 		runSandbox()
@@ -274,4 +309,25 @@ func mustJSON(v any) []byte {
 		panic(err)
 	}
 	return b
+}
+
+func parseIntList(raw string) ([]int, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]int, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		var n int
+		if _, err := fmt.Sscanf(p, "%d", &n); err != nil || n <= 0 {
+			return nil, fmt.Errorf("invalid int %q", p)
+		}
+		out = append(out, n)
+	}
+	return out, nil
 }

@@ -28,5 +28,8 @@ jobs:
       - name: Build
         run: go build ./...
 
+      - name: Bench CI (Nearest/Retrieve ≤1K)
+        run: go run ./cmd/harness -suite bench -bench-sizes 100,1000
+
       - name: Test (entorno sin AVLP_*)
         run: bash scripts/test-clean.sh
