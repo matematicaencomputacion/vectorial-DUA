@@ -10,6 +10,21 @@ Plataforma educativa vectorial y adaptativa (**DUA** + **Carl Rogers**), con **O
 - Decisiones de arquitectura: [ADR-001 — criterio de lenguajes C++/Go](docs/adr-001-criterio-lenguajes.md)
 - Deuda / backlog Ola 7: [docs/ola7-backlog.md](docs/ola7-backlog.md)
 
+## Grafo de conocimiento
+
+Currículum dirigido en git (`data/knowledge/curriculum.json`): conceptos con
+slug estable (`concept:<slug>`) y aristas tipadas
+(`requires` / `deepens` / `continues` / `alternative`). La fuente de verdad es
+**git** (Pedagogy-as-Code); Neo4j es réplica de lectura opcional.
+
+- **Orientación en la UI:** tras cargar un nodo, el rail «Para ubicarte»
+  (`orientation.js`) pide `GET /api/nodes/{id}/orientation` sin candados; el
+  copy sale del Advisor rogeriano (visitas locales por estudiante).
+- **graph-sync:** `go run ./cmd/graph-sync` valida con `LoadFile` antes de
+  cualquier escritura Bolt (`-dry-run`, `-prune`, `-validate-seeds`); idempotente
+  con `MERGE` + `synced_at`.
+- **Runbook GCP / IAP:** [docs/neo4j-gcp.md](docs/neo4j-gcp.md).
+
 ## Triángulo del entorno adaptativo
 
 | Capa | Rol | Estado en repo |
@@ -233,6 +248,9 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_INTERACTIVE_NODES` | `true` | Carga de seeds Stage/botonera |
 | `AVLP_INTERACTIVE_NODES_DIR` | `data/nodes/interactive` | Directorio de seeds (incluye promovidos) |
 | `AVLP_PROFILE_STORE_PATH` | vacío → memoria | Snapshot JSON de perfiles $V_e$ |
+| `AVLP_KNOWLEDGE_GRAPH_PATH` | `data/knowledge/curriculum.json` | Currículum JSON (fuente de verdad en git) |
+| `AVLP_KNOWLEDGE_STRICT` | vacío/`false` | Si `true`, avisos graduales (concepto sin recurso, etc.) fallan la carga |
+| `AVLP_CONCEPT_STORE_PATH` | vacío → memoria | Persistencia de visitas a conceptos por estudiante |
 | `AVLP_NEO4J_URI` | vacío → off | Bolt URI read-only del currículum (`neo4jgraph`); vacío = MemoryGraph archivo |
 | `AVLP_NEO4J_USER` / `AVLP_NEO4J_PASSWORD` | vacío | Auth básica Bolt |
 | `AVLP_NEO4J_COOLDOWN` | `30s` | Ventana del breaker tras 3 fallos (log una vez por ventana) |
@@ -242,7 +260,7 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 
 **Precedencia del umbral estático:** request gRPC válido > `AVLP_SIMILARITY_THRESHOLD` > archivo (`AVLP_CONFIG_PATH` / `data/avlp.json`) > `0.85`. El router loguea valor y origen al arrancar.
 
-La tabla incluye las variables de **sesión** (`AVLP_SESSION_*`, `AVLP_TEACHER_KEY`) y de **STT local** (`AVLP_STT_*`) añadidas en Ola 5. Sin `AVLP_STT_URL` la UI cae a Web Speech o no muestra micrófono; sin `AVLP_SESSION_SECRET` el prototipo permanece en modo abierto.
+La tabla cubre **sesión** (`AVLP_SESSION_*`, `AVLP_TEACHER_KEY`), **STT local** (`AVLP_STT_*`) y **grafo / Neo4j** (`AVLP_KNOWLEDGE_*`, `AVLP_NEO4J_*`, `AVLP_CONCEPT_STORE_PATH`). Sin `AVLP_STT_URL` la UI cae a Web Speech o no muestra micrófono; sin `AVLP_SESSION_SECRET` el prototipo permanece en modo abierto; sin `AVLP_NEO4J_URI` la orientación usa solo el MemoryGraph archivo.
 
 ## Accesibilidad de medios (DUA — múltiples medios de representación)
 
