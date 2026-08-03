@@ -1,4 +1,5 @@
 import { renderRail } from "./rail.js";
+import { clearOrientation, loadOrientation } from "./orientation.js";
 import { auth, ensureSession, requestGeneration, studentId } from "./session.js";
 import { el, renderDev, setAskMode, state } from "./state.js";
 import { api, mediaA11yFrom, reportError, setStageFromMedia, setStatus, setTextareaValue, showWaiting } from "./ui.js";
@@ -55,6 +56,8 @@ async function loadInteractiveNode(nodeId, token) {
     markdown: node.stage_markdown_default,
     clipTitle: node.titulo,
   }, mediaA11yFrom(node)));
+  await loadOrientation(node.node_id, token);
+  if (!requestGeneration.isCurrent(token)) return;
   renderDev();
   setStatus("Nodo interactivo cargado.", "ok");
 }
@@ -64,6 +67,7 @@ function showNonInteractiveRail(kind) {
   state.rawProgress = null;
   state.currentProgress = null;
   state.hierarchyUI = null;
+  clearOrientation();
   setAskMode(false);
   if (kind === "live") {
     el.railTopic.textContent = "Estación en vivo";
@@ -86,6 +90,10 @@ async function handleMatched(matched, token) {
   }
   if (!requestGeneration.isCurrent(token)) return;
   showNonInteractiveRail(matched.is_live_generated ? "live" : "static");
+  if (matched.node_id) {
+    await loadOrientation(matched.node_id, token);
+    if (!requestGeneration.isCurrent(token)) return;
+  }
   if (matched.live_content) {
     setStageFromMedia({
       title: "Estación en vivo",
@@ -136,6 +144,8 @@ async function pollStation(trackingUlid, token) {
                 await loadProgressForNode(node, token);
                 if (!requestGeneration.isCurrent(token)) return;
                 renderRail(node);
+                await loadOrientation(node.node_id, token);
+                if (!requestGeneration.isCurrent(token)) return;
                 renderDev();
               }
             } catch (_) { /* keep non-interactive rail */ }
@@ -196,6 +206,7 @@ el.form.addEventListener("submit", async function (ev) {
   // Nueva búsqueda: invalida cargas/polling en vuelo y para el intervalo.
   const token = requestGeneration.begin();
   stopPoll();
+  clearOrientation();
   const frustration = Number(el.frustration.value);
   setStatus("Consultando el router…", "");
   try {
@@ -220,6 +231,7 @@ el.form.addEventListener("submit", async function (ev) {
       state.rawProgress = null;
       state.currentProgress = null;
       state.hierarchyUI = null;
+      clearOrientation();
       setAskMode(false);
       state.lastSimilarity = null;
       renderDev();

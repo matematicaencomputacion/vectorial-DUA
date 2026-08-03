@@ -428,6 +428,40 @@
       color: var(--teal-deep);
     }
 
+    .orientation {
+      margin: 0;
+      padding: 0.65rem 0 0;
+      border-top: 1px solid var(--line);
+    }
+    .orientation-title {
+      margin: 0 0 0.35rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      font-weight: 700;
+    }
+    .orientation-copy {
+      margin: 0 0 0.55rem;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      color: var(--ink);
+    }
+    .orientation-cta {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      color: var(--teal-deep);
+      border: 1px solid var(--line);
+      padding: 0.5rem 0.65rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .orientation-cta:hover {
+      border-color: var(--teal);
+    }
+
     .tablist, .btn-list {
       display: flex;
       flex-direction: column;

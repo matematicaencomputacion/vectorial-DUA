@@ -8,7 +8,8 @@
  * (default http://127.0.0.1:8080) con el router arriba.
  *
  * Modos (AVLP_ONLY): "chips" solo el mapeo de chips, "progress" solo el
- * acordeón que recuerda, "routerdown" solo el chequeo de router caído
+ * acordeón que recuerda, "orientation" solo la sección «Para ubicarte»,
+ * "routerdown" solo el chequeo de router caído
  * (levantar master-web sin router). Sin valor corre todo.
  *
  * Estación «fuera de tema (honesto)»: asertos estructurales (contenido,
@@ -351,6 +352,51 @@ async function subtopicProgressCheck() {
   console.log("OK carrera A→B: solo B pinta el rail → progress-04-stale-race.png");
 }
 
+async function orientationCheck() {
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  const chip = page.locator(".hints button", { hasText: "Ejemplo: async/await" });
+  assert((await chip.count()) === 1, "chip async/await requerido");
+  await chip.click();
+
+  const waitQuery = page.waitForResponse(
+    (r) => r.url().endsWith("/api/query") && r.request().method() === "POST",
+    { timeout: 45000 }
+  );
+  const waitOrient = page.waitForResponse(
+    (r) => /\/api\/nodes\/.+\/orientation\?/.test(r.url()) && r.request().method() === "GET",
+    { timeout: 45000 }
+  );
+  await page.click("#btn-query");
+  const route = await (await waitQuery).json();
+  assert(route.matched && route.matched.has_interactive_payload, "async debía matchear nodos interactivo");
+  const orientRes = await waitOrient;
+  assert(orientRes.ok(), `GET orientation falló: ${orientRes.status()}`);
+  const body = await orientRes.json();
+  assert(body.available === true, "orientation disponible esperada con grafo cargado");
+  assert(Array.isArray(body.gaps) && body.gaps.length > 0, "async/await debería reportar gaps");
+
+  await page.waitForSelector("#orientation-block:not([hidden])", { timeout: 15000 });
+  const block = page.locator("#orientation-block");
+  const text = (await block.innerText()).trim();
+  assert(/Para ubicarte/i.test(text), `falta título «Para ubicarte»: ${text}`);
+  assert(
+    /Esto se apoya en .+\. Si querés lo miramos antes, o seguí acá y volvés cuando te sirva/.test(text),
+    `copy inexacto: ${text}`
+  );
+  assert(!/%|badge|candado|🔒|💯/i.test(text), `no debe haber gamificación: ${text}`);
+  assert((await block.locator("button.orientation-cta").count()) === 1, "falta CTA Mirar");
+
+  const live = await block.getAttribute("aria-live");
+  assert(live === "polite", `aria-live debe ser polite, got: ${live}`);
+
+  const dev = await page.locator("#dev-panel").textContent();
+  assert(/orientación cruda \(API\)/i.test(dev || ""), "panel dev debe mencionar orientación cruda");
+  assert(/"available"/i.test(dev || ""), "panel dev debe incluir JSON crudo de orientación");
+
+  await shot(page, "orientation-01-ubicarte.png");
+  console.log("OK Para ubicarte (async → gap) → orientation-01-ubicarte.png");
+}
+
 if (mode === "routerdown") {
   await routerDownCheck();
   await browser.close();
@@ -362,6 +408,13 @@ if (mode === "progress") {
   await subtopicProgressCheck();
   await browser.close();
   console.log("verify OK (progreso de subtemas)");
+  process.exit(0);
+}
+
+if (mode === "orientation") {
+  await orientationCheck();
+  await browser.close();
+  console.log("verify OK (orientación)");
   process.exit(0);
 }
 
