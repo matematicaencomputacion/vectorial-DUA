@@ -4,29 +4,42 @@
  *   npx --yes playwright install chromium
  *   node cmd/master-web/verify/playwright-check.mjs
  *
- * Usa Chrome del sistema (channel: chrome). Requiere master-web en AVLP_WEB_URL
- * (default http://127.0.0.1:8080) con el router arriba.
+ * Por defecto levanta un stack hermético (router + master-web en puertos
+ * efímeros) con AVLP_INTERACTIVE_NODES_DIR = copia temporal de los JSON
+ * trackeados por git en data/nodes/interactive/. Artefactos locales
+ * (p. ej. promoted-*.json del operador) no entran al índice.
+ *
+ * Para reusar un stack ya levantado a mano:
+ *   AVLP_VERIFY_USE_EXISTING=1 AVLP_WEB_URL=http://127.0.0.1:8080 node …
+ * En ese caso el operador debe apuntar el router a seeds canónicos (o a un
+ * dir preparado igual que hermetic-stack.mjs); si no, chips como async/await
+ * pueden caer al miss path.
+ *
+ * Usa Chrome del sistema (channel: chrome).
  *
  * Modos (AVLP_ONLY): "chips" solo el mapeo de chips, "progress" solo el
  * acordeón que recuerda, "orientation" solo la sección «Para ubicarte»,
  * "routerdown" solo el chequeo de router caído
- * (levantar master-web sin router). Sin valor corre todo.
+ * (master-web sin router). Sin valor corre todo.
  *
  * Estación «fuera de tema (honesto)»: asertos estructurales (contenido,
  * sin fuentes espurias, sin jerga interna, sin cola «…:»). Para el copy
- * extractivo determinista («No encontré material verificado…»), corré el
- * router sin AVLP_LLM_URL. La calidad de redacción generativa es checklist
- * humana (MANUAL_CHECKLIST.md), no substring de LLM.
+ * extractivo determinista («No encontré material verificado…»), el stack
+ * hermético deja AVLP_LLM_URL vacío. La calidad de redacción generativa es
+ * checklist humana (MANUAL_CHECKLIST.md), no substring de LLM.
  */
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { startHermeticStack } from "./hermetic-stack.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(__dirname, "out");
-const baseURL = process.env.AVLP_WEB_URL || "http://127.0.0.1:8080";
 const mode = process.env.AVLP_ONLY || "full";
+const useExisting = process.env.AVLP_VERIFY_USE_EXISTING === "1";
+let baseURL = process.env.AVLP_WEB_URL || "http://127.0.0.1:8080";
+let stackCleanup = async () => {};
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -36,6 +49,19 @@ function assert(cond, msg) {
 
 function shot(page, name) {
   return page.screenshot({ path: path.join(outDir, name), fullPage: true });
+}
+
+if (!useExisting) {
+  const stack = await startHermeticStack({ withRouter: mode !== "routerdown" });
+  baseURL = stack.baseURL;
+  stackCleanup = stack.cleanup;
+  assert(
+    !stack.fixtureFiles.some((f) => /^promoted-/i.test(f)),
+    "fixtures herméticos no deben incluir promoted-*.json trackeados; sacalos del árbol git"
+  );
+  console.log("hermetic fixtures:", stack.fixtureFiles.join(", "));
+} else {
+  console.log("AVLP_VERIFY_USE_EXISTING=1 → usando", baseURL, "(sin bootstrap hermético)");
 }
 
 // Cada chip declara su destino esperado: nodo interactivo propio, seed estático
@@ -52,6 +78,35 @@ const CHIPS = [
 
 const browser = await chromium.launch({ headless: true, channel: "chrome" });
 let page = await browser.newPage();
+
+async function finish(okMsg) {
+  try {
+    await browser.close();
+  } catch (_) {
+    /* already closed */
+  }
+  await stackCleanup();
+  if (okMsg) console.log(okMsg);
+  process.exit(0);
+}
+
+async function fail(err) {
+  console.error(err && err.stack ? err.stack : err);
+  try {
+    await browser.close();
+  } catch (_) {
+    /* already closed */
+  }
+  await stackCleanup();
+  process.exit(1);
+}
+
+process.on("SIGINT", () => {
+  fail(new Error("SIGINT"));
+});
+process.on("unhandledRejection", (err) => {
+  fail(err);
+});
 
 async function runChip(chip, i) {
   await page.goto(baseURL, { waitUntil: "domcontentloaded" });
@@ -399,32 +454,24 @@ async function orientationCheck() {
 
 if (mode === "routerdown") {
   await routerDownCheck();
-  await browser.close();
-  console.log("verify OK (router caído)");
-  process.exit(0);
+  await finish("verify OK (router caído)");
 }
 
 if (mode === "progress") {
   await subtopicProgressCheck();
-  await browser.close();
-  console.log("verify OK (progreso de subtemas)");
-  process.exit(0);
+  await finish("verify OK (progreso de subtemas)");
 }
 
 if (mode === "orientation") {
   await orientationCheck();
-  await browser.close();
-  console.log("verify OK (orientación)");
-  process.exit(0);
+  await finish("verify OK (orientación)");
 }
 
 if (mode === "chips") {
   for (let i = 0; i < CHIPS.length; i++) {
     await runChip(CHIPS[i], i);
   }
-  await browser.close();
-  console.log("verify OK (chips)");
-  process.exit(0);
+  await finish("verify OK (chips)");
 }
 
 // 1) Estado inicial: sin formulario de duda diferente y HTML sin cachear.
@@ -607,5 +654,4 @@ const gitignore = fs.readFileSync(path.join(__dirname, "../../../.gitignore"), "
 assert(/(^|\n)data\/profiles\.json(\r?\n|$)/.test(gitignore), ".gitignore debe listar data/profiles.json");
 console.log("OK data/profiles.json ignorado");
 
-await browser.close();
-console.log("verify OK");
+await finish("verify OK");

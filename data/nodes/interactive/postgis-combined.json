@@ -4,7 +4,7 @@
   "titulo": "PostGIS ST_DWithin — Matriz DUA",
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/postgis/intro.mp4",
-  "embedding_descriptor": "Matriz DUA sobre PostGIS ST_DWithin: combinar profundidad (express a deep) con formatos video, live code y diagrama para consultar geometrías dentro de un radio.",
+  "embedding_descriptor": "Matriz DUA sobre PostGIS ST_DWithin: combinar profundidad (express a deep) con formatos video, live code y diagrama para consultar geometrías dentro de un radio. Responde preguntas como: ¿qué hace ST_DWithin en PostGIS?, ¿me lo mostrás en video o diagrama?, ¿puedo combinar profundidad y formato?, ¿cómo consulto geometrías en un radio?",
   "embedding": [
     0.15,
     0.55,

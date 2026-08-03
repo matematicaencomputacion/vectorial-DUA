@@ -40,6 +40,8 @@ func main() {
 	tel := telemetry.NewCollector()
 	var failed bool
 
+	// SeedDemo only — calibrate/simmatrix no deben mezclar corpus interactive
+	// (el pin de umbral hash en hermetic-stack se calcula sobre este índice).
 	seedIndex := func(emb rag.Embedder) *vector.Index {
 		idx := vector.NewIndexWithDims(emb.Dims())
 		if err := vector.SeedDemoNodes(idx, emb); err != nil {
@@ -59,6 +61,11 @@ func main() {
 		log.Printf("evals embedder=%s dims=%d threshold=%.2f", *embedderMode, emb.Dims(), vector.EffectiveDefaultThreshold())
 
 		idx := seedIndex(emb)
+		if n, err := evals.UpsertInteractiveSeeds(idx, "data/nodes/interactive"); err != nil {
+			log.Fatalf("interactive seeds: %v", err)
+		} else {
+			log.Printf("interactive seeds upserted: %d", n)
+		}
 		store := rag.NewStore()
 		kb := "data/knowledge_base"
 		if n, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: kb, Embedder: emb}); err != nil {

@@ -39,6 +39,9 @@ func TestGoldenRoutingEvalsPass(t *testing.T) {
 	if err := vector.SeedDemoNodes(idx, emb); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := evals.UpsertInteractiveSeeds(idx, repoPath(t, "data", "nodes", "interactive")); err != nil {
+		t.Fatal(err)
+	}
 	store := rag.NewStore()
 	if _, err := rag.IngestWalk(context.Background(), store, rag.IngestOptions{Root: repoPath(t, "data", "knowledge_base"), Embedder: emb}); err != nil {
 		t.Fatal(err)

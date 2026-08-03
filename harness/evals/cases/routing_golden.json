@@ -70,6 +70,20 @@
     "expected_node_id_prefix": "dua::Compromiso::basico::conceptual"
   },
   {
+    "case_id": "variables-escopes-typo-static",
+    "description": "Typo «variables y escopes» → nodo interactivo de scope (semántico)",
+    "comment": "Misma dualidad que env-compromiso-natural-phrasing. HashEmbedder: nearest léxico ~0.21 (a veces debug-emergency), bajo calibrate hash 0.482 → expected_outcome_hash live. Con embedder=env + umbral ~0.55 (bge-m3 ~0.53 al nodo de scope) → static al ULID de variables-scope. Requiere seeds interactive en el índice de evals. No meter el typo en embedding_descriptor: lo absorbe el embedder semántico.",
+    "student_id": "stu-scope-typo-1",
+    "query_embedding": [],
+    "query_text": "variables y escopes",
+    "min_similarity_threshold": 0,
+    "expected_dimension_dua": "Representacion",
+    "expected_format": "visual",
+    "expected_outcome": "static",
+    "expected_outcome_hash": "live",
+    "expected_node_id_prefix": "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FAV"
+  },
+  {
     "case_id": "novel-block-live",
     "description": "Bloqueo inédito lejos del manifold → estación en vivo vía RAG",
     "student_id": "stu-live-1",
