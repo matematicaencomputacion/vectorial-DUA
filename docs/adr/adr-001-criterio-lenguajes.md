@@ -95,7 +95,7 @@ La reevaluación del kernel vectorial se dispara cuando **cualquiera** de estas 
 
 **Cuando el disparador de escala llegue, la respuesta correcta no es el mismo algoritmo más rápido: es otro algoritmo.** Fuerza bruta O(n) se reemplaza por ANN/HNSW O(log n) — y las implementaciones maduras de ANN **ya son C++** (FAISS, hnswlib, el motor de Qdrant). La instanciación preferida sigue el patrón de backends opcionales del repo (quinta repetición): interfaz en el consumidor + `AVLP_ANN_URL` para un motor externo, o una lib cgo **aislada en su propio módulo** si se necesita in-process.
 
-**Instrumentación que sostiene estos umbrales (pendiente, PR chico):** `go run ./cmd/harness -suite bench` — benchmarks de `Nearest` y `Retrieve` a 100 / 1.000 / 10.000 / 100.000 nodos sintéticos, corriendo en CI, para que el cruce de umbral sea un aviso automático y no un descubrimiento en producción. Seguimiento de la cola de trabajo: [docs/ola7-backlog.md](ola7-backlog.md).
+**Instrumentación que sostiene estos umbrales (pendiente, PR chico):** `go run ./cmd/harness -suite bench` — benchmarks de `Nearest` y `Retrieve` a 100 / 1.000 / 10.000 / 100.000 nodos sintéticos, corriendo en CI, para que el cruce de umbral sea un aviso automático y no un descubrimiento en producción. Seguimiento de la cola de trabajo: [docs/ola7-backlog.md](../ola7-backlog.md).
 
 ---
 
