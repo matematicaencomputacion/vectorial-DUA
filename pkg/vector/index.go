@@ -163,6 +163,23 @@ func (idx *Index) Nodes() []Node {
 	return out
 }
 
+// Get returns a copy of the node by id if present.
+func (idx *Index) Get(id string) (Node, bool) {
+	if idx == nil {
+		return Node{}, false
+	}
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.purgeLiveLocked(idx.now())
+	n, ok := idx.nodes[id]
+	if !ok {
+		return Node{}, false
+	}
+	n.Embedding = append([]float32(nil), n.Embedding...)
+	n.Concepts = append([]string(nil), n.Concepts...)
+	return n, true
+}
+
 // Nearest finds the closest node by cosine similarity (k=1 brute-force k-NN).
 //
 // Curated nodes win ties and near-ties: a live-generated station only wins when

@@ -24,6 +24,8 @@ const (
 	VectorRouter_MutateInteractiveNode_FullMethodName     = "/avlp.vector.v1.VectorRouter/MutateInteractiveNode"
 	VectorRouter_RecordSubtopicInteraction_FullMethodName = "/avlp.vector.v1.VectorRouter/RecordSubtopicInteraction"
 	VectorRouter_GetSubtopicProgress_FullMethodName       = "/avlp.vector.v1.VectorRouter/GetSubtopicProgress"
+	VectorRouter_GetNodeOrientation_FullMethodName        = "/avlp.vector.v1.VectorRouter/GetNodeOrientation"
+	VectorRouter_GetConceptRoute_FullMethodName           = "/avlp.vector.v1.VectorRouter/GetConceptRoute"
 	VectorRouter_RecordBotoneraInteraction_FullMethodName = "/avlp.vector.v1.VectorRouter/RecordBotoneraInteraction"
 	VectorRouter_GetLiveStation_FullMethodName            = "/avlp.vector.v1.VectorRouter/GetLiveStation"
 	VectorRouter_PromoteLiveStation_FullMethodName        = "/avlp.vector.v1.VectorRouter/PromoteLiveStation"
@@ -43,6 +45,10 @@ type VectorRouterClient interface {
 	// Record* RPCs. A multi-user deployment needs authentication and per-student
 	// authorization (tracked as Ola 4 debt).
 	GetSubtopicProgress(ctx context.Context, in *SubtopicProgressQuery, opts ...grpc.CallOption) (*SubtopicProgress, error)
+	// Prerequisite orientation after render; never part of QueryNearestNode.
+	GetNodeOrientation(ctx context.Context, in *NodeOrientationQuery, opts ...grpc.CallOption) (*NodeOrientation, error)
+	// Learning-order path between curriculum concepts.
+	GetConceptRoute(ctx context.Context, in *ConceptRouteQuery, opts ...grpc.CallOption) (*ConceptRoute, error)
 	// Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
 	// Legacy vector_delta is content-embedding space and is NEVER applied to V_e;
 	// without a client preference_delta the RPC returns Ack without Apply.
@@ -112,6 +118,26 @@ func (c *vectorRouterClient) GetSubtopicProgress(ctx context.Context, in *Subtop
 	return out, nil
 }
 
+func (c *vectorRouterClient) GetNodeOrientation(ctx context.Context, in *NodeOrientationQuery, opts ...grpc.CallOption) (*NodeOrientation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NodeOrientation)
+	err := c.cc.Invoke(ctx, VectorRouter_GetNodeOrientation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vectorRouterClient) GetConceptRoute(ctx context.Context, in *ConceptRouteQuery, opts ...grpc.CallOption) (*ConceptRoute, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConceptRoute)
+	err := c.cc.Invoke(ctx, VectorRouter_GetConceptRoute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *vectorRouterClient) RecordBotoneraInteraction(ctx context.Context, in *BotoneraInteraction, opts ...grpc.CallOption) (*Ack, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Ack)
@@ -156,6 +182,10 @@ type VectorRouterServer interface {
 	// Record* RPCs. A multi-user deployment needs authentication and per-student
 	// authorization (tracked as Ola 4 debt).
 	GetSubtopicProgress(context.Context, *SubtopicProgressQuery) (*SubtopicProgress, error)
+	// Prerequisite orientation after render; never part of QueryNearestNode.
+	GetNodeOrientation(context.Context, *NodeOrientationQuery) (*NodeOrientation, error)
+	// Learning-order path between curriculum concepts.
+	GetConceptRoute(context.Context, *ConceptRouteQuery) (*ConceptRoute, error)
 	// Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
 	// Legacy vector_delta is content-embedding space and is NEVER applied to V_e;
 	// without a client preference_delta the RPC returns Ack without Apply.
@@ -189,6 +219,12 @@ func (UnimplementedVectorRouterServer) RecordSubtopicInteraction(context.Context
 }
 func (UnimplementedVectorRouterServer) GetSubtopicProgress(context.Context, *SubtopicProgressQuery) (*SubtopicProgress, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSubtopicProgress not implemented")
+}
+func (UnimplementedVectorRouterServer) GetNodeOrientation(context.Context, *NodeOrientationQuery) (*NodeOrientation, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetNodeOrientation not implemented")
+}
+func (UnimplementedVectorRouterServer) GetConceptRoute(context.Context, *ConceptRouteQuery) (*ConceptRoute, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetConceptRoute not implemented")
 }
 func (UnimplementedVectorRouterServer) RecordBotoneraInteraction(context.Context, *BotoneraInteraction) (*Ack, error) {
 	return nil, status.Error(codes.Unimplemented, "method RecordBotoneraInteraction not implemented")
@@ -310,6 +346,42 @@ func _VectorRouter_GetSubtopicProgress_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VectorRouter_GetNodeOrientation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NodeOrientationQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VectorRouterServer).GetNodeOrientation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VectorRouter_GetNodeOrientation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VectorRouterServer).GetNodeOrientation(ctx, req.(*NodeOrientationQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VectorRouter_GetConceptRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConceptRouteQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VectorRouterServer).GetConceptRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VectorRouter_GetConceptRoute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VectorRouterServer).GetConceptRoute(ctx, req.(*ConceptRouteQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _VectorRouter_RecordBotoneraInteraction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BotoneraInteraction)
 	if err := dec(in); err != nil {
@@ -390,6 +462,14 @@ var VectorRouter_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSubtopicProgress",
 			Handler:    _VectorRouter_GetSubtopicProgress_Handler,
+		},
+		{
+			MethodName: "GetNodeOrientation",
+			Handler:    _VectorRouter_GetNodeOrientation_Handler,
+		},
+		{
+			MethodName: "GetConceptRoute",
+			Handler:    _VectorRouter_GetConceptRoute_Handler,
 		},
 		{
 			MethodName: "RecordBotoneraInteraction",

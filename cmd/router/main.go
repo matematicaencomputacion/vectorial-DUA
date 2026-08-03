@@ -192,7 +192,7 @@ func main() {
 		len(kg.ConceptIDs()), len(kg.Edges()), unbound)
 
 	visits, visitCloser := openConceptVisitStore()
-	advisor := &knowledge.Advisor{Graph: kg, Visits: visits}
+	advisor := &knowledge.Advisor{Graph: kg, Visits: visits, Logf: log.Printf}
 
 	srvImpl := routerserver.New(routerserver.Deps{
 		Router:        router,

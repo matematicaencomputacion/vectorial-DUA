@@ -237,6 +237,50 @@ func TestGatewayGetNodeAndMutate(t *testing.T) {
 	}
 }
 
+func TestGatewayNodeOrientationAndConceptRoute(t *testing.T) {
+	gw, _, cleanup := startTestGateway(t)
+	defer cleanup()
+
+	const nodeID = "dua::Accion::basico::practica::01ARZ3NDEKTSV4RRFFQ69G5FB1"
+	const studentID = "stu-orient"
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/nodes/"+nodeID+"/orientation?student_id="+studentID, nil)
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("orientation status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var orient vectorv1.NodeOrientation
+	if err := json.Unmarshal(rr.Body.Bytes(), &orient); err != nil {
+		t.Fatal(err)
+	}
+	// Test gateway has no Advisor wired → available=false is intentional.
+	if orient.GetAvailable() {
+		t.Fatalf("expected available=false without advisor, got %+v", orient)
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet,
+		"/api/concepts/route?student_id="+studentID+"&from=concept:env-secrets&to=concept:string-literals", nil)
+	gw.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("route status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var route vectorv1.ConceptRoute
+	if err := json.Unmarshal(rr.Body.Bytes(), &route); err != nil {
+		t.Fatal(err)
+	}
+	if route.GetAvailable() {
+		t.Fatalf("expected available=false without advisor, got %+v", route)
+	}
+
+	missing := httptest.NewRecorder()
+	gw.Handler().ServeHTTP(missing, httptest.NewRequest(http.MethodGet, "/api/concepts/route?student_id="+studentID, nil))
+	if missing.Code != http.StatusBadRequest {
+		t.Fatalf("missing from/to status=%d body=%s", missing.Code, missing.Body.String())
+	}
+}
+
 func TestGatewaySubtopicProgress(t *testing.T) {
 	gw, _, cleanup := startTestGateway(t)
 	defer cleanup()

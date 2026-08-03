@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package avlp.vector.v1;
+
+option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
+
+// NodeOrientationQuery asks for prerequisite guidance for a pedagogical node.
+message NodeOrientationQuery {
+  string student_id = 1;
+  string node_id = 2;
+}
+
+// ConceptGap is one unmet foundational concept relative to the focus.
+message ConceptGap {
+  string concept_id = 1;
+  string title = 2;
+  string track = 3;
+  string kind = 4;
+  double strength = 5;
+  string rationale_es = 6;
+  int32 depth = 7;
+}
+
+// NodeOrientation is the student-facing tip after a node render (never inside search).
+message NodeOrientation {
+  string student_id = 1;
+  string node_id = 2;
+  bool available = 3;
+  string message_es = 4;
+  repeated ConceptGap gaps = 5;
+  repeated string focus_concept_ids = 6;
+}
+
+// ConceptRouteQuery asks for a learning-order path between two concepts.
+message ConceptRouteQuery {
+  string student_id = 1;
+  string from_concept_id = 2;
+  string to_concept_id = 3;
+}
+
+// ConceptRoute is a foundational-first learning path when Available.
+message ConceptRoute {
+  string student_id = 1;
+  bool available = 2;
+  repeated string concept_ids = 3;
+  repeated string titles = 4;
+}

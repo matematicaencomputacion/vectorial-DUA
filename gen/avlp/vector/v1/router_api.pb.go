@@ -813,7 +813,7 @@ var File_router_api_proto protoreflect.FileDescriptor
 
 const file_router_api_proto_rawDesc = "" +
 	"\n" +
-	"\x10router_api.proto\x12\x0eavlp.vector.v1\x1a\x13student_state.proto\x1a\x16interactive_node.proto\"\xce\x02\n" +
+	"\x10router_api.proto\x12\x0eavlp.vector.v1\x1a\x13student_state.proto\x1a\x16interactive_node.proto\x1a\x0fknowledge.proto\"\xce\x02\n" +
 	"\fNodeResponse\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12#\n" +
 	"\rdimension_dua\x18\x02 \x01(\tR\fdimensionDua\x12!\n" +
@@ -877,13 +877,15 @@ const file_router_api_proto_rawDesc = "" +
 	"\vRouteResult\x128\n" +
 	"\amatched\x18\x01 \x01(\v2\x1c.avlp.vector.v1.NodeResponseH\x00R\amatched\x12>\n" +
 	"\apending\x18\x02 \x01(\v2\".avlp.vector.v1.LiveStationPendingH\x00R\apendingB\t\n" +
-	"\aoutcome2\xf7\x05\n" +
+	"\aoutcome2\xa8\a\n" +
 	"\fVectorRouter\x12L\n" +
 	"\x10QueryNearestNode\x12\x1b.avlp.vector.v1.VectorQuery\x1a\x1b.avlp.vector.v1.RouteResult\x12Y\n" +
 	"\x12GetInteractiveNode\x12\x1d.avlp.vector.v1.NodeIdRequest\x1a$.avlp.vector.v1.InteractiveVideoNode\x12l\n" +
 	"\x15MutateInteractiveNode\x12(.avlp.vector.v1.MutateInteractiveRequest\x1a).avlp.vector.v1.MutateInteractiveResponse\x12U\n" +
 	"\x19RecordSubtopicInteraction\x12#.avlp.vector.v1.SubtopicInteraction\x1a\x13.avlp.vector.v1.Ack\x12^\n" +
-	"\x13GetSubtopicProgress\x12%.avlp.vector.v1.SubtopicProgressQuery\x1a .avlp.vector.v1.SubtopicProgress\x12U\n" +
+	"\x13GetSubtopicProgress\x12%.avlp.vector.v1.SubtopicProgressQuery\x1a .avlp.vector.v1.SubtopicProgress\x12[\n" +
+	"\x12GetNodeOrientation\x12$.avlp.vector.v1.NodeOrientationQuery\x1a\x1f.avlp.vector.v1.NodeOrientation\x12R\n" +
+	"\x0fGetConceptRoute\x12!.avlp.vector.v1.ConceptRouteQuery\x1a\x1c.avlp.vector.v1.ConceptRoute\x12U\n" +
 	"\x19RecordBotoneraInteraction\x12#.avlp.vector.v1.BotoneraInteraction\x1a\x13.avlp.vector.v1.Ack\x12U\n" +
 	"\x0eGetLiveStation\x12 .avlp.vector.v1.LiveStationQuery\x1a!.avlp.vector.v1.LiveStationStatus\x12k\n" +
 	"\x12PromoteLiveStation\x12).avlp.vector.v1.PromoteLiveStationRequest\x1a*.avlp.vector.v1.PromoteLiveStationResponseB;Z9github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1b\x06proto3"
@@ -917,10 +919,14 @@ var file_router_api_proto_goTypes = []any{
 	(*NodeIdRequest)(nil),              // 12: avlp.vector.v1.NodeIdRequest
 	(*MutateInteractiveRequest)(nil),   // 13: avlp.vector.v1.MutateInteractiveRequest
 	(*SubtopicInteraction)(nil),        // 14: avlp.vector.v1.SubtopicInteraction
-	(*BotoneraInteraction)(nil),        // 15: avlp.vector.v1.BotoneraInteraction
-	(*InteractiveVideoNode)(nil),       // 16: avlp.vector.v1.InteractiveVideoNode
-	(*MutateInteractiveResponse)(nil),  // 17: avlp.vector.v1.MutateInteractiveResponse
-	(*Ack)(nil),                        // 18: avlp.vector.v1.Ack
+	(*NodeOrientationQuery)(nil),       // 15: avlp.vector.v1.NodeOrientationQuery
+	(*ConceptRouteQuery)(nil),          // 16: avlp.vector.v1.ConceptRouteQuery
+	(*BotoneraInteraction)(nil),        // 17: avlp.vector.v1.BotoneraInteraction
+	(*InteractiveVideoNode)(nil),       // 18: avlp.vector.v1.InteractiveVideoNode
+	(*MutateInteractiveResponse)(nil),  // 19: avlp.vector.v1.MutateInteractiveResponse
+	(*Ack)(nil),                        // 20: avlp.vector.v1.Ack
+	(*NodeOrientation)(nil),            // 21: avlp.vector.v1.NodeOrientation
+	(*ConceptRoute)(nil),               // 22: avlp.vector.v1.ConceptRoute
 }
 var file_router_api_proto_depIdxs = []int32{
 	7,  // 0: avlp.vector.v1.SubtopicProgress.root_states:type_name -> avlp.vector.v1.RootSubtopicProgress
@@ -932,19 +938,23 @@ var file_router_api_proto_depIdxs = []int32{
 	13, // 6: avlp.vector.v1.VectorRouter.MutateInteractiveNode:input_type -> avlp.vector.v1.MutateInteractiveRequest
 	14, // 7: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:input_type -> avlp.vector.v1.SubtopicInteraction
 	6,  // 8: avlp.vector.v1.VectorRouter.GetSubtopicProgress:input_type -> avlp.vector.v1.SubtopicProgressQuery
-	15, // 9: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:input_type -> avlp.vector.v1.BotoneraInteraction
-	2,  // 10: avlp.vector.v1.VectorRouter.GetLiveStation:input_type -> avlp.vector.v1.LiveStationQuery
-	4,  // 11: avlp.vector.v1.VectorRouter.PromoteLiveStation:input_type -> avlp.vector.v1.PromoteLiveStationRequest
-	10, // 12: avlp.vector.v1.VectorRouter.QueryNearestNode:output_type -> avlp.vector.v1.RouteResult
-	16, // 13: avlp.vector.v1.VectorRouter.GetInteractiveNode:output_type -> avlp.vector.v1.InteractiveVideoNode
-	17, // 14: avlp.vector.v1.VectorRouter.MutateInteractiveNode:output_type -> avlp.vector.v1.MutateInteractiveResponse
-	18, // 15: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:output_type -> avlp.vector.v1.Ack
-	9,  // 16: avlp.vector.v1.VectorRouter.GetSubtopicProgress:output_type -> avlp.vector.v1.SubtopicProgress
-	18, // 17: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:output_type -> avlp.vector.v1.Ack
-	3,  // 18: avlp.vector.v1.VectorRouter.GetLiveStation:output_type -> avlp.vector.v1.LiveStationStatus
-	5,  // 19: avlp.vector.v1.VectorRouter.PromoteLiveStation:output_type -> avlp.vector.v1.PromoteLiveStationResponse
-	12, // [12:20] is the sub-list for method output_type
-	4,  // [4:12] is the sub-list for method input_type
+	15, // 9: avlp.vector.v1.VectorRouter.GetNodeOrientation:input_type -> avlp.vector.v1.NodeOrientationQuery
+	16, // 10: avlp.vector.v1.VectorRouter.GetConceptRoute:input_type -> avlp.vector.v1.ConceptRouteQuery
+	17, // 11: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:input_type -> avlp.vector.v1.BotoneraInteraction
+	2,  // 12: avlp.vector.v1.VectorRouter.GetLiveStation:input_type -> avlp.vector.v1.LiveStationQuery
+	4,  // 13: avlp.vector.v1.VectorRouter.PromoteLiveStation:input_type -> avlp.vector.v1.PromoteLiveStationRequest
+	10, // 14: avlp.vector.v1.VectorRouter.QueryNearestNode:output_type -> avlp.vector.v1.RouteResult
+	18, // 15: avlp.vector.v1.VectorRouter.GetInteractiveNode:output_type -> avlp.vector.v1.InteractiveVideoNode
+	19, // 16: avlp.vector.v1.VectorRouter.MutateInteractiveNode:output_type -> avlp.vector.v1.MutateInteractiveResponse
+	20, // 17: avlp.vector.v1.VectorRouter.RecordSubtopicInteraction:output_type -> avlp.vector.v1.Ack
+	9,  // 18: avlp.vector.v1.VectorRouter.GetSubtopicProgress:output_type -> avlp.vector.v1.SubtopicProgress
+	21, // 19: avlp.vector.v1.VectorRouter.GetNodeOrientation:output_type -> avlp.vector.v1.NodeOrientation
+	22, // 20: avlp.vector.v1.VectorRouter.GetConceptRoute:output_type -> avlp.vector.v1.ConceptRoute
+	20, // 21: avlp.vector.v1.VectorRouter.RecordBotoneraInteraction:output_type -> avlp.vector.v1.Ack
+	3,  // 22: avlp.vector.v1.VectorRouter.GetLiveStation:output_type -> avlp.vector.v1.LiveStationStatus
+	5,  // 23: avlp.vector.v1.VectorRouter.PromoteLiveStation:output_type -> avlp.vector.v1.PromoteLiveStationResponse
+	14, // [14:24] is the sub-list for method output_type
+	4,  // [4:14] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
 	4,  // [4:4] is the sub-list for extension extendee
 	0,  // [0:4] is the sub-list for field type_name
@@ -957,6 +967,7 @@ func file_router_api_proto_init() {
 	}
 	file_student_state_proto_init()
 	file_interactive_node_proto_init()
+	file_knowledge_proto_init()
 	file_router_api_proto_msgTypes[10].OneofWrappers = []any{
 		(*RouteResult_Matched)(nil),
 		(*RouteResult_Pending)(nil),

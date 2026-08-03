@@ -135,6 +135,44 @@ func (a *Advisor) AdviseForConcepts(ctx context.Context, studentID string, focus
 	}, nil
 }
 
+// RouteResult is a learning-order path between concepts (foundational first).
+type RouteResult struct {
+	Available bool
+	Path      []Concept
+}
+
+// Route walks toward foundational concepts and reverses into study order.
+// Transport failures degrade to Available:false with err == nil.
+func (a *Advisor) Route(ctx context.Context, from, to ConceptID) (RouteResult, error) {
+	if strings.TrimSpace(string(from)) == "" || strings.TrimSpace(string(to)) == "" {
+		return RouteResult{}, fmt.Errorf("knowledge: from and to concept ids are required")
+	}
+	if a == nil || a.Graph == nil {
+		return RouteResult{Available: false}, nil
+	}
+	ids, err := a.Graph.Path(ctx, from, to, TraverseOptions{})
+	if err != nil {
+		if errors.Is(err, ErrNoPath) || errors.Is(err, ErrConceptNotFound) {
+			return RouteResult{Available: true}, nil
+		}
+		a.logTransport(err)
+		return RouteResult{Available: false}, nil
+	}
+	out := make([]Concept, 0, len(ids))
+	for _, id := range ids {
+		c, cerr := a.Graph.Concept(ctx, id)
+		if cerr != nil {
+			if errors.Is(cerr, ErrConceptNotFound) {
+				continue
+			}
+			a.logTransport(cerr)
+			return RouteResult{Available: false}, nil
+		}
+		out = append(out, c)
+	}
+	return RouteResult{Available: true, Path: out}, nil
+}
+
 func (a *Advisor) logTransport(err error) {
 	if a == nil || err == nil {
 		return
