@@ -4,6 +4,11 @@
 
 Plataforma educativa vectorial y adaptativa (**DUA** + **Carl Rogers**), con **OpenSpec (SDD)**, **Harness**, **RAG** y **nodos interactivos** (Stage + botonera).
 
+## Documentación
+
+- Runbook Neo4j (GCP / IAP / sync): [docs/neo4j-gcp.md](docs/neo4j-gcp.md)
+- Decisiones de arquitectura: ADR-001 — criterio de lenguajes C++/Go (ver `docs/` cuando el PR de ADR esté en main)
+
 ## Triángulo del entorno adaptativo
 
 | Capa | Rol | Estado en repo |
@@ -323,11 +328,13 @@ Por defecto el router guarda $V_e$ en memoria. Con `AVLP_PROFILE_STORE_PATH` (p.
 
 ```text
 vectorial-DUA/
-├── cmd/{router,router-client,harness,master-web}
+├── cmd/{router,router-client,harness,master-web,graph-sync}
 ├── internal/{routerserver,testenv}
-├── pkg/{vector,rag,livestation,dua,rogerian,webgateway}
+├── pkg/{vector,rag,livestation,dua,rogerian,webgateway,knowledge}
 ├── data/knowledge_base/
+├── data/knowledge/
 ├── data/nodes/interactive/
+├── docs/neo4j-gcp.md
 ├── proto/ + gen/
 ├── harness/{evals,sandbox,load,telemetry}
 ├── .github/workflows/ci.yml
