@@ -10,6 +10,7 @@ import (
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
 	"github.com/vectorial-dua/avlp/pkg/dua"
+	"github.com/vectorial-dua/avlp/pkg/knowledge"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/rogerian"
 	"github.com/vectorial-dua/avlp/pkg/session"
@@ -25,6 +26,9 @@ type Deps struct {
 	Profiles      dua.ProfileRepository
 	Interactions  *dua.InteractionStore
 	Promoter      *dua.LiveStationPromoter
+	Graph         knowledge.KnowledgeGraph
+	Visits        knowledge.ConceptVisitStore
+	Advisor       *knowledge.Advisor
 }
 
 // Server implements the VectorRouter gRPC service using the canonical domain services.
@@ -37,6 +41,9 @@ type Server struct {
 	profiles      dua.ProfileRepository
 	interactions  *dua.InteractionStore
 	promoter      *dua.LiveStationPromoter
+	graph         knowledge.KnowledgeGraph
+	visits        knowledge.ConceptVisitStore
+	advisor       *knowledge.Advisor
 }
 
 // New builds the canonical gRPC handler implementation.
@@ -49,6 +56,9 @@ func New(deps Deps) *Server {
 		profiles:      deps.Profiles,
 		interactions:  deps.Interactions,
 		promoter:      deps.Promoter,
+		graph:         deps.Graph,
+		visits:        deps.Visits,
+		advisor:       deps.Advisor,
 	}
 }
 
@@ -128,6 +138,8 @@ func (s *Server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 		if s.reg != nil {
 			_, hasInteractive = s.reg.Get(outcome.Node.ID)
 		}
+		conceptRefs := s.conceptRefsForMatch(outcome.Node)
+		s.recordConceptVisits(ctx, studentID, outcome.Node.ID, conceptRefs)
 		return &vectorv1.RouteResult{
 			Outcome: &vectorv1.RouteResult_Matched{
 				Matched: &vectorv1.NodeResponse{
@@ -307,12 +319,14 @@ func (s *Server) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.Bo
 
 	delta := dua.ResolveBotoneraDelta(n, req.GetVariantId(), req.GetPreferenceDelta())
 	if len(delta) == 0 {
+		s.recordConceptVisits(ctx, req.GetStudentId(), req.GetNodeId(), n.Concepts)
 		return neutralAck(), nil
 	}
 	if _, err := s.profiles.Apply(req.GetStudentId(), delta); err != nil {
 		log.Printf("botonera profile delta skipped student=%s node=%s variant=%s: %v",
 			req.GetStudentId(), req.GetNodeId(), req.GetVariantId(), err)
 	}
+	s.recordConceptVisits(ctx, req.GetStudentId(), req.GetNodeId(), n.Concepts)
 	return neutralAck(), nil
 }
 
@@ -352,6 +366,7 @@ func (s *Server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.Su
 
 	delta := dua.ResolveSubtopicDelta(n.Hierarchy, req.GetSubtopicId(), req.GetPreferenceDelta())
 	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), delta)
+	s.recordConceptVisits(ctx, req.GetStudentId(), req.GetParentNodeId(), n.Concepts)
 	return neutralAck(), nil
 }
 
@@ -414,4 +429,19 @@ func (s *Server) GetSubtopicProgress(ctx context.Context, req *vectorv1.Subtopic
 		})
 	}
 	return out, nil
+}
+
+func (s *Server) conceptRefsForMatch(node vector.Node) []string {
+	if s.reg != nil {
+		if n, ok := s.reg.Get(node.ID); ok && len(n.Concepts) > 0 {
+			return append([]string(nil), n.Concepts...)
+		}
+	}
+	return append([]string(nil), node.Concepts...)
+}
+
+func (s *Server) recordConceptVisits(ctx context.Context, studentID, nodeID string, refs []string) {
+	if err := knowledge.RecordConcepts(ctx, s.visits, studentID, refs); err != nil {
+		log.Printf("concept visit record skipped student=%s node=%s: %v", studentID, nodeID, err)
+	}
 }
