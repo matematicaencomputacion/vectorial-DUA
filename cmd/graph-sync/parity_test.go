@@ -15,9 +15,20 @@ import (
 
 // Same fixture (curriculum.json) loaded in MemoryGraph and synced to Neo4j;
 // identical query batteries including order.
+//
+// WRITE WARNING: this test runs applyPlan with prune=true against the Neo4j
+// pointed by AVLP_NEO4J_URI — it CREATES constraints, MERGEs curriculum data and
+// MAY DELETE concepts/edges absent from the fixture. NEVER point it at the
+// production curriculum database. Use an ephemeral local container (see
+// docs/neo4j-gcp.md § integration tests).
 func TestParityMemoryGraphVsNeo4j(t *testing.T) {
 	if os.Getenv("RUN_NEO4J_INTEGRATION") != "1" {
 		t.Skip("set RUN_NEO4J_INTEGRATION=1 (and AVLP_NEO4J_*) for live Bolt parity")
+	}
+	if os.Getenv("AVLP_NEO4J_ALLOW_INTEGRATION_WRITE") != "1" {
+		t.Fatal("refusing Neo4j write integration: set AVLP_NEO4J_ALLOW_INTEGRATION_WRITE=1 " +
+			"only after confirming AVLP_NEO4J_URI is an ephemeral local container " +
+			"(never the curriculum production DB). See docs/neo4j-gcp.md")
 	}
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -47,10 +58,13 @@ func TestParityMemoryGraphVsNeo4j(t *testing.T) {
 	}
 	defer driver.Close(context.Background())
 
+	// Explicit coverage of schema-then-data isolation: applyPlan must succeed on
+	// Neo4j ≥5 / 2025+ where mixing CREATE CONSTRAINT + MERGE in one tx fails with
+	// ForbiddenDueToTransactionType.
 	plan := buildPlan(mem, true)
 	syncedAt := time.Now().UTC()
 	if err := applyPlan(context.Background(), driver, plan, syncedAt); err != nil {
-		t.Fatalf("sync: %v", err)
+		t.Fatalf("sync (schema+data tx isolation): %v", err)
 	}
 
 	neo, err := neo4jgraph.New(cfg)
