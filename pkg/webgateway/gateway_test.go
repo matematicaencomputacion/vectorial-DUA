@@ -256,7 +256,8 @@ func TestGatewayNodeOrientationAndConceptRoute(t *testing.T) {
 	}
 	// Test gateway has no Advisor wired → available=false is intentional.
 	if orient.GetAvailable() {
-		t.Fatalf("expected available=false without advisor, got %+v", orient)
+		t.Fatalf("expected available=false without advisor, got available=%v message=%q",
+			orient.GetAvailable(), orient.GetMessageEs())
 	}
 
 	rr = httptest.NewRecorder()
@@ -271,7 +272,8 @@ func TestGatewayNodeOrientationAndConceptRoute(t *testing.T) {
 		t.Fatal(err)
 	}
 	if route.GetAvailable() {
-		t.Fatalf("expected available=false without advisor, got %+v", route)
+		t.Fatalf("expected available=false without advisor, got available=%v concepts=%v",
+			route.GetAvailable(), route.GetConceptIds())
 	}
 
 	missing := httptest.NewRecorder()
