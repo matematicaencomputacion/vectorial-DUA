@@ -29,10 +29,11 @@ entre estudiantes ni salir a backends de currículum.
 - Cypher sin `student`: `pkg/knowledge/neo4jgraph/queries.go` (comentario privacy);
   `TestNeo4jQueriesCarryNoStudentData` en `pkg/knowledge/neo4jgraph/graph_test.go`.
 - Aislamiento Advisor: `openspec/specs/concept-advisor/spec.md` (scenario
-  Aislamiento); implementación `pkg/knowledge/advisor.go` + tests en
-  `pkg/knowledge/advisor_test.go`.
+  Aislamiento); `pkg/knowledge/advisor_test.go` («privacy: other student must
+  not see visit»).
 - Profile store local: `pkg/dua/profile_file.go`; arranque
   `cmd/router/main.go` (`AVLP_PROFILE_STORE_PATH`).
-- Concept visits: `cmd/router/main.go` (`AVLP_CONCEPT_STORE_PATH`).
+- Concept visits: `pkg/knowledge/visits_file.go` (`FileConceptVisitStore`);
+  arranque `cmd/router/main.go` (`AVLP_CONCEPT_STORE_PATH`).
 - Compose Neo4j: `pkg/knowledge/neo4jgraph/compose.go` (sólo orientación;
   routing no depende de Neo4j).

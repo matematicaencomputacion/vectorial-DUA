@@ -17,7 +17,7 @@ Cada backend opcional sigue el mismo contrato:
 - **URL/path presente pero inválido** → **error** (no degradar en silencio).
 - El consumidor programa contra una **interfaz**; el `*FromEnv` resuelve.
 
-Instancias vigentes (×6):
+Cinco instancias vigentes + sexta documentada (ADR-001 §4):
 
 | # | Interfaz | Env | Off / fallback documentado |
 |---|----------|-----|----------------------------|
@@ -26,24 +26,28 @@ Instancias vigentes (×6):
 | 3 | `stt.Transcriber` | `AVLP_STT_URL` | cascada Web Speech / sin mic |
 | 4 | `dua.ProfileRepository` | `AVLP_PROFILE_STORE_PATH` | memoria si vacío |
 | 5 | `knowledge.KnowledgeGraph` | `AVLP_NEO4J_URI` | `NewFromEnv` → `(nil, nil)` + MemoryGraph |
-| 6 | visitas de concepto | `AVLP_CONCEPT_STORE_PATH` | memoria si vacío |
+| 6 | ANN (futuro) | `AVLP_ANN_URL` | motor externo; **aún no implementado** |
+
+Hermano del mismo contrato (Ola 7): visitas de concepto vía
+`AVLP_CONCEPT_STORE_PATH` vacío → memoria + log (`openConceptVisitStore`).
 
 ## Consecuencias
 
 - CI y demos locales corren sin servicios externos.
 - Operadores ven en el log qué camino está activo.
-- ANN futuro (`AVLP_ANN_URL`) debe repetir este patrón (ADR-001 §4).
+- Cuando llegue ANN, no reinventar el contrato: copy-paste del patrón ×1–5.
 
 ## Referencias
 
 - Embedder no-silencioso: `pkg/rag/embedder.go` (`DefaultEmbedderE` —
-  «no silent fallback to hash»).
-- LLM off: `cmd/router/main.go` («extractive fallback active…»).
-- STT FromEnv: `pkg/stt/transcriber_http.go` (`NewHTTPTranscriberFromEnv`).
+  «no silent fallback to hash»); URL vacía `(nil, nil)` en
+  `pkg/rag/embedder_http.go`.
+- LLM off: `cmd/router/main.go` («extractive fallback active…»);
+  `pkg/rogerian/synthesizer_http.go` (`NewHTTPSynthesizerFromEnv`).
+- STT: `pkg/stt/transcriber_http.go`; log UI en `cmd/master-web/main.go`.
 - Profile path: `cmd/router/main.go` + `pkg/dua/profile_file.go`.
-- Neo4j: `pkg/knowledge/neo4jgraph/graph.go` (`NewFromEnv` → `(nil, nil)`);
-  test `TestNewFromEnvEmptyURI` en `graph_test.go`.
-- Concept visits: `cmd/router/main.go` (`openConceptVisitStore` /
-  `AVLP_CONCEPT_STORE_PATH`).
-- Synthesizer FromEnv: `pkg/rogerian/synthesizer_http.go`
-  (`NewHTTPSynthesizerFromEnv`).
+- Neo4j: `pkg/knowledge/neo4jgraph/graph.go` / `config.go`
+  (`NewFromEnv` → `(nil, nil)`); `TestNewFromEnvEmptyURI`.
+- Concept visits (hermano): `cmd/router/main.go` (`openConceptVisitStore`);
+  `pkg/knowledge/visits_file.go`.
+- Sexta (ANN): `docs/adr/adr-001-criterio-lenguajes.md` §4.

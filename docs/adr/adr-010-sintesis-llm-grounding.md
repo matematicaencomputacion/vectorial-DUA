@@ -31,12 +31,16 @@ sin `AVLP_LLM_URL` y ante timeouts del modelo.
 
 - Bundle grounded: `pkg/rogerian/prompt.go` (`PromptBundle`, «no invention
   outside context»).
-- Synthesizer: `pkg/rogerian/synthesizer.go` + `synthesizer_http.go`.
+- Synthesizer: `pkg/rogerian/synthesizer.go` + `synthesizer_http.go`
+  (system: usar exclusivamente contexto verificado).
 - Fallback extractivo: `pkg/livestation/generator.go` (logs
-  «extractive fallback»); test `pkg/livestation/generator_test.go`
-  (`expected extractive fallback`, counter).
+  «extractive fallback», modelo `extractive-fallback`); test
+  `pkg/livestation/generator_test.go` (counter
+  `livestation_synthesis_fallback_total`).
 - Faithfulness: `harness/evals/faithfulness.go` (`ScoreRAGFaithfulness`).
 - Tone / no leak: `pkg/rogerian/tone_live_test.go`, `prompt_test.go`.
 - OpenSpec: `openspec/specs/llm-synthesis/spec.md`;
+  pending async: `openspec/specs/live-station-delivery/spec.md`;
   archive `openspec/changes/archive/2026-07-30-add-ola5-llm-synthesis/`.
-- Deadline → pending: `pkg/vector/router.go` (`LLMSyncDeadlineFromEnv`).
+- Deadline → pending: `pkg/vector/router.go` (`LLMSyncDeadlineFromEnv`,
+  `pendingOutcome`).

@@ -42,4 +42,8 @@ Validar el token HMAC **dentro del router**, o **mTLS** gateway↔router
   («Router en loopback o mTLS»).
 - Design + no-goals mTLS: `openspec/changes/archive/2026-07-31-add-ola5-minimal-auth/design.md`.
 - Tasks deuda Ola 6: `…/add-ola5-minimal-auth/tasks.md` §4.2.
-- Session FromEnv: `pkg/session/session.go`; wiring `pkg/webgateway/gateway.go`.
+- Gateway verifica Bearer → metadata gRPC: `pkg/webgateway/gateway.go`
+  (`authedContext`).
+- Metadata saliente / no revalida HMAC en router: `pkg/session/context.go`
+  (`RequireSecureIdentity`, `AppendOutgoingMetadata`).
+- Session FromEnv: `pkg/session/session.go`.

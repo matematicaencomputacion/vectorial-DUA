@@ -34,6 +34,9 @@ de dims fallan o se descartan con log — nunca truncado silencioso entre espaci
 - Guardrail anti-mezcla: `pkg/dua/preference_lookup.go` («MUST NEVER be applied to V_e»).
 - Test dims de mutación live ≠ $V_e$: `pkg/dua/interactive_test.go`
   (`vector_delta dims … want content space … (not V_e)`).
+- Upsert 5-dims rechazado: `pkg/vector/dims_test.go` (error debe aclarar
+  `not V_e`).
+- Sin promover `vector_delta` → $V_e$: `pkg/dua/preference_lookup_test.go`.
 - Snapshot: `pkg/dua/profile_file.go` / `profile_file_test.go`
   (`TestFileProfileStoreVeDimsMismatchDiscards`).
 - Provenance: `openspec/changes/add-ola2-adaptive-debt/proposal.md`
