@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "concepts": [
+    {
+      "id": "concept:alpha",
+      "title": "Alpha",
+      "summary": "Fundamento A",
+      "track": "python",
+      "tags": ["a"],
+      "source": "fixture"
+    },
+    {
+      "id": "concept:beta",
+      "title": "Beta",
+      "summary": "Apoyado en alpha",
+      "track": "python",
+      "tags": ["b"],
+      "source": "fixture"
+    },
+    {
+      "id": "concept:gamma",
+      "title": "Gamma",
+      "summary": "Apoyado en beta",
+      "track": "ingles",
+      "tags": ["c"],
+      "source": "fixture"
+    },
+    {
+      "id": "concept:delta",
+      "title": "Delta",
+      "summary": "Carril matemático",
+      "track": "matematica",
+      "tags": ["d"],
+      "source": "fixture"
+    },
+    {
+      "id": "concept:epsilon",
+      "title": "Epsilon",
+      "summary": "Alternativa a gamma",
+      "track": "plataforma",
+      "tags": ["e"],
+      "source": "fixture"
+    }
+  ],
+  "edges": [
+    {
+      "from": "concept:beta",
+      "to": "concept:alpha",
+      "kind": "requires",
+      "strength": 0.9,
+      "rationale_es": "Beta se apoya en Alpha.",
+      "source": "fixture"
+    },
+    {
+      "from": "concept:gamma",
+      "to": "concept:beta",
+      "kind": "requires",
+      "strength": 0.8,
+      "rationale_es": "Gamma se apoya en Beta.",
+      "source": "fixture"
+    },
+    {
+      "from": "concept:gamma",
+      "to": "concept:alpha",
+      "kind": "requires",
+      "strength": 0.5,
+      "rationale_es": "Atajo débil hacia Alpha.",
+      "source": "fixture"
+    },
+    {
+      "from": "concept:delta",
+      "to": "concept:alpha",
+      "kind": "deepens",
+      "strength": 0.7,
+      "rationale_es": "Delta profundiza Alpha.",
+      "source": "fixture"
+    },
+    {
+      "from": "concept:epsilon",
+      "to": "concept:gamma",
+      "kind": "continues",
+      "strength": 0.6,
+      "rationale_es": "Epsilon continúa después de Gamma.",
+      "source": "fixture"
+    },
+    {
+      "from": "concept:gamma",
+      "to": "concept:epsilon",
+      "kind": "alternative",
+      "strength": 0.4,
+      "rationale_es": "Gamma y Epsilon son caminos alternativos.",
+      "source": "fixture"
+    }
+  ]
+}

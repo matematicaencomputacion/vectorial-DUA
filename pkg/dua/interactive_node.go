@@ -46,6 +46,7 @@ type InteractiveVideoNode struct {
 	Transcript               string               `json:"transcript,omitempty"`
 	AltText                  string               `json:"alt_text,omitempty"`
 	AudioDescriptionURL      string               `json:"audio_description_url,omitempty"`
+	Concepts                 []string             `json:"concepts,omitempty"` // knowledge concept ids (Ola 7)
 }
 
 // Validate checks structural integrity of an interactive node.
@@ -128,6 +129,7 @@ func (n *InteractiveVideoNode) Clone() *InteractiveVideoNode {
 	out.Botonera = append([]InteractiveButton(nil), n.Botonera...)
 	out.Embedding = append([]float32(nil), n.Embedding...)
 	out.RetrievedSources = append([]string(nil), n.RetrievedSources...)
+	out.Concepts = append([]string(nil), n.Concepts...)
 	for i := range out.Botonera {
 		out.Botonera[i].VectorDelta = append([]float32(nil), n.Botonera[i].VectorDelta...)
 	}

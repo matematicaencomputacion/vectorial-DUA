@@ -126,5 +126,8 @@
   },
   "alt_text": "Vista macro de un automóvil: carrocería, habitáculo y ruedas en un plano general.",
   "transcript": "## Macro automóvil\nUn automóvil es un sistema: caja central (habitáculo y controles) más cuatro ruedas que lo conectan al suelo. Explorá los subtemas en el orden que prefieras.",
-  "captions_url": "https://cdn.example.com/videos/auto/macro-45s.vtt"
+  "captions_url": "https://cdn.example.com/videos/auto/macro-45s.vtt",
+  "concepts": [
+    "concept:automobile-systems"
+  ]
 }

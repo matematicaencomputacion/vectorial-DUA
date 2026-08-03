@@ -80,5 +80,8 @@
     ]
   },
   "alt_text": "Introducción visual a async/await y por qué no bloquea el hilo principal.",
-  "transcript": "## Intro async/await\nAsync marca una función que puede pausarse. Await espera una promesa sin congelar toda la app: el evento loop sigue atendiendo otras tareas."
+  "transcript": "## Intro async/await\nAsync marca una función que puede pausarse. Await espera una promesa sin congelar toda la app: el evento loop sigue atendiendo otras tareas.",
+  "concepts": [
+    "concept:async-await"
+  ]
 }

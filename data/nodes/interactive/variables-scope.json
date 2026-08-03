@@ -102,5 +102,8 @@
   },
   "alt_text": "Clip introductorio: mapa visual de dónde vive cada variable en un programa.",
   "transcript": "## Intro\nEn este clip vemos el mapa de scopes: global, de función y de bloque. La idea es ubicar *dónde* existe cada nombre antes de usarlo.",
-  "captions_url": "https://cdn.example.com/videos/vars/intro.vtt"
+  "captions_url": "https://cdn.example.com/videos/vars/intro.vtt",
+  "concepts": [
+    "concept:variables-scope"
+  ]
 }
