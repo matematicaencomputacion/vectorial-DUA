@@ -3,6 +3,8 @@
 package knowledge
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,9 +13,16 @@ import (
 const (
 	// SchemaVersion is the only supported curriculum JSON version.
 	SchemaVersion = 1
-	// MaxTraversalDepth caps Path / neighbourhood walks.
+	// MaxTraversalDepth caps Path walks when TraverseOptions.MaxDepth is 0.
 	MaxTraversalDepth = 4
 	conceptPrefix     = "concept:"
+)
+
+var (
+	// ErrConceptNotFound is returned when a concept id is absent from the graph.
+	ErrConceptNotFound = errors.New("knowledge: concept not found")
+	// ErrNoPath is returned when Path cannot reach the destination.
+	ErrNoPath = errors.New("knowledge: no path")
 )
 
 var slugRE = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
@@ -45,7 +54,6 @@ func NormalizeConceptRef(raw string) (ConceptID, error) {
 	}
 	return ParseConceptID(raw)
 }
-
 
 // Track is a program lane; edges MAY cross tracks.
 type Track string
@@ -114,28 +122,50 @@ type Edge struct {
 	Source      string
 }
 
-// Health is a snapshot of graph binding coverage.
-type Health struct {
-	Concepts           int
-	Edges              int
-	ResourcesUnbound   int // resources without any declared concept
-	ConceptsUntaught   int // concepts with no teaching resource
-	Warnings           []string
+// Relation is a traversal hit: the edge, the peer concept, and hop depth.
+type Relation struct {
+	Kind        EdgeKind
+	Strength    float64
+	RationaleES string
+	Source      string
+	Peer        Concept
+	Depth       int
+}
+
+// TraverseOptions filters curriculum walks. The zero value uses current defaults:
+// MaxDepth 1 for Prerequisites/Dependents/Neighbors (direct), MaxTraversalDepth
+// for Path; Kinds depend on the method; MinStrength/Limit unrestricted.
+type TraverseOptions struct {
+	MaxDepth    int
+	Kinds       []EdgeKind
+	MinStrength float64
+	Limit       int
+}
+
+// Stats is a snapshot of graph size and binding coverage (not connection health).
+type Stats struct {
+	Concepts         int
+	Edges            int
+	ResourcesUnbound int // resources without any declared concept
+	ConceptsUntaught int // concepts with no teaching resource
+	Warnings         []string
 }
 
 // KnowledgeGraph is the query surface for curriculum structure.
+// ctx + error keep Neo4j/Bolt callers cancellable without another signature churn.
 // No studentID: the graph models curriculum; learner evidence is a later PR.
 type KnowledgeGraph interface {
-	Concept(id ConceptID) (Concept, bool)
-	Prerequisites(id ConceptID) []ConceptID
-	Dependents(id ConceptID) []ConceptID
-	Neighbors(id ConceptID, kind EdgeKind) []Edge
-	Path(from, to ConceptID) ([]ConceptID, bool)
-	Health() Health
+	Concept(ctx context.Context, id ConceptID) (Concept, error)
+	Prerequisites(ctx context.Context, id ConceptID, opts TraverseOptions) ([]Relation, error)
+	Dependents(ctx context.Context, id ConceptID, opts TraverseOptions) ([]Relation, error)
+	Neighbors(ctx context.Context, id ConceptID, opts TraverseOptions) ([]Relation, error)
+	Path(ctx context.Context, from, to ConceptID, opts TraverseOptions) ([]ConceptID, error)
+	// Health is a transport / availability probe (MemoryGraph: always nil).
+	Health(ctx context.Context) error
 }
 
 // ResourceBinder resolves concept ↔ teaching resource at runtime.
 type ResourceBinder interface {
-	ResourcesFor(id ConceptID) []string
-	ConceptsForNode(nodeID string) []ConceptID
+	ResourcesFor(ctx context.Context, id ConceptID) ([]string, error)
+	ConceptsForNode(ctx context.Context, nodeID string) ([]ConceptID, error)
 }

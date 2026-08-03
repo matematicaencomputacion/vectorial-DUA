@@ -1,6 +1,7 @@
 package knowledge_test
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 )
 
 func TestIndexBinder(t *testing.T) {
+	ctx := context.Background()
 	idx := vector.NewIndexWithDims(4)
 	if err := idx.Upsert(vector.Node{
 		ID:          "dua::Representacion::basico::visual::01ARZ3NDEKTSV4RRFFQ69G5FZZ",
@@ -55,11 +57,17 @@ func TestIndexBinder(t *testing.T) {
 		t.Fatalf("LoadFile: %v", err)
 	}
 
-	resAlpha := binder.ResourcesFor("concept:alpha")
+	resAlpha, err := binder.ResourcesFor(ctx, "concept:alpha")
+	if err != nil {
+		t.Fatalf("ResourcesFor: %v", err)
+	}
 	if len(resAlpha) != 1 || resAlpha[0] != "master://nodes/env-diagram" {
 		t.Fatalf("ResourcesFor alpha=%v (live should be skipped)", resAlpha)
 	}
-	ids := binder.ConceptsForNode("interactive-1")
+	ids, err := binder.ConceptsForNode(ctx, "interactive-1")
+	if err != nil {
+		t.Fatalf("ConceptsForNode: %v", err)
+	}
 	if len(ids) != 1 || ids[0] != "concept:beta" {
 		t.Fatalf("ConceptsForNode=%v", ids)
 	}
@@ -82,8 +90,7 @@ func TestIndexBinder(t *testing.T) {
 	}
 
 	t.Setenv("AVLP_KNOWLEDGE_STRICT", "true")
-	strict := knowledge.StrictFromEnv()
-	if !strict {
+	if !knowledge.StrictFromEnv() {
 		t.Fatal("StrictFromEnv should be true")
 	}
 	_, _, err = knowledge.LoadFile(fixture, knowledge.LoadOptions{
@@ -94,8 +101,11 @@ func TestIndexBinder(t *testing.T) {
 		t.Fatal("expected strict binding error")
 	}
 
-	h := g.Health()
-	if h.Concepts != 5 || h.Edges != 6 {
-		t.Fatalf("Health size concepts=%d edges=%d", h.Concepts, h.Edges)
+	st := g.Stats()
+	if st.Concepts != 5 || st.Edges != 6 {
+		t.Fatalf("Stats size concepts=%d edges=%d", st.Concepts, st.Edges)
+	}
+	if err := g.Health(ctx); err != nil {
+		t.Fatalf("Health: %v", err)
 	}
 }

@@ -28,7 +28,14 @@ ausente fallan (espíritu de `AVLP_REQUIRE_MEDIA_A11Y`).
 `IndexBinder{Index, Registry}` deriva concepto↔recurso en cada arranque desde
 `Concepts` declarados en seeds y nodos demo.
 
+### 5. Firmas Neo4j-ready
+
+`KnowledgeGraph` y `ResourceBinder` llevan `context.Context` y `error`.
+Prerequisites/Dependents/Neighbors devuelven `[]Relation` (arista + peer + Depth)
+con `TraverseOptions`. `Health(ctx) error` es sonda de disponibilidad;
+cobertura y conteos viven en `Stats()`.
+
 ## Risks
 
 - Rationale de borrador mal curado llega al estudiante → marcado en proposal.
-- Grafo incompleto → Health/avisos, no bloqueo por defecto.
+- Grafo incompleto → Stats/avisos, no bloqueo por defecto.

@@ -1,6 +1,7 @@
 package knowledge
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -185,8 +186,13 @@ func LoadFile(path string, opt LoadOptions) (*MemoryGraph, Report, error) {
 				return nil, rep, err
 			}
 		} else {
+			ctx := context.Background()
 			for _, id := range g.conceptOrder {
-				if len(opt.Binder.ResourcesFor(id)) == 0 {
+				res, err := opt.Binder.ResourcesFor(ctx, id)
+				if err != nil {
+					return nil, rep, err
+				}
+				if len(res) == 0 {
 					msg := fmt.Sprintf("concept without teaching resource: %s", id)
 					rep.Warnings = append(rep.Warnings, msg)
 					if opt.Logf != nil {

@@ -1,6 +1,7 @@
 package knowledge
 
 import (
+	"context"
 	"sort"
 	"strconv"
 	"strings"
@@ -72,19 +73,19 @@ func (b *IndexBinder) Bind() {
 }
 
 // ResourcesFor implements ResourceBinder.
-func (b *IndexBinder) ResourcesFor(id ConceptID) []string {
+func (b *IndexBinder) ResourcesFor(_ context.Context, id ConceptID) ([]string, error) {
 	if b == nil || b.byConcept == nil {
-		return nil
+		return nil, nil
 	}
-	return append([]string(nil), b.byConcept[id]...)
+	return append([]string(nil), b.byConcept[id]...), nil
 }
 
 // ConceptsForNode implements ResourceBinder.
-func (b *IndexBinder) ConceptsForNode(nodeID string) []ConceptID {
+func (b *IndexBinder) ConceptsForNode(_ context.Context, nodeID string) ([]ConceptID, error) {
 	if b == nil || b.byNode == nil {
-		return nil
+		return nil, nil
 	}
-	return append([]ConceptID(nil), b.byNode[nodeID]...)
+	return append([]ConceptID(nil), b.byNode[nodeID]...), nil
 }
 
 // UnboundResourceCount returns curated resources that declare no concepts.
@@ -110,8 +111,6 @@ func (b *IndexBinder) UnboundResourceCount() int {
 		if _, ok := seen[node.ID]; ok {
 			continue
 		}
-		// Interactive nodes also live in the index with interactive:// URL —
-		// skip duplicates already counted via registry.
 		if strings.HasPrefix(node.ResourceURL, "interactive://") {
 			continue
 		}
@@ -158,9 +157,14 @@ func ApplyBindingWarnings(g *MemoryGraph, binder *IndexBinder, strict bool, logf
 	}
 	binder.Bind()
 	g.SetBinder(binder)
+	ctx := context.Background()
 
 	for _, id := range g.conceptOrder {
-		if len(binder.ResourcesFor(id)) == 0 {
+		res, err := binder.ResourcesFor(ctx, id)
+		if err != nil {
+			return rep, err
+		}
+		if len(res) == 0 {
 			msg := "concept without teaching resource: " + string(id)
 			rep.Warnings = append(rep.Warnings, msg)
 			if logf != nil {
