@@ -1,0 +1,3 @@
+- [x] 1.1 neo4jgraph Config/New/NewFromEnv + breaker + cache + Cypher
+- [x] 1.2 ReadThrough + wiring router
+- [x] 1.3 Tests CI + RUN_NEO4J_INTEGRATION + PR freno

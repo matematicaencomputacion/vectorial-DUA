@@ -227,6 +227,10 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_INTERACTIVE_NODES` | `true` | Carga de seeds Stage/botonera |
 | `AVLP_INTERACTIVE_NODES_DIR` | `data/nodes/interactive` | Directorio de seeds (incluye promovidos) |
 | `AVLP_PROFILE_STORE_PATH` | vacío → memoria | Snapshot JSON de perfiles $V_e$ |
+| `AVLP_NEO4J_URI` | vacío → off | Bolt URI read-only del currículum (`neo4jgraph`); vacío = MemoryGraph archivo |
+| `AVLP_NEO4J_USER` / `AVLP_NEO4J_PASSWORD` | vacío | Auth básica Bolt |
+| `AVLP_NEO4J_COOLDOWN` | `30s` | Ventana del breaker tras 3 fallos (log una vez por ventana) |
+| `AVLP_KNOWLEDGE_CACHE_TTL` | `5m` | Caché TTL de lecturas Neo4j |
 | `AVLP_ROUTER_ADDR` | `127.0.0.1:50051` | Bind gRPC del router (loopback) / dial del gateway; override explícito para otras interfaces |
 | `AVLP_WEB_ADDR` | `127.0.0.1:8080` | Bind HTTP de `master-web` |
 
