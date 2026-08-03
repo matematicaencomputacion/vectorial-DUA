@@ -4,6 +4,12 @@
 
 Plataforma educativa vectorial y adaptativa (**DUA** + **Carl Rogers**), con **OpenSpec (SDD)**, **Harness**, **RAG** y **nodos interactivos** (Stage + botonera).
 
+## Documentación
+
+- Decisiones de arquitectura: [ADR-001 — criterio de lenguajes C++/Go](docs/adr-001-criterio-lenguajes.md)
+<!-- Cuando exista: runbook Neo4j (Ola 7) — link aquí junto a los ADR. -->
+- Deuda / backlog Ola 7: [docs/ola7-backlog.md](docs/ola7-backlog.md)
+
 ## Triángulo del entorno adaptativo
 
 | Capa | Rol | Estado en repo |
@@ -328,6 +334,7 @@ vectorial-DUA/
 ├── harness/{evals,sandbox,load,telemetry}
 ├── .github/workflows/ci.yml
 ├── scripts/{test-clean.sh,gen-proto.sh}
+├── docs/{adr-001-criterio-lenguajes.md,ola7-backlog.md}
 └── openspec/
     ├── specs/{routing,routing-robustness,rag,interactive_node,
     │         live-node-lifecycle,harness}/
