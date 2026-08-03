@@ -9,8 +9,9 @@ por estudiante y un Advisor que usa `Relation.RationaleES` ya resuelto.
 - `ConceptVisitStore` + `FileConceptVisitStore` (`AVLP_CONCEPT_STORE_PATH`,
   patrón de `FileProfileStore`).
 - `Advisor` con copy en español, sin jerga de sistema.
-- Wiring: registrar visitas en `QueryNearestNode` (match) y `Record*`; adjuntar
-  `advice_es` en `NodeResponse` cuando hay gaps.
+- Wiring: registrar visitas en `QueryNearestNode` (match) y `Record*`.
+  La orientación al estudiante va por RPC aparte (PR 7.3), no en la respuesta
+  de búsqueda.
 
 ### Fuera de alcance
 

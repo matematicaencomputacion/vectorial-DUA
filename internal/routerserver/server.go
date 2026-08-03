@@ -139,10 +139,7 @@ func (s *Server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 			_, hasInteractive = s.reg.Get(outcome.Node.ID)
 		}
 		conceptRefs := s.conceptRefsForMatch(outcome.Node)
-		adviceES := s.adviceForMatch(ctx, studentID, conceptRefs)
-		if err := knowledge.RecordConcepts(ctx, s.visits, studentID, conceptRefs); err != nil {
-			log.Printf("concept visit record skipped student=%s node=%s: %v", studentID, outcome.Node.ID, err)
-		}
+		s.recordConceptVisits(ctx, studentID, outcome.Node.ID, conceptRefs)
 		return &vectorv1.RouteResult{
 			Outcome: &vectorv1.RouteResult_Matched{
 				Matched: &vectorv1.NodeResponse{
@@ -154,7 +151,6 @@ func (s *Server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 					RetrievedSources:      outcome.RetrievedSources,
 					LiveContent:           outcome.LiveContent,
 					HasInteractivePayload: hasInteractive,
-					AdviceEs:              adviceES,
 				},
 			},
 		}, nil
@@ -323,16 +319,14 @@ func (s *Server) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.Bo
 
 	delta := dua.ResolveBotoneraDelta(n, req.GetVariantId(), req.GetPreferenceDelta())
 	if len(delta) == 0 {
-		_ = knowledge.RecordConcepts(ctx, s.visits, req.GetStudentId(), n.Concepts)
+		s.recordConceptVisits(ctx, req.GetStudentId(), req.GetNodeId(), n.Concepts)
 		return neutralAck(), nil
 	}
 	if _, err := s.profiles.Apply(req.GetStudentId(), delta); err != nil {
 		log.Printf("botonera profile delta skipped student=%s node=%s variant=%s: %v",
 			req.GetStudentId(), req.GetNodeId(), req.GetVariantId(), err)
 	}
-	if err := knowledge.RecordConcepts(ctx, s.visits, req.GetStudentId(), n.Concepts); err != nil {
-		log.Printf("concept visit record skipped student=%s node=%s: %v", req.GetStudentId(), req.GetNodeId(), err)
-	}
+	s.recordConceptVisits(ctx, req.GetStudentId(), req.GetNodeId(), n.Concepts)
 	return neutralAck(), nil
 }
 
@@ -372,9 +366,7 @@ func (s *Server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.Su
 
 	delta := dua.ResolveSubtopicDelta(n.Hierarchy, req.GetSubtopicId(), req.GetPreferenceDelta())
 	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), delta)
-	if err := knowledge.RecordConcepts(ctx, s.visits, req.GetStudentId(), n.Concepts); err != nil {
-		log.Printf("concept visit record skipped student=%s node=%s: %v", req.GetStudentId(), req.GetParentNodeId(), err)
-	}
+	s.recordConceptVisits(ctx, req.GetStudentId(), req.GetParentNodeId(), n.Concepts)
 	return neutralAck(), nil
 }
 
@@ -448,25 +440,8 @@ func (s *Server) conceptRefsForMatch(node vector.Node) []string {
 	return append([]string(nil), node.Concepts...)
 }
 
-func (s *Server) adviceForMatch(ctx context.Context, studentID string, refs []string) string {
-	if s.advisor == nil || studentID == "" || len(refs) == 0 {
-		return ""
+func (s *Server) recordConceptVisits(ctx context.Context, studentID, nodeID string, refs []string) {
+	if err := knowledge.RecordConcepts(ctx, s.visits, studentID, refs); err != nil {
+		log.Printf("concept visit record skipped student=%s node=%s: %v", studentID, nodeID, err)
 	}
-	var focuses []knowledge.ConceptID
-	for _, raw := range refs {
-		id, err := knowledge.NormalizeConceptRef(raw)
-		if err != nil {
-			continue
-		}
-		focuses = append(focuses, id)
-	}
-	if len(focuses) == 0 {
-		return ""
-	}
-	adv, err := s.advisor.AdviseForConcepts(ctx, studentID, focuses)
-	if err != nil {
-		log.Printf("concept advice skipped student=%s: %v", studentID, err)
-		return ""
-	}
-	return adv.MessageES
 }

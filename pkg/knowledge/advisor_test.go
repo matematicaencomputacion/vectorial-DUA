@@ -2,6 +2,7 @@ package knowledge_test
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -23,8 +24,8 @@ func TestAdvisorRogerianNoJargon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Advise: %v", err)
 	}
-	if adv.MessageES == "" || len(adv.Gaps) == 0 {
-		t.Fatalf("expected gaps, got %+v", adv)
+	if adv.MessageES == "" || len(adv.Gaps) == 0 || !adv.Available {
+		t.Fatalf("expected available gaps, got %+v", adv)
 	}
 	if !strings.Contains(adv.MessageES, "Beta") && !strings.Contains(adv.MessageES, "Alpha") {
 		t.Fatalf("expected peer titles in message: %q", adv.MessageES)
@@ -60,7 +61,7 @@ func TestAdvisorPrivacyIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("alice: %v", err)
 	}
-	if alice.MessageES != "" || len(alice.Gaps) != 0 {
+	if alice.MessageES != "" || len(alice.Gaps) != 0 || !alice.Available {
 		t.Fatalf("alice should have no gaps, got %+v", alice)
 	}
 
@@ -68,7 +69,7 @@ func TestAdvisorPrivacyIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bob: %v", err)
 	}
-	if len(bob.Gaps) == 0 || bob.MessageES == "" {
+	if !bob.Available || len(bob.Gaps) == 0 || bob.MessageES == "" {
 		t.Fatalf("bob must see unmet prerequisites: %+v", bob)
 	}
 	// Bob must not inherit Alice's completion.
@@ -110,5 +111,61 @@ func TestFileConceptVisitStorePersists(t *testing.T) {
 	okOther, _ := reopened.HasVisited(ctx, "other", "concept:alpha")
 	if okOther {
 		t.Fatal("privacy: other student must not see visit")
+	}
+}
+
+type fakeGraph struct {
+	err error
+}
+
+func (f fakeGraph) Concept(context.Context, knowledge.ConceptID) (knowledge.Concept, error) {
+	return knowledge.Concept{}, f.err
+}
+func (f fakeGraph) Prerequisites(context.Context, knowledge.ConceptID, knowledge.TraverseOptions) ([]knowledge.Relation, error) {
+	return nil, f.err
+}
+func (f fakeGraph) Dependents(context.Context, knowledge.ConceptID, knowledge.TraverseOptions) ([]knowledge.Relation, error) {
+	return nil, f.err
+}
+func (f fakeGraph) Neighbors(context.Context, knowledge.ConceptID, knowledge.TraverseOptions) ([]knowledge.Relation, error) {
+	return nil, f.err
+}
+func (f fakeGraph) Path(context.Context, knowledge.ConceptID, knowledge.ConceptID, knowledge.TraverseOptions) ([]knowledge.ConceptID, error) {
+	return nil, f.err
+}
+func (f fakeGraph) Health(context.Context) error { return f.err }
+
+func TestAdvisorTransportDegradesAvailableFalse(t *testing.T) {
+	ctx := context.Background()
+	var logs int
+	advisor := &knowledge.Advisor{
+		Graph: fakeGraph{err: errors.New("bolt: dial tcp timeout")},
+		Logf: func(string, ...any) { logs++ },
+	}
+	adv, err := advisor.Advise(ctx, "stu", "concept:gamma")
+	if err != nil {
+		t.Fatalf("transport must not surface as error: %v", err)
+	}
+	if adv.Available || adv.MessageES != "" || len(adv.Gaps) != 0 {
+		t.Fatalf("want Available:false empty advice, got %+v", adv)
+	}
+	if logs != 1 {
+		t.Fatalf("expected one cooldown log, got %d", logs)
+	}
+	// Second failure within cooldown: no extra log.
+	adv2, err := advisor.Advise(ctx, "stu", "concept:gamma")
+	if err != nil || adv2.Available {
+		t.Fatalf("second call: err=%v adv=%+v", err, adv2)
+	}
+	if logs != 1 {
+		t.Fatalf("cooldown should suppress duplicate logs, got %d", logs)
+	}
+}
+
+func TestAdvisorEmptyFocusIsCallerError(t *testing.T) {
+	advisor := &knowledge.Advisor{Graph: fakeGraph{}}
+	_, err := advisor.Advise(context.Background(), "stu", "")
+	if err == nil {
+		t.Fatal("expected caller error for empty focus")
 	}
 }

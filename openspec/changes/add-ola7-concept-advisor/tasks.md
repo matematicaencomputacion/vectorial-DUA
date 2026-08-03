@@ -5,5 +5,5 @@
 
 ## 2. Wiring
 
-- [x] 2.1 advice_es en NodeResponse; Record* + match; router open store
+- [x] 2.1 Visitas en match + Record*; degradación Available en Advisor
 - [x] 2.2 test-clean + PR con freno
