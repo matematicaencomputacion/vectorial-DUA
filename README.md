@@ -7,7 +7,8 @@ Plataforma educativa vectorial y adaptativa (**DUA** + **Carl Rogers**), con **O
 ## Documentación
 
 - Runbook Neo4j (GCP / IAP / sync): [docs/neo4j-gcp.md](docs/neo4j-gcp.md)
-- Decisiones de arquitectura: ADR-001 — criterio de lenguajes C++/Go (ver `docs/` cuando el PR de ADR esté en main)
+- Decisiones de arquitectura: [ADR-001 — criterio de lenguajes C++/Go](docs/adr-001-criterio-lenguajes.md)
+- Deuda / backlog Ola 7: [docs/ola7-backlog.md](docs/ola7-backlog.md)
 
 ## Triángulo del entorno adaptativo
 
@@ -334,7 +335,7 @@ vectorial-DUA/
 ├── data/knowledge_base/
 ├── data/knowledge/
 ├── data/nodes/interactive/
-├── docs/neo4j-gcp.md
+├── docs/{neo4j-gcp.md,adr-001-criterio-lenguajes.md,ola7-backlog.md}
 ├── proto/ + gen/
 ├── harness/{evals,sandbox,load,telemetry}
 ├── .github/workflows/ci.yml
