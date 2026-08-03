@@ -32,8 +32,10 @@ type NodeResponse struct {
 	LiveContent      string                 `protobuf:"bytes,7,opt,name=live_content,json=liveContent,proto3" json:"live_content,omitempty"`
 	// When the matched pedagogical node is interactive, Master may fetch full payload via GetInteractiveNode.
 	HasInteractivePayload bool `protobuf:"varint,8,opt,name=has_interactive_payload,json=hasInteractivePayload,proto3" json:"has_interactive_payload,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Optional rogerian Spanish tip about unmet foundational concepts (Ola 7.2).
+	AdviceEs      string `protobuf:"bytes,9,opt,name=advice_es,json=adviceEs,proto3" json:"advice_es,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *NodeResponse) Reset() {
@@ -120,6 +122,13 @@ func (x *NodeResponse) GetHasInteractivePayload() bool {
 		return x.HasInteractivePayload
 	}
 	return false
+}
+
+func (x *NodeResponse) GetAdviceEs() string {
+	if x != nil {
+		return x.AdviceEs
+	}
+	return ""
 }
 
 type LiveStationPending struct {
@@ -813,7 +822,7 @@ var File_router_api_proto protoreflect.FileDescriptor
 
 const file_router_api_proto_rawDesc = "" +
 	"\n" +
-	"\x10router_api.proto\x12\x0eavlp.vector.v1\x1a\x13student_state.proto\x1a\x16interactive_node.proto\"\xce\x02\n" +
+	"\x10router_api.proto\x12\x0eavlp.vector.v1\x1a\x13student_state.proto\x1a\x16interactive_node.proto\"\xeb\x02\n" +
 	"\fNodeResponse\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12#\n" +
 	"\rdimension_dua\x18\x02 \x01(\tR\fdimensionDua\x12!\n" +
@@ -822,7 +831,8 @@ const file_router_api_proto_rawDesc = "" +
 	"\x11is_live_generated\x18\x05 \x01(\bR\x0fisLiveGenerated\x12+\n" +
 	"\x11retrieved_sources\x18\x06 \x03(\tR\x10retrievedSources\x12!\n" +
 	"\flive_content\x18\a \x01(\tR\vliveContent\x126\n" +
-	"\x17has_interactive_payload\x18\b \x01(\bR\x15hasInteractivePayload\"k\n" +
+	"\x17has_interactive_payload\x18\b \x01(\bR\x15hasInteractivePayload\x12\x1b\n" +
+	"\tadvice_es\x18\t \x01(\tR\badviceEs\"k\n" +
 	"\x12LiveStationPending\x12#\n" +
 	"\rtracking_ulid\x18\x01 \x01(\tR\ftrackingUlid\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +

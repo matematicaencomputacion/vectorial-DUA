@@ -38,6 +38,8 @@ message NodeResponse {
   string live_content = 7;
   // When the matched pedagogical node is interactive, Master may fetch full payload via GetInteractiveNode.
   bool has_interactive_payload = 8;
+  // Optional rogerian Spanish tip about unmet foundational concepts (Ola 7.2).
+  string advice_es = 9;
 }
 
 message LiveStationPending {

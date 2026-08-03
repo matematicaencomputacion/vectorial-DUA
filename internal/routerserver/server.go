@@ -10,6 +10,7 @@ import (
 
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
 	"github.com/vectorial-dua/avlp/pkg/dua"
+	"github.com/vectorial-dua/avlp/pkg/knowledge"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/rogerian"
 	"github.com/vectorial-dua/avlp/pkg/session"
@@ -25,6 +26,9 @@ type Deps struct {
 	Profiles      dua.ProfileRepository
 	Interactions  *dua.InteractionStore
 	Promoter      *dua.LiveStationPromoter
+	Graph         knowledge.KnowledgeGraph
+	Visits        knowledge.ConceptVisitStore
+	Advisor       *knowledge.Advisor
 }
 
 // Server implements the VectorRouter gRPC service using the canonical domain services.
@@ -37,6 +41,9 @@ type Server struct {
 	profiles      dua.ProfileRepository
 	interactions  *dua.InteractionStore
 	promoter      *dua.LiveStationPromoter
+	graph         knowledge.KnowledgeGraph
+	visits        knowledge.ConceptVisitStore
+	advisor       *knowledge.Advisor
 }
 
 // New builds the canonical gRPC handler implementation.
@@ -49,6 +56,9 @@ func New(deps Deps) *Server {
 		profiles:      deps.Profiles,
 		interactions:  deps.Interactions,
 		promoter:      deps.Promoter,
+		graph:         deps.Graph,
+		visits:        deps.Visits,
+		advisor:       deps.Advisor,
 	}
 }
 
@@ -128,6 +138,11 @@ func (s *Server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 		if s.reg != nil {
 			_, hasInteractive = s.reg.Get(outcome.Node.ID)
 		}
+		conceptRefs := s.conceptRefsForMatch(outcome.Node)
+		adviceES := s.adviceForMatch(ctx, studentID, conceptRefs)
+		if err := knowledge.RecordConcepts(ctx, s.visits, studentID, conceptRefs); err != nil {
+			log.Printf("concept visit record skipped student=%s node=%s: %v", studentID, outcome.Node.ID, err)
+		}
 		return &vectorv1.RouteResult{
 			Outcome: &vectorv1.RouteResult_Matched{
 				Matched: &vectorv1.NodeResponse{
@@ -139,6 +154,7 @@ func (s *Server) QueryNearestNode(ctx context.Context, req *vectorv1.VectorQuery
 					RetrievedSources:      outcome.RetrievedSources,
 					LiveContent:           outcome.LiveContent,
 					HasInteractivePayload: hasInteractive,
+					AdviceEs:              adviceES,
 				},
 			},
 		}, nil
@@ -307,11 +323,15 @@ func (s *Server) RecordBotoneraInteraction(ctx context.Context, req *vectorv1.Bo
 
 	delta := dua.ResolveBotoneraDelta(n, req.GetVariantId(), req.GetPreferenceDelta())
 	if len(delta) == 0 {
+		_ = knowledge.RecordConcepts(ctx, s.visits, req.GetStudentId(), n.Concepts)
 		return neutralAck(), nil
 	}
 	if _, err := s.profiles.Apply(req.GetStudentId(), delta); err != nil {
 		log.Printf("botonera profile delta skipped student=%s node=%s variant=%s: %v",
 			req.GetStudentId(), req.GetNodeId(), req.GetVariantId(), err)
+	}
+	if err := knowledge.RecordConcepts(ctx, s.visits, req.GetStudentId(), n.Concepts); err != nil {
+		log.Printf("concept visit record skipped student=%s node=%s: %v", req.GetStudentId(), req.GetNodeId(), err)
 	}
 	return neutralAck(), nil
 }
@@ -352,6 +372,9 @@ func (s *Server) RecordSubtopicInteraction(ctx context.Context, req *vectorv1.Su
 
 	delta := dua.ResolveSubtopicDelta(n.Hierarchy, req.GetSubtopicId(), req.GetPreferenceDelta())
 	s.interactions.Record(req.GetStudentId(), req.GetParentNodeId(), req.GetSubtopicId(), delta)
+	if err := knowledge.RecordConcepts(ctx, s.visits, req.GetStudentId(), n.Concepts); err != nil {
+		log.Printf("concept visit record skipped student=%s node=%s: %v", req.GetStudentId(), req.GetParentNodeId(), err)
+	}
 	return neutralAck(), nil
 }
 
@@ -414,4 +437,36 @@ func (s *Server) GetSubtopicProgress(ctx context.Context, req *vectorv1.Subtopic
 		})
 	}
 	return out, nil
+}
+
+func (s *Server) conceptRefsForMatch(node vector.Node) []string {
+	if s.reg != nil {
+		if n, ok := s.reg.Get(node.ID); ok && len(n.Concepts) > 0 {
+			return append([]string(nil), n.Concepts...)
+		}
+	}
+	return append([]string(nil), node.Concepts...)
+}
+
+func (s *Server) adviceForMatch(ctx context.Context, studentID string, refs []string) string {
+	if s.advisor == nil || studentID == "" || len(refs) == 0 {
+		return ""
+	}
+	var focuses []knowledge.ConceptID
+	for _, raw := range refs {
+		id, err := knowledge.NormalizeConceptRef(raw)
+		if err != nil {
+			continue
+		}
+		focuses = append(focuses, id)
+	}
+	if len(focuses) == 0 {
+		return ""
+	}
+	adv, err := s.advisor.AdviseForConcepts(ctx, studentID, focuses)
+	if err != nil {
+		log.Printf("concept advice skipped student=%s: %v", studentID, err)
+		return ""
+	}
+	return adv.MessageES
 }

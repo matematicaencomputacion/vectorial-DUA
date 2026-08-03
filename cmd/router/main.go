@@ -191,6 +191,9 @@ func main() {
 	log.Printf("grafo: %d conceptos, %d aristas, %d recursos sin concepto",
 		len(kg.ConceptIDs()), len(kg.Edges()), unbound)
 
+	visits, visitCloser := openConceptVisitStore()
+	advisor := &knowledge.Advisor{Graph: kg, Visits: visits}
+
 	srvImpl := routerserver.New(routerserver.Deps{
 		Router:        router,
 		Registry:      reg,
@@ -198,6 +201,9 @@ func main() {
 		QueryEmbedder: emb,
 		Profiles:      profiles,
 		Interactions:  interactions,
+		Graph:         kg,
+		Visits:        visits,
+		Advisor:       advisor,
 		Promoter: &dua.LiveStationPromoter{
 			Ledger:   router.Ledger,
 			Index:    index,
@@ -252,6 +258,13 @@ func main() {
 			log.Printf("profile store flushed")
 		}
 	}
+	if visitCloser != nil {
+		if err := visitCloser.Close(); err != nil {
+			log.Printf("concept visit store close: %v", err)
+		} else {
+			log.Printf("concept visit store flushed")
+		}
+	}
 }
 
 func openProfileStore() (dua.ProfileRepository, interface{ Close() error }) {
@@ -266,6 +279,21 @@ func openProfileStore() (dua.ProfileRepository, interface{ Close() error }) {
 	}
 	store.Logf = log.Printf
 	log.Printf("profile store: file snapshot at %s", path)
+	return store, store
+}
+
+func openConceptVisitStore() (knowledge.ConceptVisitStore, interface{ Close() error }) {
+	path := strings.TrimSpace(os.Getenv("AVLP_CONCEPT_STORE_PATH"))
+	if path == "" {
+		log.Printf("concept visit store: in-memory (set AVLP_CONCEPT_STORE_PATH to persist)")
+		return knowledge.NewMemoryConceptVisitStore(), nil
+	}
+	store, err := knowledge.NewFileConceptVisitStore(path)
+	if err != nil {
+		log.Fatalf("concept visit store: %v", err)
+	}
+	store.Logf = log.Printf
+	log.Printf("concept visit store: file snapshot at %s", path)
 	return store, store
 }
 
