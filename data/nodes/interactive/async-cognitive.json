@@ -4,7 +4,7 @@
   "titulo": "Async/Await — Estilos cognitivos",
   "layout_type": "interactive_dashboard",
   "stage_media_default": "https://cdn.example.com/videos/async/intro.mp4",
-  "embedding_descriptor": "Explicación de async/await con distintos estilos cognitivos: analogía animada, live coding, diagrama de promesas y un debate breve sobre cuándo usarlo.",
+  "embedding_descriptor": "Explicación de async/await con distintos estilos cognitivos: analogía animada, live coding, diagrama de promesas y un debate breve sobre cuándo usarlo. Responde preguntas como: ¿qué es async/await?, ¿me lo enseñás con una analogía animada?, ¿hay un live coding de promesas?, ¿cuándo conviene preferir async/await?",
   "embedding": [
     0.2,
     0.7,

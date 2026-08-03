@@ -10,6 +10,43 @@ go run ./cmd/master-web
 # abrir http://127.0.0.1:8080
 ```
 
+### Seeds interactivos vs. promovidos locales
+
+`data/nodes/interactive/` debe contener **solo** seeds canónicos versionados.
+Las estaciones que vos promocionás al curriculum van a
+`data/nodes/promoted-local/` (gitignoreado). Para reincorporar una al índice
+de desarrollo local (fuera de Playwright):
+
+```bash
+cp data/nodes/promoted-local/promoted-….json data/nodes/interactive/
+# reiniciar el router
+```
+
+### Playwright hermético
+
+`node cmd/master-web/verify/playwright-check.mjs` **no** usa tu
+`data/nodes/interactive/` tal cual: por defecto levanta router + master-web
+con `AVLP_INTERACTIVE_NODES_DIR` apuntando a un dir temporal poblado con
+`git ls-files -- data/nodes/interactive/*.json`. Todo lo untracked (y lo
+ya fuera del árbol git, como `promoted-local/`) queda fuera; un promoted
+versionado por error rompería el aserto del harness.
+
+El stack hermético fija `AVLP_SIMILARITY_THRESHOLD=0.482` según
+`go run ./cmd/harness -suite calibrate -embedder hash` del **2026-08-03**
+(suggested=0.482, worst_correct=0.389, best_incorrect=0.576, margen=-0.187;
+WARNING de overlap bajo hash — los goldens marcan `expected_outcome_hash=live`).
+También pinnea `AVLP_CONFIG_PATH` a un path inexistente dentro del dir de
+fixtures para no leer un `data/avlp.json` local del operador, y deja
+`AVLP_EMBEDDING_URL` / `AVLP_LLM_URL` vacíos. Los
+`embedding_descriptor` de seeds interactivos usan doc-expansion Ola 2.b
+(«Responde preguntas como: ¿…?»), no el texto literal del chip; tras el
+enriquecimiento los chips canónicos quedan ≥0.55 frente a su nodo con hash.
+
+Para forzar un stack manual: `AVLP_VERIFY_USE_EXISTING=1` +
+`AVLP_WEB_URL=…`, sabiendo que entonces sos responsable de no mezclar
+artefactos locales en el dir del router y de un umbral/embedder coherente
+con los chips.
+
 ## Flujo funcional
 
 - [ ] Duda con ejemplo «variables y scope» → carga nodo interactivo (Stage + botonera depth)
@@ -44,7 +81,7 @@ go run ./cmd/master-web
 - [ ] Si la API responde `available:false` o sin gaps, la sección **no** se dibuja
 - [ ] El botón «Mirar «X»» dispara una búsqueda hacia el material sugerido
 - [ ] Panel de desarrollo: incluye la respuesta cruda de orientación
-- [ ] Evidencia Playwright: `verify/out/orientation-01-ubicarte.png` (`AVLP_ONLY=orientation`)
+- [ ] Evidencia Playwright: `verify/out/orientation-01-ubicarte.png` (`AVLP_ONLY=orientation`; stack hermético por defecto)
 
 ## Voz (cascada: STT local → Web Speech → sin botón)
 

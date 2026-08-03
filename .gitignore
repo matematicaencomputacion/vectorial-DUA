@@ -23,3 +23,6 @@ vendor/
 # Local runtime state (profile store)
 data/profiles.json
 data/avlp.json
+
+# Estaciones promovidas del operador (fuera del índice de verificación)
+data/nodes/promoted-local/
