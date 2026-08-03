@@ -1,0 +1,3 @@
+- [x] 1.1 knowledge.proto + RPCs + gen-proto
+- [x] 1.2 handlers + gateway
+- [x] 1.3 tests + PR con freno

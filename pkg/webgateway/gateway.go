@@ -70,6 +70,8 @@ func (g *Gateway) Handler() http.Handler {
 	mux.HandleFunc("POST /api/query", g.handleQuery)
 	mux.HandleFunc("GET /api/nodes/{id}", g.handleGetNode)
 	mux.HandleFunc("GET /api/nodes/{id}/progress", g.handleSubtopicProgress)
+	mux.HandleFunc("GET /api/nodes/{id}/orientation", g.handleNodeOrientation)
+	mux.HandleFunc("GET /api/concepts/route", g.handleConceptRoute)
 	mux.HandleFunc("POST /api/nodes/{id}/mutate", g.handleMutate)
 	mux.HandleFunc("POST /api/interactions/botonera", g.handleBotonera)
 	mux.HandleFunc("POST /api/interactions/subtopic", g.handleSubtopic)
@@ -267,6 +269,64 @@ func (g *Gateway) handleSubtopicProgress(w http.ResponseWriter, r *http.Request)
 	res, err := g.Client.GetSubtopicProgress(ctx, &vectorv1.SubtopicProgressQuery{
 		StudentId:    studentID,
 		ParentNodeId: id,
+	})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	writeProto(w, http.StatusOK, res)
+}
+
+func (g *Gateway) handleNodeOrientation(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	requested := r.URL.Query().Get("student_id")
+	if id == "" {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "node id is required", "")
+		return
+	}
+	ctx, identity, err := g.authedContext(r, requested)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	studentID, err := session.ResolveStudentID(identity, requested)
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	res, err := g.Client.GetNodeOrientation(ctx, &vectorv1.NodeOrientationQuery{
+		StudentId: studentID,
+		NodeId:    id,
+	})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	writeProto(w, http.StatusOK, res)
+}
+
+func (g *Gateway) handleConceptRoute(w http.ResponseWriter, r *http.Request) {
+	requested := r.URL.Query().Get("student_id")
+	fromID := r.URL.Query().Get("from")
+	toID := r.URL.Query().Get("to")
+	if fromID == "" || toID == "" {
+		writeAPIError(w, http.StatusBadRequest, "invalid_argument", "from and to are required", "")
+		return
+	}
+	ctx, identity, err := g.authedContext(r, requested)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	studentID, err := session.ResolveStudentID(identity, requested)
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+	res, err := g.Client.GetConceptRoute(ctx, &vectorv1.ConceptRouteQuery{
+		StudentId:      studentID,
+		FromConceptId:  fromID,
+		ToConceptId:    toID,
 	})
 	if err != nil {
 		writeGRPCError(w, err)

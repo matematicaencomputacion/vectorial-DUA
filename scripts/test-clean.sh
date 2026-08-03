@@ -28,6 +28,9 @@ fi
 echo "==> go build ./..."
 go build ./...
 
+echo "==> go vet ./..."
+go vet ./...
+
 # Guardado explícito: bash 3.2 (macOS) trata "$@" vacío como unbound bajo set -u.
 if [ "$#" -gt 0 ]; then
   echo "==> go test -race -count=1 ./... $*"

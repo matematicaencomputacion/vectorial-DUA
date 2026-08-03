@@ -6,6 +6,7 @@ option go_package = "github.com/vectorial-dua/avlp/gen/avlp/vector/v1;vectorv1";
 
 import "student_state.proto";
 import "interactive_node.proto";
+import "knowledge.proto";
 
 // VectorRouter is the adaptive routing API consumed by Agent/IDE/Master.
 service VectorRouter {
@@ -17,6 +18,10 @@ service VectorRouter {
   // Record* RPCs. A multi-user deployment needs authentication and per-student
   // authorization (tracked as Ola 4 debt).
   rpc GetSubtopicProgress(SubtopicProgressQuery) returns (SubtopicProgress);
+  // Prerequisite orientation after render; never part of QueryNearestNode.
+  rpc GetNodeOrientation(NodeOrientationQuery) returns (NodeOrientation);
+  // Learning-order path between curriculum concepts.
+  rpc GetConceptRoute(ConceptRouteQuery) returns (ConceptRoute);
   // Accepts botonera_schema variants and legacy flat Botonera id_btn matches.
   // Legacy vector_delta is content-embedding space and is NEVER applied to V_e;
   // without a client preference_delta the RPC returns Ack without Apply.
