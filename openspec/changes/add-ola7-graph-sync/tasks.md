@@ -1,0 +1,3 @@
+- [x] 1.1 CLI graph-sync + cypher write
+- [x] 1.2 Runbook neo4j-gcp.md
+- [x] 1.3 Tests CI + parity flag + PR freno

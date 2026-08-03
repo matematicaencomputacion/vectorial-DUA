@@ -18,6 +18,7 @@ import (
 	"github.com/vectorial-dua/avlp/internal/routerserver"
 	"github.com/vectorial-dua/avlp/pkg/dua"
 	"github.com/vectorial-dua/avlp/pkg/knowledge"
+	"github.com/vectorial-dua/avlp/pkg/knowledge/neo4jgraph"
 	"github.com/vectorial-dua/avlp/pkg/livestation"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/rogerian"
@@ -179,7 +180,7 @@ func main() {
 		kgPath = abs
 	}
 	binder := &knowledge.IndexBinder{Index: index, Registry: reg}
-	kg, _, err := knowledge.LoadFile(kgPath, knowledge.LoadOptions{
+	memKG, _, err := knowledge.LoadFile(kgPath, knowledge.LoadOptions{
 		Strict: knowledge.StrictFromEnv(),
 		Logf:   log.Printf,
 		Binder: binder,
@@ -189,7 +190,24 @@ func main() {
 	}
 	unbound := binder.UnboundResourceCount()
 	log.Printf("grafo: %d conceptos, %d aristas, %d recursos sin concepto",
-		len(kg.ConceptIDs()), len(kg.Edges()), unbound)
+		len(memKG.ConceptIDs()), len(memKG.Edges()), unbound)
+
+	neoKG, err := neo4jgraph.NewFromEnv(log.Printf)
+	if err != nil {
+		log.Fatalf("neo4j knowledge: %v", err)
+	}
+	var kg knowledge.KnowledgeGraph = memKG
+	if neoKG != nil {
+		kg = neo4jgraph.Compose(neoKG, memKG)
+		log.Printf("knowledge: Neo4j read-through activo (fallback=curriculum archivo)")
+		defer func() {
+			if err := neoKG.Close(context.Background()); err != nil {
+				log.Printf("neo4j close: %v", err)
+			}
+		}()
+	} else {
+		log.Printf("knowledge: Neo4j desactivado (AVLP_NEO4J_URI vacío) — MemoryGraph archivo")
+	}
 
 	visits, visitCloser := openConceptVisitStore()
 	advisor := &knowledge.Advisor{Graph: kg, Visits: visits, Logf: log.Printf}

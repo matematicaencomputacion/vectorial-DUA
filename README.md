@@ -6,8 +6,8 @@ Plataforma educativa vectorial y adaptativa (**DUA** + **Carl Rogers**), con **O
 
 ## Documentación
 
+- Runbook Neo4j (GCP / IAP / sync): [docs/neo4j-gcp.md](docs/neo4j-gcp.md)
 - Decisiones de arquitectura: [ADR-001 — criterio de lenguajes C++/Go](docs/adr-001-criterio-lenguajes.md)
-<!-- Cuando exista: runbook Neo4j (Ola 7) — link aquí junto a los ADR. -->
 - Deuda / backlog Ola 7: [docs/ola7-backlog.md](docs/ola7-backlog.md)
 
 ## Triángulo del entorno adaptativo
@@ -233,6 +233,10 @@ El seed conserva markdown, fuentes y embedding; el mismo `node_id` pasa a curado
 | `AVLP_INTERACTIVE_NODES` | `true` | Carga de seeds Stage/botonera |
 | `AVLP_INTERACTIVE_NODES_DIR` | `data/nodes/interactive` | Directorio de seeds (incluye promovidos) |
 | `AVLP_PROFILE_STORE_PATH` | vacío → memoria | Snapshot JSON de perfiles $V_e$ |
+| `AVLP_NEO4J_URI` | vacío → off | Bolt URI read-only del currículum (`neo4jgraph`); vacío = MemoryGraph archivo |
+| `AVLP_NEO4J_USER` / `AVLP_NEO4J_PASSWORD` | vacío | Auth básica Bolt |
+| `AVLP_NEO4J_COOLDOWN` | `30s` | Ventana del breaker tras 3 fallos (log una vez por ventana) |
+| `AVLP_KNOWLEDGE_CACHE_TTL` | `5m` | Caché TTL de lecturas Neo4j |
 | `AVLP_ROUTER_ADDR` | `127.0.0.1:50051` | Bind gRPC del router (loopback) / dial del gateway; override explícito para otras interfaces |
 | `AVLP_WEB_ADDR` | `127.0.0.1:8080` | Bind HTTP de `master-web` |
 
@@ -325,16 +329,17 @@ Por defecto el router guarda $V_e$ en memoria. Con `AVLP_PROFILE_STORE_PATH` (p.
 
 ```text
 vectorial-DUA/
-├── cmd/{router,router-client,harness,master-web}
+├── cmd/{router,router-client,harness,master-web,graph-sync}
 ├── internal/{routerserver,testenv}
-├── pkg/{vector,rag,livestation,dua,rogerian,webgateway}
+├── pkg/{vector,rag,livestation,dua,rogerian,webgateway,knowledge}
 ├── data/knowledge_base/
+├── data/knowledge/
 ├── data/nodes/interactive/
+├── docs/{neo4j-gcp.md,adr-001-criterio-lenguajes.md,ola7-backlog.md}
 ├── proto/ + gen/
 ├── harness/{evals,sandbox,load,telemetry}
 ├── .github/workflows/ci.yml
 ├── scripts/{test-clean.sh,gen-proto.sh}
-├── docs/{adr-001-criterio-lenguajes.md,ola7-backlog.md}
 └── openspec/
     ├── specs/{routing,routing-robustness,rag,interactive_node,
     │         live-node-lifecycle,harness}/

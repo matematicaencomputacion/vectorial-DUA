@@ -3,6 +3,7 @@ module github.com/vectorial-dua/avlp
 go 1.25.0
 
 require (
+	github.com/neo4j/neo4j-go-driver/v5 v5.28.4
 	github.com/oklog/ulid/v2 v2.1.2
 	golang.org/x/text v0.36.0
 	google.golang.org/grpc v1.82.1
