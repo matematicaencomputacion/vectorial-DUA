@@ -13,6 +13,7 @@ export const state = {
   interactiveSession: false,
   activeTabId: null,
   lastTrackingUlid: null,
+  rawOrientation: null,
 };
 
 export const el = {
@@ -71,6 +72,8 @@ export function renderDev() {
     "última similitud de ruteo: " + (state.lastSimilarity == null ? "—" : Number(state.lastSimilarity).toFixed(4)),
     "nodo actual: " + (state.currentNode && state.currentNode.node_id ? state.currentNode.node_id : "—"),
     "última estación (tracking): " + (state.lastTrackingUlid || "—"),
+    "orientación cruda (API):",
+    state.rawOrientation ? JSON.stringify(state.rawOrientation, null, 2) : "—",
     "progreso crudo de subtemas (API):",
     state.rawProgress ? JSON.stringify(state.rawProgress, null, 2) : "—",
     "progreso local (incluye actualización optimista):",

@@ -1,0 +1,2 @@
+- [x] 1.1 Módulo UI + wiring con guard de generación
+- [x] 1.2 Checklist + Playwright + PR con freno

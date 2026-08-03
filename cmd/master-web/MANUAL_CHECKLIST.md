@@ -37,6 +37,15 @@ go run ./cmd/master-web
 - [ ] Reiniciar el router sí borra este progreso: `InteractionStore` continúa siendo en memoria en Ola 3.c
 - [ ] Panel de desarrollo: muestra por separado el payload crudo de progreso devuelto por la API y el estado local optimista
 
+## Orientación curricular (Ola 7.4)
+
+- [ ] Tras cargar un nodo con prerrequisitos no visitados (p. ej. «async/await»), el rail muestra la sección «Para ubicarte» con `aria-live="polite"`
+- [ ] Copy exacto: «Esto se apoya en X. Si querés lo miramos antes, o seguí acá y volvés cuando te sirva» — sin candados, porcentajes ni badges
+- [ ] Si la API responde `available:false` o sin gaps, la sección **no** se dibuja
+- [ ] El botón «Mirar «X»» dispara una búsqueda hacia el material sugerido
+- [ ] Panel de desarrollo: incluye la respuesta cruda de orientación
+- [ ] Evidencia Playwright: `verify/out/orientation-01-ubicarte.png` (`AVLP_ONLY=orientation`)
+
 ## Voz (cascada: STT local → Web Speech → sin botón)
 
 Playwright **no** puede ejercer un micrófono real. Los casos de captura/permiso
