@@ -79,5 +79,8 @@
     ]
   },
   "alt_text": "Introducción a ST_DWithin: puntos dentro de un radio sobre un mapa.",
-  "transcript": "## Intro ST_DWithin\nST_DWithin pregunta si dos geometrías están a lo sumo a una distancia. Ideal para «cafés a 500 m»."
+  "transcript": "## Intro ST_DWithin\nST_DWithin pregunta si dos geometrías están a lo sumo a una distancia. Ideal para «cafés a 500 m».",
+  "concepts": [
+    "concept:postgis-stdwithin"
+  ]
 }

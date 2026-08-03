@@ -201,6 +201,8 @@ message InteractiveVideoNode {
   string transcript = 14;
   string alt_text = 15;
   string audio_description_url = 16;
+  // Stable knowledge-graph concept ids (concept:<slug>) taught by this node.
+  repeated string concepts = 17;
 }
 
 // NodeIdRequest fetches a single interactive node by id.

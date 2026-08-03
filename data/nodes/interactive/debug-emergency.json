@@ -65,5 +65,8 @@
     ]
   },
   "alt_text": "Escenario de depuración: el Stage muestra un programa con variable indefinida.",
-  "transcript": "## Stage debug\nPartimos de un error `undefined`/`NameError`. El objetivo no es adivinar: es contrastar declaración y uso en el mismo scope."
+  "transcript": "## Stage debug\nPartimos de un error `undefined`/`NameError`. El objetivo no es adivinar: es contrastar declaración y uso en el mismo scope.",
+  "concepts": [
+    "concept:debug-variables"
+  ]
 }

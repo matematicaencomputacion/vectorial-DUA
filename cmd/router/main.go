@@ -17,6 +17,7 @@ import (
 	vectorv1 "github.com/vectorial-dua/avlp/gen/avlp/vector/v1"
 	"github.com/vectorial-dua/avlp/internal/routerserver"
 	"github.com/vectorial-dua/avlp/pkg/dua"
+	"github.com/vectorial-dua/avlp/pkg/knowledge"
 	"github.com/vectorial-dua/avlp/pkg/livestation"
 	"github.com/vectorial-dua/avlp/pkg/rag"
 	"github.com/vectorial-dua/avlp/pkg/rogerian"
@@ -149,6 +150,7 @@ func main() {
 					Format:       formatFromNodeID(node.NodeID),
 					ResourceURL:  "interactive://" + node.NodeID,
 					Embedding:    fitted,
+					Concepts:     append([]string(nil), node.Concepts...),
 				}); err != nil {
 					log.Printf("index interactive node %s: %v", node.NodeID, err)
 				}
@@ -168,6 +170,26 @@ func main() {
 	if liveGen != nil && reg != nil {
 		liveGen.AvailableTopics = reg.TopicTitles()
 	}
+
+	kgPath := strings.TrimSpace(os.Getenv("AVLP_KNOWLEDGE_GRAPH_PATH"))
+	if kgPath == "" {
+		kgPath = "data/knowledge/curriculum.json"
+	}
+	if abs, err := filepath.Abs(kgPath); err == nil {
+		kgPath = abs
+	}
+	binder := &knowledge.IndexBinder{Index: index, Registry: reg}
+	kg, _, err := knowledge.LoadFile(kgPath, knowledge.LoadOptions{
+		Strict: knowledge.StrictFromEnv(),
+		Logf:   log.Printf,
+		Binder: binder,
+	})
+	if err != nil {
+		log.Fatalf("knowledge graph: %v", err)
+	}
+	unbound := binder.UnboundResourceCount()
+	log.Printf("grafo: %d conceptos, %d aristas, %d recursos sin concepto",
+		len(kg.ConceptIDs()), len(kg.Edges()), unbound)
 
 	srvImpl := routerserver.New(routerserver.Deps{
 		Router:        router,

@@ -58,5 +58,8 @@
     ]
   },
   "alt_text": "Historia motivacional: por qué separar secretos del código con variables de entorno.",
-  "transcript": "## Por qué .env\nSi subís una API key al repo, cualquiera con acceso la puede usar. Las variables de entorno separan configuración de código y reducen ese riesgo."
+  "transcript": "## Por qué .env\nSi subís una API key al repo, cualquiera con acceso la puede usar. Las variables de entorno separan configuración de código y reducen ese riesgo.",
+  "concepts": [
+    "concept:env-secrets"
+  ]
 }

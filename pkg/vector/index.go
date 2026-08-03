@@ -19,6 +19,7 @@ type Node struct {
 	Embedding       []float32
 	IsLiveGenerated bool // RAG-generated station, not reviewed curriculum
 	CreatedAt       time.Time
+	Concepts        []string // knowledge concept ids or slugs (Ola 7)
 }
 
 // LivePreferenceMargin is how much better a live-generated station must score
@@ -200,16 +201,21 @@ func (idx *Index) Nearest(query []float32) Match {
 // RegisterNode creates a hierarchical ULID id and upserts a curated node.
 // Embeddings must match the index dimensionality (see FitIndexEmbedding).
 func (idx *Index) RegisterNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32) (Node, error) {
-	return idx.registerNode(dimensionDUA, difficulty, format, resourceURL, embedding, false)
+	return idx.RegisterNodeWithConcepts(dimensionDUA, difficulty, format, resourceURL, embedding, nil)
+}
+
+// RegisterNodeWithConcepts is RegisterNode plus stable knowledge-concept links.
+func (idx *Index) RegisterNodeWithConcepts(dimensionDUA, difficulty, format, resourceURL string, embedding []float32, concepts []string) (Node, error) {
+	return idx.registerNode(dimensionDUA, difficulty, format, resourceURL, embedding, false, concepts)
 }
 
 // RegisterLiveNode registers a RAG-generated station, matched under
 // LivePreferenceMargin so it never quietly displaces curated material.
 func (idx *Index) RegisterLiveNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32) (Node, error) {
-	return idx.registerNode(dimensionDUA, difficulty, format, resourceURL, embedding, true)
+	return idx.registerNode(dimensionDUA, difficulty, format, resourceURL, embedding, true, nil)
 }
 
-func (idx *Index) registerNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32, isLive bool) (Node, error) {
+func (idx *Index) registerNode(dimensionDUA, difficulty, format, resourceURL string, embedding []float32, isLive bool, concepts []string) (Node, error) {
 	fitted, err := FitIndexEmbedding(embedding, idx.Dims())
 	if err != nil {
 		return Node{}, err
@@ -226,6 +232,7 @@ func (idx *Index) registerNode(dimensionDUA, difficulty, format, resourceURL str
 		ResourceURL:     resourceURL,
 		Embedding:       fitted,
 		IsLiveGenerated: isLive,
+		Concepts:        append([]string(nil), concepts...),
 	}
 	if isLive {
 		node.CreatedAt = idx.now()
@@ -276,26 +283,32 @@ func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
 	seeds := []struct {
 		dim, diff, format, url string
 		text                   string
+		concepts               []string
 	}{
 		{
 			"Representacion", "basico", "visual", "master://nodes/env-diagram",
 			"Diagrama visual que explica qué son las variables de entorno y el archivo .env: cómo se leen en ejecución y cómo representar la configuración separada del código. Responde preguntas como: ¿qué es el archivo .env?, ¿me lo mostrás con un diagrama?, ¿cómo se ve la configuración fuera del código?",
+			[]string{"concept:env-file"},
 		},
 		{
 			"Accion", "basico", "practica", "ide://cells/env-exercise",
 			"Ejercicio guiado paso a paso para crear y leer un archivo .env en el IDE: escribir la variable, cargarla en el código y verificar que el programa la lee. Responde preguntas como: ¿cómo creo el archivo .env?, ¿cómo leo una variable de entorno desde mi código?",
+			[]string{"concept:env-file"},
 		},
 		{
 			"Compromiso", "basico", "conceptual", "agent://analogies/env-story",
 			"Por qué importan las variables de entorno y cuidar los secretos: motivación, qué riesgos de seguridad hay al exponer credenciales, y qué te ahorra separar la configuración del código. Responde preguntas como: ¿por qué debería importarme configurar el .env?, ¿qué riesgo hay si subo mis claves al repo?, ¿para qué separar la configuración del código?",
+			[]string{"concept:env-secrets"},
 		},
 		{
 			"Representacion", "basico", "conceptual", "master://nodes/parameter-card",
 			"Tarjeta conceptual que define qué es un parámetro en programación: para qué sirve, cómo se distingue de una variable de entorno, y un ejemplo breve de uso. Responde preguntas como: ¿qué es un parámetro?, ¿qué diferencia hay entre un parámetro y una variable normal?",
+			[]string{"concept:function-parameters"},
 		},
 		{
 			"Accion", "basico", "practica", "ide://cells/string-quotes",
 			"Práctica de depuración con comillas y strings: errores comunes al abrir o cerrar comillas, cómo corregirlos en una celda y verificar la salida. Responde preguntas como: ¿por qué se rompe mi string por las comillas?, ¿puedo probarlo en una celda?",
+			[]string{"concept:string-literals"},
 		},
 	}
 	for _, s := range seeds {
@@ -303,7 +316,7 @@ func SeedDemoNodes(idx *Index, emb TextEmbedder) error {
 		if err != nil {
 			return err
 		}
-		if _, err := idx.RegisterNode(s.dim, s.diff, s.format, s.url, vec); err != nil {
+		if _, err := idx.RegisterNodeWithConcepts(s.dim, s.diff, s.format, s.url, vec, s.concepts); err != nil {
 			return err
 		}
 		// Ensure chronological uniqueness under high-speed registration.

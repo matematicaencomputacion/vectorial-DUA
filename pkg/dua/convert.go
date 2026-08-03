@@ -25,6 +25,7 @@ func ToProto(n *InteractiveVideoNode) *vectorv1.InteractiveVideoNode {
 		Transcript:               n.Transcript,
 		AltText:                  n.AltText,
 		AudioDescriptionUrl:      n.AudioDescriptionURL,
+		Concepts:                 append([]string(nil), n.Concepts...),
 	}
 	for _, b := range n.Botonera {
 		out.Botonera = append(out.Botonera, buttonToProto(b))

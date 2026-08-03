@@ -1,0 +1,327 @@
+{
+  "version": 1,
+  "concepts": [
+    {
+      "id": "concept:string-literals",
+      "title": "Literales de texto (strings)",
+      "summary": "Cómo se escriben textos en código: comillas, escapes y errores típicos de sintaxis.",
+      "track": "python",
+      "tags": ["sintaxis", "basico"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:variables-scope",
+      "title": "Variables y scope",
+      "summary": "Qué es una variable y dónde vive su valor (local, función, módulo).",
+      "track": "python",
+      "tags": ["variables", "scope"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:function-parameters",
+      "title": "Parámetros de función",
+      "summary": "Cómo una función recibe valores de entrada y los usa sin confundirlos con variables globales.",
+      "track": "python",
+      "tags": ["funciones"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:env-file",
+      "title": "Archivo .env",
+      "summary": "Separar configuración del código con un archivo de entorno legible en ejecución.",
+      "track": "python",
+      "tags": ["config", "env"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:env-secrets",
+      "title": "Secretos y credenciales",
+      "summary": "Por qué no versionar claves y cómo el .env protege secretos de despliegue.",
+      "track": "python",
+      "tags": ["seguridad", "env"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:async-await",
+      "title": "Async / Await",
+      "summary": "Escribir trabajo no bloqueante con async/await y cuándo vale la pena usarlo.",
+      "track": "python",
+      "tags": ["concurrency"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:debug-variables",
+      "title": "Depurar variables",
+      "summary": "Desbloquear NameError / undefined con pistas y casos de prueba mínimos.",
+      "track": "python",
+      "tags": ["debug"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:coordinate-geometry",
+      "title": "Geometría de coordenadas",
+      "summary": "Puntos en el plano: ejes, distancia y noción de radio alrededor de un origen.",
+      "track": "matematica",
+      "tags": ["geometria"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:distance-on-plane",
+      "title": "Distancia en el plano",
+      "summary": "Calcular si un punto cae dentro de un radio dado (base conceptual de ST_DWithin).",
+      "track": "matematica",
+      "tags": ["geometria", "distancia"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:postgis-stdwithin",
+      "title": "PostGIS ST_DWithin",
+      "summary": "Consultar geometrías dentro de una distancia usando PostGIS.",
+      "track": "python",
+      "tags": ["spatial", "sql"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:reading-technical-docs",
+      "title": "Lectura de documentación técnica",
+      "summary": "Estrategias para leer docs en inglés sin perderse en el detalle.",
+      "track": "ingles",
+      "tags": ["lectura"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:vocab-scope-english",
+      "title": "Vocabulario: scope / alcance",
+      "summary": "Palabras del dominio (scope, variable, parameter) y falsos amigos en español.",
+      "track": "ingles",
+      "tags": ["vocabulario"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:vocab-async-english",
+      "title": "Vocabulario: async / await",
+      "summary": "Léxico de concurrencia en inglés técnico para leer ejemplos y APIs.",
+      "track": "ingles",
+      "tags": ["vocabulario", "concurrency"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:proportions-basics",
+      "title": "Proporciones básicas",
+      "summary": "Razones y proporciones como herramienta de modelado cuantitativo.",
+      "track": "matematica",
+      "tags": ["proporciones"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:dua-dimensions",
+      "title": "Dimensiones DUA",
+      "summary": "Representación, Acción y Compromiso como carriles de un mismo concepto.",
+      "track": "plataforma",
+      "tags": ["dua"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:interactive-stage",
+      "title": "Escenario interactivo",
+      "summary": "Stage + botonera: cómo se presenta un nodo pedagógico en AVLP.",
+      "track": "plataforma",
+      "tags": ["ui", "dua"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:live-station",
+      "title": "Estación live",
+      "summary": "Recursos generados en runtime cuando no hay nodo curado cercano.",
+      "track": "plataforma",
+      "tags": ["rag", "live"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:automobile-systems",
+      "title": "Sistemas de un automóvil",
+      "summary": "Exploración jerárquica macro → micro como metáfora de zoom pedagógico.",
+      "track": "plataforma",
+      "tags": ["jerarquia", "metafora"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:hierarchy-zoom",
+      "title": "Zoom jerárquico",
+      "summary": "Navegar de visión general a detalle sin forzar un camino lineal.",
+      "track": "plataforma",
+      "tags": ["jerarquia"],
+      "source": "seed"
+    },
+    {
+      "id": "concept:units-and-scale",
+      "title": "Unidades y escala",
+      "summary": "Elegir unidades coherentes al medir distancias o radios en un mapa.",
+      "track": "matematica",
+      "tags": ["unidades"],
+      "source": "seed"
+    }
+  ],
+  "edges": [
+    {
+      "from": "concept:variables-scope",
+      "to": "concept:string-literals",
+      "kind": "requires",
+      "strength": 0.8,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Para nombrar y asignar variables con texto hace falta entender literales de string.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:function-parameters",
+      "to": "concept:variables-scope",
+      "kind": "requires",
+      "strength": 0.9,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Un parámetro es una variable local con alcance de función; sin scope el parámetro se confunde con el global.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:env-file",
+      "to": "concept:variables-scope",
+      "kind": "requires",
+      "strength": 0.85,
+      "rationale_es": "[BORRADOR — curaduría pendiente] El .env define nombres y valores que el programa lee como variables de entorno.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:env-secrets",
+      "to": "concept:env-file",
+      "kind": "requires",
+      "strength": 1.0,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Hablar de secretos asume que ya sabés separar la configuración en un .env.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:async-await",
+      "to": "concept:function-parameters",
+      "kind": "requires",
+      "strength": 0.75,
+      "rationale_es": "[BORRADOR — curaduría pendiente] async/await se apoya en funciones que reciben argumentos y devuelven resultados.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:debug-variables",
+      "to": "concept:variables-scope",
+      "kind": "requires",
+      "strength": 0.95,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Depurar NameError exige saber dónde debería existir cada variable.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:distance-on-plane",
+      "to": "concept:coordinate-geometry",
+      "kind": "requires",
+      "strength": 0.9,
+      "rationale_es": "[BORRADOR — curaduría pendiente] La distancia entre puntos asume el plano cartesiano.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:distance-on-plane",
+      "to": "concept:units-and-scale",
+      "kind": "requires",
+      "strength": 0.7,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Un radio sin unidades coherentes no se puede interpretar en un mapa.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:postgis-stdwithin",
+      "to": "concept:distance-on-plane",
+      "kind": "requires",
+      "strength": 0.9,
+      "rationale_es": "[BORRADOR — curaduría pendiente] ST_DWithin implementa la idea de «dentro de un radio» sobre geometrías.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:postgis-stdwithin",
+      "to": "concept:function-parameters",
+      "kind": "requires",
+      "strength": 0.55,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Llamar a ST_DWithin es pasar argumentos a una función SQL; conviene ya manejar parámetros.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:vocab-scope-english",
+      "to": "concept:reading-technical-docs",
+      "kind": "requires",
+      "strength": 0.8,
+      "rationale_es": "[BORRADOR — curaduría pendiente] El vocabulario de scope se aprende leyendo documentación técnica con método.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:vocab-async-english",
+      "to": "concept:reading-technical-docs",
+      "kind": "requires",
+      "strength": 0.8,
+      "rationale_es": "[BORRADOR — curaduría pendiente] El léxico de async se ancla en la lectura guiada de docs y ejemplos.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:vocab-scope-english",
+      "to": "concept:variables-scope",
+      "kind": "deepens",
+      "strength": 0.6,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Tras practicar scope en código, el inglés técnico del mismo concepto refuerza la transferencia.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:vocab-async-english",
+      "to": "concept:async-await",
+      "kind": "continues",
+      "strength": 0.65,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Después de async en práctica, sigue el vocabulario inglés para leer APIs.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:interactive-stage",
+      "to": "concept:dua-dimensions",
+      "kind": "requires",
+      "strength": 0.85,
+      "rationale_es": "[BORRADOR — curaduría pendiente] El escenario interactivo se organiza según las dimensiones DUA.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:live-station",
+      "to": "concept:interactive-stage",
+      "kind": "requires",
+      "strength": 0.7,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Una estación live reutiliza el contrato de stage cuando falta material curado.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:hierarchy-zoom",
+      "to": "concept:automobile-systems",
+      "kind": "deepens",
+      "strength": 0.75,
+      "rationale_es": "[BORRADOR — curaduría pendiente] El zoom jerárquico se vuelve concreto con la metáfora del automóvil.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:proportions-basics",
+      "to": "concept:units-and-scale",
+      "kind": "continues",
+      "strength": 0.5,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Tras unidades, las proporciones modelan escalas y razones en problemas cuantitativos.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:string-literals",
+      "to": "concept:vocab-scope-english",
+      "kind": "alternative",
+      "strength": 0.4,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Entrada alternativa: o practicás literales en código, o entrás vía vocabulario técnico en inglés.",
+      "source": "draft"
+    },
+    {
+      "from": "concept:debug-variables",
+      "to": "concept:env-file",
+      "kind": "continues",
+      "strength": 0.45,
+      "rationale_es": "[BORRADOR — curaduría pendiente] Tras desbloquear variables en depuración, sigue cargar configuración desde .env.",
+      "source": "draft"
+    }
+  ]
+}

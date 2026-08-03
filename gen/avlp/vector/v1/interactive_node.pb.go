@@ -1430,8 +1430,10 @@ type InteractiveVideoNode struct {
 	Transcript               string   `protobuf:"bytes,14,opt,name=transcript,proto3" json:"transcript,omitempty"`
 	AltText                  string   `protobuf:"bytes,15,opt,name=alt_text,json=altText,proto3" json:"alt_text,omitempty"`
 	AudioDescriptionUrl      string   `protobuf:"bytes,16,opt,name=audio_description_url,json=audioDescriptionUrl,proto3" json:"audio_description_url,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Stable knowledge-graph concept ids (concept:<slug>) taught by this node.
+	Concepts      []string `protobuf:"bytes,17,rep,name=concepts,proto3" json:"concepts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InteractiveVideoNode) Reset() {
@@ -1574,6 +1576,13 @@ func (x *InteractiveVideoNode) GetAudioDescriptionUrl() string {
 		return x.AudioDescriptionUrl
 	}
 	return ""
+}
+
+func (x *InteractiveVideoNode) GetConcepts() []string {
+	if x != nil {
+		return x.Concepts
+	}
+	return nil
 }
 
 // NodeIdRequest fetches a single interactive node by id.
@@ -1890,7 +1899,7 @@ const file_interactive_node_proto_rawDesc = "" +
 	"\x11timestamp_unix_ms\x18\x06 \x01(\x03R\x0ftimestampUnixMs\"/\n" +
 	"\x03Ack\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xf7\x05\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x93\x06\n" +
 	"\x14InteractiveVideoNode\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12#\n" +
 	"\rdimension_dua\x18\x02 \x01(\tR\fdimensionDua\x12\x16\n" +
@@ -1911,7 +1920,8 @@ const file_interactive_node_proto_rawDesc = "" +
 	"transcript\x18\x0e \x01(\tR\n" +
 	"transcript\x12\x19\n" +
 	"\balt_text\x18\x0f \x01(\tR\aaltText\x122\n" +
-	"\x15audio_description_url\x18\x10 \x01(\tR\x13audioDescriptionUrl\"(\n" +
+	"\x15audio_description_url\x18\x10 \x01(\tR\x13audioDescriptionUrl\x12\x1a\n" +
+	"\bconcepts\x18\x11 \x03(\tR\bconcepts\"(\n" +
 	"\rNodeIdRequest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\"\xbc\x01\n" +
 	"\x18MutateInteractiveRequest\x12\x17\n" +
